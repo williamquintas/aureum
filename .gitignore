@@ -1,0 +1,77 @@
+# ── Go ─────────────────────────────────────────────────────────
+bin/
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+*.test.txt
+go.sum
+/go/bin
+
+# ── Build ──────────────────────────────────────────────────────
+/build/
+/coverage/
+/tmp/
+dist/
+
+# ── IDE / Editor ───────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+.project
+.classpath
+.settings/
+
+# ── Environment ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+secrets/
+
+# ── Dependency / Cache ─────────────────────────────────────────
+/pkg/mod/
+/pkg/sumdb/
+*.sum
+
+# ── Proto / Generated ─────────────────────────────────────────
+/gen/
+
+# ── Test Artifacts ─────────────────────────────────────────────
+testdata/**/*.actual
+testdata/**/*.expected
+testdata/**/*.diff
+docker-compose.override.yml
+
+# ── OS ─────────────────────────────────────────────────────────
+Thumbs.db
+Desktop.ini
+*.log
+/var/
+
+# ── Terraform ──────────────────────────────────────────────────
+deploy/terraform/.terraform/
+deploy/terraform/*.tfstate
+deploy/terraform/*.tfstate.backup
+deploy/terraform/*.tfplan
+
+# ── Docker ─────────────────────────────────────────────────────
+.docker/
+*.tar
+
+# ── Misc ───────────────────────────────────────────────────────
+*.local
+*.orig
+*.bak
+*.tmp

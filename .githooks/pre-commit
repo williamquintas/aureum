@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Pre-commit checks: formatting and linting
+#
+
+STASH_NAME="pre-commit-$(date +%s)"
+git stash save -q --keep-index "$STASH_NAME"
+STASHED=$?
+
+cleanup() {
+    if [ "$STASHED" -eq 0 ]; then
+        if git stash list | grep -q "$STASH_NAME"; then
+            git stash pop -q
+        fi
+    fi
+}
+trap cleanup EXIT
+
+echo "  → Running gofmt check..."
+GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+if [ -n "$GO_FILES" ]; then
+    UNFORMATTED=$(gofmt -l "$GO_FILES" 2>/dev/null)
+    if [ -n "$UNFORMATTED" ]; then
+        echo ""
+        echo "  ✗ Unformatted Go files:"
+        echo "$UNFORMATTED" | sed 's/^/    /'
+        echo "    Run: gofumpt -w $UNFORMATTED"
+        echo ""
+        exit 1
+    fi
+fi
+
+echo "  ✓ gofmt passed"
+
+GOVULNCHECK=$(which govulncheck 2>/dev/null)
+if [ -n "$GOVULNCHECK" ] && [ -f "go.work" ]; then
+    govulncheck ./... 2>/dev/null || true
+fi
+
+exit 0

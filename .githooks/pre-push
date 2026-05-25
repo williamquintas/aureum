@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Pre-push checks: lint and test
+#
+
+echo "  → Running lint..."
+if ! make lint 2>/dev/null; then
+    echo ""
+    echo "  ✗ Lint failed. Fix issues before pushing."
+    echo ""
+    exit 1
+fi
+
+echo "  ✓ Lint passed"
+
+echo "  → Running tests..."
+if ! make test 2>/dev/null; then
+    echo ""
+    echo "  ✗ Tests failed. Fix failures before pushing."
+    echo ""
+    exit 1
+fi
+
+echo "  ✓ Tests passed"
+
+echo "  → Building..."
+if ! make build 2>/dev/null; then
+    echo ""
+    echo "  ✗ Build failed. Fix errors before pushing."
+    echo ""
+    exit 1
+fi
+
+echo "  ✓ Build passed"
+echo ""
+echo "  ✓ All checks passed — safe to push"
+exit 0

@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Validate conventional commit format
+# Regex: ^(feat|fix|docs|refactor|test|perf|ci|chore|revert)(\(.+\))?: .+$
+#
+COMMIT_MSG=$(cat "$1")
+
+if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|refactor|test|perf|ci|chore|revert)(\(.+\))?!?: .+$'; then
+    echo ""
+    echo "  ✗ Invalid commit message format."
+    echo "    Must follow conventional commits:"
+    echo ""
+    echo "    feat(scope): add new feature"
+    echo "    fix(scope): correct bug"
+    echo "    docs: update documentation"
+    echo "    refactor(scope): restructure code"
+    echo "    test(scope): add tests"
+    echo "    perf(scope): improve performance"
+    echo "    ci: update CI config"
+    echo "    chore(scope): maintenance"
+    echo "    revert(scope): revert change"
+    echo ""
+    echo "    Scopes: budget-svc, creditcard-svc, debt-svc, graphql-bff,"
+    echo "            identity-svc, investment-svc, report-svc, transaction-svc,"
+    echo "            pkg, proto, deploy, docs"
+    echo ""
+    echo "    Actual: $(cat "$1")"
+    echo ""
+    exit 1
+fi
+
+exit 0

@@ -1,0 +1,31 @@
+# This file defines code owners for automatic PR review requests
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - all files
+* @williamquintas
+
+# Go source code
+apps/ @williamquintas
+pkg/ @williamquintas
+
+# Proto definitions
+/proto/ @williamquintas
+
+# Documentation
+/docs/ @williamquintas
+*.md @williamquintas
+
+# GitHub workflows and templates
+/.github/ @williamquintas
+
+# Kubernetes, Docker, Terraform
+/deploy/ @williamquintas
+
+# Scripts
+/scripts/ @williamquintas
+
+# Root config files
+Makefile @williamquintas
+*.go @williamquintas
+go.mod @williamquintas
+go.work @williamquintas

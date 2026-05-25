@@ -1,0 +1,56 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  version-consistency:
+    name: Version Consistency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate version format
+        run: |
+          # Check if there's a VERSION file
+          if [ -f VERSION ]; then
+            VERSION=$(cat VERSION)
+          elif [ -f version.txt ]; then
+            VERSION=$(cat version.txt)
+          else
+            echo "No VERSION file found - skipping check"
+            exit 0
+          fi
+
+          echo "Current version: $VERSION"
+
+          # Check if version matches semantic versioning
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "Version '$VERSION' does not follow semantic versioning (MAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+
+          echo "Version format is valid"
+
+      - name: Check version in CHANGELOG
+        run: |
+          if [ -f VERSION ]; then
+            VERSION=$(cat VERSION)
+          elif [ -f version.txt ]; then
+            VERSION=$(cat version.txt)
+          else
+            echo "Skipping CHANGELOG check"
+            exit 0
+          fi
+
+          if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            echo "Warning: Version $VERSION not found in CHANGELOG.md"
+            echo "Consider adding an entry for this version"
+          else
+            echo "Version $VERSION found in CHANGELOG.md"
+          fi

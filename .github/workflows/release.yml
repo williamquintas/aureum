@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+          echo "Version: $TAG"
+
+      - name: Build all binaries
+        run: make build
+
+      - name: Build Docker images
+        run: make docker
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Extract changelog for this version
+          TAG=${{ steps.version.version }}
+          if grep -q "^## \[$TAG\]" CHANGELOG.md; then
+            NOTES=$(awk "/^## \\[$TAG\\]/,/^## /{if (!/^## \\[$TAG\\]/ && !/^## /) print}" CHANGELOG.md | sed '$d')
+          else
+            NOTES="See CHANGELOG.md for details."
+          fi
+          NOTES="${NOTES//'%'/'%25'}"
+          NOTES="${NOTES//$'\n'/'%0A'}"
+          NOTES="${NOTES//$'\r'/'%0D'}"
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.version }}
+          name: Release v${{ steps.version.version }}
+          body: |
+            ## Release v${{ steps.version.version }}
+
+            ${{ steps.release_notes.notes }}
+
+            ### Build Information
+            - **Commit**: ${{ github.sha }}
+            - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          draft: false
+          prerelease: ${{ contains(steps.version.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

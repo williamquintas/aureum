@@ -1,0 +1,60 @@
+name: Feature Request
+description: Request a new feature for Aureum
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature!
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: Affected Service
+      multiple: true
+      options:
+        - identity-svc
+        - transaction-svc
+        - creditcard-svc
+        - investment-svc
+        - debt-svc
+        - budget-svc
+        - report-svc
+        - graphql-bff
+        - pkg
+        - proto
+        - deploy
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Breaking change (requires migration)
+        - Non-breaking (backward compatible)
+        - Internal only (no API change)

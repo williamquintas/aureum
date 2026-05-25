@@ -1,0 +1,45 @@
+# Dependabot configuration
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - "/apps/budget-svc"
+      - "/apps/creditcard-svc"
+      - "/apps/debt-svc"
+      - "/apps/graphql-bff"
+      - "/apps/identity-svc"
+      - "/apps/investment-svc"
+      - "/apps/report-svc"
+      - "/apps/transaction-svc"
+      - "/pkg"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto-merge
+
+  - package-ecosystem: docker
+    directories:
+      - "/apps/budget-svc"
+      - "/apps/creditcard-svc"
+      - "/apps/debt-svc"
+      - "/apps/graphql-bff"
+      - "/apps/identity-svc"
+      - "/apps/investment-svc"
+      - "/apps/report-svc"
+      - "/apps/transaction-svc"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci
