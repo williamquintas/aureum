@@ -130,3 +130,8 @@ When modifying services, document the impact:
 - `SUPPORT.md` — Support information
 - `.github/ISSUE_TEMPLATE/` — Bug report and feature request templates
 - `.github/workflows/` — CI/CD workflows
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
