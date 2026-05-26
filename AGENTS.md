@@ -11,7 +11,7 @@
 - Outbox Pattern: all domain events go through transactional outbox → Kafka
 - Idempotency: all mutations require Idempotency-Key header
 - Circuit Breaker: all gRPC client calls wrapped with gobreaker
-- Feature Flags: all new features behind OpenFeature flags
+- Feature Flags: all new features behind Unleash flags
 - Cache: all read queries consider Redis cache first
 
 ## Commands
@@ -104,7 +104,7 @@ apps/{service}/
 | Auth        | Keycloak JWT middleware       |
 | Idempotency | Idempotency-Key header + Redis|
 | Cache       | Cache-first (Redis)           |
-| Feature Flag| OpenFeature                   |
+| Feature Flag| Unleash                   |
 | Events      | Outbox → Kafka                |
 | Circuit Brkr| gobreaker                     |
 | Observability| OpenTelemetry metrics/tracing|
