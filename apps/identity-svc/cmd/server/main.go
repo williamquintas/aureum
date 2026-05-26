@@ -21,6 +21,7 @@ import (
 	"github.com/aureum/identity-svc/internal/application"
 	"github.com/aureum/identity-svc/internal/infrastructure/api"
 	kc "github.com/aureum/identity-svc/internal/infrastructure/auth"
+	appcache "github.com/aureum/identity-svc/internal/infrastructure/cache"
 	"github.com/aureum/identity-svc/internal/infrastructure/middleware"
 	"github.com/aureum/identity-svc/internal/infrastructure/persistence"
 	"github.com/aureum/pkg/cache"
@@ -95,11 +96,15 @@ func run() int {
 
 	idempStore := idempotency.NewStore(rdb)
 	keycloakClient := kc.NewKeycloakClient(cfg.KeycloakURL, cfg.KeycloakRealm, cfg.KeycloakClientID, cfg.KeycloakClientSec)
+	tokenBlacklist := appcache.NewTokenBlacklist(rdb)
 
 	writeRepo := persistence.NewUserWriteRepository(writePool)
 	outboxRepo := persistence.NewOutboxRepository(writePool)
 
-	authSvc := application.NewAuthService(writeRepo, keycloakClient, outboxRepo, idempStore, redisCache)
+	authSvc := application.NewAuthService(
+		writeRepo, keycloakClient, outboxRepo,
+		idempStore, redisCache, tokenBlacklist, cfg.JWTSecret,
+	)
 
 	handler := api.NewHandler(authSvc)
 

@@ -25,10 +25,14 @@ func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 	r.Post("/signup", h.Signup)
 	r.Post("/login", h.Login)
 	r.Post("/verify-email", h.VerifyEmail)
+	r.Post("/forgot-password", h.ForgotPassword)
+	r.Post("/reset-password", h.ResetPassword)
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtSecret))
 		r.Get("/me", h.GetProfile)
+		r.Post("/refresh", h.RefreshToken)
+		r.Post("/logout", h.Logout)
 	})
 }
 
@@ -119,6 +123,87 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, profile)
+}
+
+func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req application.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.authService.RefreshToken(r.Context(), req)
+	if err != nil {
+		if errors.Is(err, domain.ErrTokenInvalid) || errors.Is(err, domain.ErrTokenExpired) {
+			writeError(w, http.StatusUnauthorized, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	token := r.Header.Get("Authorization")
+	if len(token) > 7 {
+		token = token[7:]
+	}
+
+	if err := h.authService.Logout(r.Context(), claims.Subject, token); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req application.ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.ForgotPassword(r.Context(), req); err != nil {
+		if errors.Is(err, domain.ErrInvalidEmail) {
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req application.ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.ResetPassword(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrTokenInvalid), errors.Is(err, domain.ErrTokenExpired):
+			writeError(w, http.StatusUnauthorized, "invalid or expired reset token")
+		case errors.Is(err, domain.ErrWeakPassword):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

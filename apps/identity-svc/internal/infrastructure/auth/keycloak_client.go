@@ -174,6 +174,56 @@ func (c *Client) ValidateToken(ctx context.Context, accessToken string) (*domain
 	return user, nil
 }
 
+func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*application.LoginResponse, error) {
+	token, err := c.client.RefreshToken(ctx, refreshToken, c.clientID, c.secret, c.realm)
+	if err != nil {
+		return nil, fmt.Errorf("keycloak refresh token: %w", err)
+	}
+
+	resp := &application.LoginResponse{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		IDToken:      token.IDToken,
+		ExpiresIn:    token.ExpiresIn,
+		TokenType:    "Bearer",
+	}
+
+	if resp.ExpiresIn == 0 {
+		resp.ExpiresIn = 900
+	}
+
+	return resp, nil
+}
+
+func (c *Client) Logout(ctx context.Context, refreshToken string) error {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = c.client.Logout(ctx, c.clientID, c.secret, c.realm, refreshToken)
+	if err != nil {
+		return fmt.Errorf("keycloak logout: %w", err)
+	}
+
+	_ = c.client.LogoutAllSessions(ctx, token.AccessToken, c.realm, "")
+	return nil
+}
+
+func (c *Client) UpdatePassword(ctx context.Context, userID, newPassword string) error {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = c.client.SetPassword(ctx, token.AccessToken, userID, c.realm, newPassword, false)
+	if err != nil {
+		return fmt.Errorf("keycloak set password: %w", err)
+	}
+
+	return nil
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

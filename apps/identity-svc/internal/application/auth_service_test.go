@@ -3,7 +3,9 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
@@ -13,14 +15,31 @@ import (
 	"github.com/aureum/pkg/outbox"
 )
 
+func generateTestToken(t *testing.T, userID string) string {
+	t.Helper()
+	claims := jwt.MapClaims{
+		"sub": userID,
+		"jti": "test-jti-" + userID,
+		"exp": float64(time.Now().Add(15 * time.Minute).Unix()),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(testJWTSecret))
+	require.NoError(t, err)
+	return signed
+}
+
 const testPassword = "Str0ng!Pass"
 const testUserID = "user-id"
+const testEmail = "user@example.com"
 
 type mockKeycloak struct {
 	createUserFunc     func(ctx context.Context, email, password, name string) (string, error)
 	authenticateFunc   func(ctx context.Context, email, password string) (*LoginResponse, error)
 	verifyEmailFunc    func(ctx context.Context, userID string) error
 	getUserByEmailFunc func(ctx context.Context, email string) (*domain.User, error)
+	refreshTokenFunc   func(ctx context.Context, refreshToken string) (*LoginResponse, error)
+	logoutFunc         func(ctx context.Context, refreshToken string) error
+	updatePasswordFunc func(ctx context.Context, userID, newPassword string) error
 }
 
 func (m *mockKeycloak) CreateUser(ctx context.Context, email, password, name string) (string, error) {
@@ -34,6 +53,24 @@ func (m *mockKeycloak) VerifyEmail(ctx context.Context, userID string) error {
 }
 func (m *mockKeycloak) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	return m.getUserByEmailFunc(ctx, email)
+}
+func (m *mockKeycloak) RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error) {
+	if m.refreshTokenFunc != nil {
+		return m.refreshTokenFunc(ctx, refreshToken)
+	}
+	return nil, domain.ErrTokenInvalid
+}
+func (m *mockKeycloak) Logout(ctx context.Context, refreshToken string) error {
+	if m.logoutFunc != nil {
+		return m.logoutFunc(ctx, refreshToken)
+	}
+	return nil
+}
+func (m *mockKeycloak) UpdatePassword(ctx context.Context, userID, newPassword string) error {
+	if m.updatePasswordFunc != nil {
+		return m.updatePasswordFunc(ctx, userID, newPassword)
+	}
+	return nil
 }
 
 type mockOutbox struct {
@@ -82,17 +119,40 @@ func newMockOutbox() *mockOutbox {
 	}
 }
 
+func newMockBlacklist() *mockBlacklist {
+	return &mockBlacklist{}
+}
+
+type mockBlacklist struct{}
+
+func (m *mockBlacklist) Add(_ context.Context, _ string, _ time.Duration) error { return nil }
+func (m *mockBlacklist) IsBlacklisted(ctx context.Context, jti string) (bool, error) {
+	return false, nil
+}
+
+func newTestSvc(
+	users domain.UserRepository,
+	kc KeycloakClient,
+	ob outbox.Repository,
+	idem *idempotency.Store,
+	cache Cache,
+) *AuthService {
+	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(), testJWTSecret)
+}
+
+const testJWTSecret = "test-secret-key-for-signing-tokens"
+
 // Tests that DON'T require external infrastructure:
 
 func TestAuthService_Signup_InvalidEmail(t *testing.T) {
-	svc := NewAuthService(nil, nil, newMockOutbox(), nil, nil)
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
 	_, err := svc.Signup(context.Background(), SignupRequest{Email: "invalid", Password: testPassword}, "")
 	require.ErrorIs(t, err, domain.ErrInvalidEmail)
 }
 
 func TestAuthService_Signup_WeakPassword(t *testing.T) {
-	svc := NewAuthService(nil, nil, newMockOutbox(), nil, nil)
-	_, err := svc.Signup(context.Background(), SignupRequest{Email: "user@example.com", Password: "weak"}, "")
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
+	_, err := svc.Signup(context.Background(), SignupRequest{Email: testEmail, Password: "weak"}, "")
 	require.ErrorIs(t, err, domain.ErrWeakPassword)
 }
 
@@ -102,7 +162,7 @@ func TestAuthService_Signup_DuplicateEmail(t *testing.T) {
 			return &domain.User{Email: email}, nil
 		},
 	}
-	svc := NewAuthService(users, nil, newMockOutbox(), nil, nil)
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
 	_, err := svc.Signup(context.Background(), SignupRequest{Email: "existing@example.com", Password: testPassword}, "")
 	require.ErrorIs(t, err, domain.ErrEmailAlreadyRegistered)
 }
@@ -115,7 +175,7 @@ func TestAuthService_Login_EmailNotVerified(t *testing.T) {
 			}, nil
 		},
 	}
-	svc := NewAuthService(users, nil, newMockOutbox(), nil, nil)
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
 	_, err := svc.Login(context.Background(), LoginRequest{Email: "unverified@example.com", Password: testPassword})
 	require.ErrorIs(t, err, domain.ErrEmailNotVerified)
 }
@@ -128,7 +188,7 @@ func TestAuthService_Login_UserLocked(t *testing.T) {
 			}, nil
 		},
 	}
-	svc := NewAuthService(users, nil, newMockOutbox(), nil, nil)
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
 	_, err := svc.Login(context.Background(), LoginRequest{Email: "locked@example.com", Password: testPassword})
 	require.ErrorIs(t, err, domain.ErrUserLocked)
 }
@@ -144,8 +204,8 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 			return &domain.User{ID: testUserID, Email: email, EmailVerified: true, Status: domain.UserStatusActive}, nil
 		},
 	}
-	svc := NewAuthService(users, kc, newMockOutbox(), nil, nil)
-	_, err := svc.Login(context.Background(), LoginRequest{Email: "user@example.com", Password: "wrong"})
+	svc := newTestSvc(users, kc, newMockOutbox(), nil, nil)
+	_, err := svc.Login(context.Background(), LoginRequest{Email: testEmail, Password: "wrong"})
 	require.ErrorIs(t, err, domain.ErrInvalidCredentials)
 }
 
@@ -164,11 +224,88 @@ func TestAuthService_Signup_UserNotFound(t *testing.T) {
 			return "kc-user-id", nil
 		},
 	}
-	svc := NewAuthService(users, kc, newMockOutbox(), nil, nil)
+	svc := newTestSvc(users, kc, newMockOutbox(), nil, nil)
 	resp, err := svc.Signup(context.Background(), SignupRequest{Email: "new@example.com", Password: testPassword}, "")
 	require.NoError(t, err)
 	require.Equal(t, "new@example.com", resp.Email)
 	require.Equal(t, "UNVERIFIED", resp.Status)
+}
+
+func TestAuthService_RefreshToken_Empty(t *testing.T) {
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
+	_, err := svc.RefreshToken(context.Background(), RefreshTokenRequest{RefreshToken: ""})
+	require.ErrorIs(t, err, domain.ErrTokenInvalid)
+}
+
+func TestAuthService_ForgotPassword_InvalidEmail(t *testing.T) {
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
+	err := svc.ForgotPassword(context.Background(), ForgotPasswordRequest{Email: "invalid"})
+	require.ErrorIs(t, err, domain.ErrInvalidEmail)
+}
+
+func TestAuthService_ForgotPassword_UserNotFound(t *testing.T) {
+	users := &mockUserRepo{
+		findByEmailFunc: func(ctx context.Context, email string) (*domain.User, error) {
+			return nil, domain.ErrUserNotFound
+		},
+	}
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
+	err := svc.ForgotPassword(context.Background(), ForgotPasswordRequest{Email: "nonexistent@example.com"})
+	require.NoError(t, err)
+}
+
+func TestAuthService_ResetPassword_WeakPassword(t *testing.T) {
+	validToken, err := generateResetToken("uid", "u@e.com", []byte(testJWTSecret))
+	require.NoError(t, err)
+
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
+	err = svc.ResetPassword(context.Background(), ResetPasswordRequest{Token: validToken, NewPassword: "weak"})
+	require.ErrorIs(t, err, domain.ErrWeakPassword)
+}
+
+func TestAuthService_ResetPassword_InvalidToken(t *testing.T) {
+	svc := newTestSvc(nil, nil, newMockOutbox(), nil, nil)
+	err := svc.ResetPassword(context.Background(), ResetPasswordRequest{Token: "invalid-token", NewPassword: testPassword})
+	require.ErrorIs(t, err, domain.ErrTokenInvalid)
+}
+
+func TestAuthService_RefreshToken_Success(t *testing.T) {
+	kc := &mockKeycloak{
+		refreshTokenFunc: func(ctx context.Context, rt string) (*LoginResponse, error) {
+			return &LoginResponse{
+				AccessToken: "new-access", RefreshToken: "new-refresh",
+				ExpiresIn: 900, TokenType: "Bearer",
+			}, nil
+		},
+	}
+	svc := newTestSvc(nil, kc, newMockOutbox(), nil, nil)
+	resp, err := svc.RefreshToken(context.Background(), RefreshTokenRequest{RefreshToken: "valid-refresh"})
+	require.NoError(t, err)
+	require.Equal(t, "new-access", resp.AccessToken)
+	require.Equal(t, "new-refresh", resp.RefreshToken)
+}
+
+func TestAuthService_Logout_Success(t *testing.T) {
+	tokenStr := generateTestToken(t, testUserID)
+	users := &mockUserRepo{
+		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
+			return &domain.User{ID: id, Email: "test@example.com"}, nil
+		},
+	}
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
+	err := svc.Logout(context.Background(), testUserID, tokenStr)
+	require.NoError(t, err)
+}
+
+func TestAuthService_ForgotPassword_Success(t *testing.T) {
+	users := &mockUserRepo{
+		findByEmailFunc: func(ctx context.Context, email string) (*domain.User, error) {
+			return &domain.User{ID: "uid", Email: email, Status: domain.UserStatusActive}, nil
+		},
+	}
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, nil)
+	err := svc.ForgotPassword(context.Background(), ForgotPasswordRequest{Email: testEmail})
+	require.NoError(t, err)
 }
 
 // Tests that REQUIRE Redis (idempotency, cache):
@@ -205,7 +342,7 @@ func TestAuthService_Idempotency_KeyReturnsCached(t *testing.T) {
 		},
 	}
 
-	svc := NewAuthService(users, kc, newMockOutbox(), idem, cache)
+	svc := newTestSvc(users, kc, newMockOutbox(), idem, cache)
 	resp1, err := svc.Signup(context.Background(), SignupRequest{
 		Email: "idem@example.com", Password: testPassword, Name: "Idem",
 	}, "idem-same-key")
@@ -228,7 +365,7 @@ func TestAuthService_GetProfile_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	svc := NewAuthService(users, nil, newMockOutbox(), nil, cache)
+	svc := newTestSvc(users, nil, newMockOutbox(), nil, cache)
 	profile, err := svc.GetProfile(context.Background(), "user-id")
 	require.NoError(t, err)
 	require.Equal(t, "profile@example.com", profile.Email)

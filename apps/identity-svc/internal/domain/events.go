@@ -38,3 +38,16 @@ type UserRoleChangedEvent struct {
 	ChangedBy string   `json:"changed_by"`
 	Timestamp int64    `json:"timestamp"`
 }
+
+type PasswordResetRequestedEvent struct {
+	UserID    string `json:"user_id"`
+	Email     string `json:"email"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type PasswordResetCompletedEvent struct {
+	UserID    string `json:"user_id"`
+	Email     string `json:"email"`
+	Timestamp int64  `json:"timestamp"`
+}
