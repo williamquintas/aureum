@@ -75,5 +75,5 @@ deploy/terraform/*.tfplan
 *.orig
 *.bak
 *.tmp
-server
+/server
 go.work

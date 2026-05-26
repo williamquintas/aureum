@@ -1,4 +1,3 @@
-// Command server is the entrypoint for the identity service.
 package main
 
 import (
@@ -18,6 +17,14 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+
+	"github.com/aureum/identity-svc/internal/application"
+	"github.com/aureum/identity-svc/internal/infrastructure/api"
+	kc "github.com/aureum/identity-svc/internal/infrastructure/auth"
+	"github.com/aureum/identity-svc/internal/infrastructure/middleware"
+	"github.com/aureum/identity-svc/internal/infrastructure/persistence"
+	"github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/idempotency"
 )
 
 type Config struct {
@@ -31,15 +38,12 @@ type Config struct {
 	KeycloakURL       string `envconfig:"KEYCLOAK_URL" default:"http://localhost:8081"`
 	KeycloakRealm     string `envconfig:"KEYCLOAK_REALM" default:"aureum"`
 	KeycloakClientID  string `envconfig:"KEYCLOAK_CLIENT_ID" default:"identity-svc-confidential"`
-	KeycloakClientSec string `envconfig:"KEYCLOAK_CLIENT_SECRET" default:"secret"`
-	OTLPEndpoint      string `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT" default:"http://localhost:4318"`
-	UnleashURL        string `envconfig:"UNLEASH_URL" default:"http://localhost:4242/api"`
-	UnleashAPIToken   string `envconfig:"UNLEASH_API_TOKEN" default:"*:development.unleash-insecure-api-token"`
+	KeycloakClientSec string `envconfig:"KEYCLOAK_CLIENT_SECRET" required:"true"`
 	JWTSecret         string `envconfig:"JWT_SECRET" required:"true"`
-	IdempotencyTTL    string `envconfig:"IDEMPOTENCY_TTL" default:"24h"`
-	CacheTTL          string `envconfig:"CACHE_TTL" default:"5m"`
 	RateLimitPerIP    int    `envconfig:"RATE_LIMIT_PER_IP" default:"5"`
 	RateLimitWindow   string `envconfig:"RATE_LIMIT_WINDOW" default:"15m"`
+	CacheTTL          string `envconfig:"CACHE_TTL" default:"5m"`
+	IdempotencyTTL    string `envconfig:"IDEMPOTENCY_TTL" default:"24h"`
 }
 
 func main() {
@@ -81,28 +85,43 @@ func run() int {
 		log.Error("failed to connect to redis", "error", err)
 		return 1
 	}
-	defer func() {
-		_ = rdb.Close()
-	}()
+	defer func() { _ = rdb.Close() }()
 
-	log.Info("Keycloak client initialized",
-		"url", cfg.KeycloakURL,
-		"realm", cfg.KeycloakRealm,
-		"client_id", cfg.KeycloakClientID,
-	)
+	redisCache, err := cache.NewRedisCache(cfg.RedisAddr, cfg.RedisPassword, 0)
+	if err != nil {
+		log.Error("failed to create redis cache", "error", err)
+		return 1
+	}
 
-	log.Info("starting outbox publisher")
+	idempStore := idempotency.NewStore(rdb)
+	keycloakClient := kc.NewKeycloakClient(cfg.KeycloakURL, cfg.KeycloakRealm, cfg.KeycloakClientID, cfg.KeycloakClientSec)
+
+	writeRepo := persistence.NewUserWriteRepository(writePool)
+	outboxRepo := persistence.NewOutboxRepository(writePool)
+
+	authSvc := application.NewAuthService(writeRepo, keycloakClient, outboxRepo, idempStore, redisCache)
+
+	handler := api.NewHandler(authSvc)
+
+	rateLimitWindow, err := time.ParseDuration(cfg.RateLimitWindow)
+	if err != nil {
+		rateLimitWindow = 15 * time.Minute
+	}
+	rateLimiter := middleware.NewRateLimiter(rdb, cfg.RateLimitPerIP, rateLimitWindow)
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(rateLimiter.Middleware)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintln(w, "ok")
 	})
+
+	handler.RegisterRoutes(r, cfg.JWTSecret)
 
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort("", cfg.Port),
