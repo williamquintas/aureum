@@ -26,6 +26,7 @@ import (
 	"github.com/aureum/identity-svc/internal/infrastructure/persistence"
 	"github.com/aureum/pkg/cache"
 	"github.com/aureum/pkg/idempotency"
+	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
 )
 
 type Config struct {
@@ -100,13 +101,21 @@ func run() int {
 
 	writeRepo := persistence.NewUserWriteRepository(writePool)
 	outboxRepo := persistence.NewOutboxRepository(writePool)
+	roleRepo := persistence.NewRoleRepository(writePool)
+	cacheTTL, err := time.ParseDuration(cfg.CacheTTL)
+	if err != nil {
+		cacheTTL = 5 * time.Minute
+	}
+	tokenValidator := kc.NewCachedTokenValidator(keycloakClient, redisCache, cacheTTL)
 
 	authSvc := application.NewAuthService(
 		writeRepo, keycloakClient, outboxRepo,
-		idempStore, redisCache, tokenBlacklist, cfg.JWTSecret,
+		idempStore, redisCache, tokenBlacklist, tokenValidator, cfg.JWTSecret,
 	)
+	authzSvc := application.NewAuthorizationService(writeRepo, roleRepo)
 
-	handler := api.NewHandler(authSvc)
+	handler := api.NewHandler(authSvc, authzSvc)
+	grpcHandler := api.NewGRPCHandler(authSvc, authzSvc)
 
 	rateLimitWindow, err := time.ParseDuration(cfg.RateLimitWindow)
 	if err != nil {
@@ -150,6 +159,7 @@ func run() int {
 	}
 
 	grpcServer := grpc.NewServer()
+	identityv1.RegisterIdentityServiceServer(grpcServer, grpcHandler)
 
 	go func() {
 		log.Info("starting gRPC server", "port", cfg.GRPCPort)

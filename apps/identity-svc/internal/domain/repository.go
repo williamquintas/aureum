@@ -8,4 +8,11 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*User, error)
 	FindByKeycloakID(ctx context.Context, keycloakID string) (*User, error)
 	Update(ctx context.Context, user *User) error
+	List(ctx context.Context, offset, limit int) ([]*User, error)
+}
+
+type RoleRepository interface {
+	AssignRole(ctx context.Context, userID string, role RoleName) error
+	RemoveRole(ctx context.Context, userID string, role RoleName) error
+	GetUserRoles(ctx context.Context, userID string) ([]RoleName, error)
 }

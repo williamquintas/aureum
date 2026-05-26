@@ -5,8 +5,8 @@ managed:
     default: github.com/aureum/proto/gen
 plugins:
   - plugin: go
-    out: gen
+    out: proto/gen
     opt: paths=source_relative
   - plugin: go-grpc
-    out: gen
+    out: proto/gen
     opt: paths=source_relative

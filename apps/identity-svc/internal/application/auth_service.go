@@ -68,13 +68,14 @@ type TokenBlacklist interface {
 }
 
 type AuthService struct {
-	users       domain.UserRepository
-	keycloak    KeycloakClient
-	outbox      outbox.Repository
-	idempotency *idempotency.Store
-	cache       Cache
-	blacklist   TokenBlacklist
-	jwtSecret   []byte
+	users          domain.UserRepository
+	keycloak       KeycloakClient
+	outbox         outbox.Repository
+	idempotency    *idempotency.Store
+	cache          Cache
+	blacklist      TokenBlacklist
+	tokenValidator TokenValidator
+	jwtSecret      []byte
 }
 
 type Cache interface {
@@ -90,17 +91,23 @@ func NewAuthService(
 	idem *idempotency.Store,
 	cache Cache,
 	blacklist TokenBlacklist,
+	tokenValidator TokenValidator,
 	jwtSecret string,
 ) *AuthService {
 	return &AuthService{
-		users:       users,
-		keycloak:    keycloak,
-		outbox:      ob,
-		idempotency: idem,
-		cache:       cache,
-		blacklist:   blacklist,
-		jwtSecret:   []byte(jwtSecret),
+		users:          users,
+		keycloak:       keycloak,
+		outbox:         ob,
+		idempotency:    idem,
+		cache:          cache,
+		blacklist:      blacklist,
+		tokenValidator: tokenValidator,
+		jwtSecret:      []byte(jwtSecret),
 	}
+}
+
+func (s *AuthService) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
+	return s.tokenValidator.ValidateToken(ctx, token)
 }
 
 func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotencyKey string) (*SignupResponse, error) {
@@ -143,7 +150,7 @@ func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotency
 		Email:            email.Address,
 		Status:           domain.UserStatusUnverified,
 		Name:             req.Name,
-		Roles:            []string{"user"},
+		Roles:            []string{string(domain.RoleUser)},
 		CustomAttributes: map[string]interface{}{},
 	}
 

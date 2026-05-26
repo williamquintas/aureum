@@ -14,11 +14,12 @@ import (
 )
 
 type Handler struct {
-	authService *application.AuthService
+	authService  *application.AuthService
+	authzService *application.AuthorizationService
 }
 
-func NewHandler(authService *application.AuthService) *Handler {
-	return &Handler{authService: authService}
+func NewHandler(authService *application.AuthService, authzService *application.AuthorizationService) *Handler {
+	return &Handler{authService: authService, authzService: authzService}
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
@@ -33,6 +34,15 @@ func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 		r.Get("/me", h.GetProfile)
 		r.Post("/refresh", h.RefreshToken)
 		r.Post("/logout", h.Logout)
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireRole("admin"))
+			r.Post("/admin/users/{id}/assign-role", h.AssignRole)
+			r.Post("/admin/users/{id}/remove-role", h.RemoveRole)
+			r.Get("/admin/users", h.ListUsers)
+			r.Get("/admin/roles", h.ListRoles)
+			r.Post("/admin/abac-check", h.ABACCheck)
+		})
 	})
 }
 
@@ -204,6 +214,97 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "id")
+	var req application.AssignRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	claims := auth.GetClaims(r.Context())
+	if err := h.authzService.AssignRole(r.Context(), claims.Subject, userID, domain.RoleName(req.Role)); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			writeError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, domain.ErrRoleNotFound):
+			writeError(w, http.StatusNotFound, "role not found")
+		case errors.Is(err, domain.ErrInsufficientRole):
+			writeError(w, http.StatusForbidden, "insufficient permissions")
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "id")
+	var req application.RemoveRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	claims := auth.GetClaims(r.Context())
+	if err := h.authzService.RemoveRole(r.Context(), claims.Subject, userID, domain.RoleName(req.Role)); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			writeError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, domain.ErrRoleNotFound):
+			writeError(w, http.StatusNotFound, "role not found")
+		case errors.Is(err, domain.ErrInsufficientRole):
+			writeError(w, http.StatusForbidden, "insufficient permissions")
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	offset := 0
+	limit := 20
+
+	resp, err := h.authzService.ListUsers(r.Context(), offset, limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
+	roles, err := h.authzService.ListRoles(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, roles)
+}
+
+func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
+	var req application.ABACCheckRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.authzService.Evaluate(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

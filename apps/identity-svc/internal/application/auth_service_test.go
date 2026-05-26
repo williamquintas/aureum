@@ -112,6 +112,9 @@ func (m *mockUserRepo) Update(ctx context.Context, user *domain.User) error {
 	}
 	return nil
 }
+func (m *mockUserRepo) List(ctx context.Context, offset, limit int) ([]*domain.User, error) {
+	return nil, nil
+}
 
 func newMockOutbox() *mockOutbox {
 	return &mockOutbox{
@@ -130,6 +133,17 @@ func (m *mockBlacklist) IsBlacklisted(ctx context.Context, jti string) (bool, er
 	return false, nil
 }
 
+type mockTokenValidator struct {
+	validateFunc func(ctx context.Context, token string) (*domain.User, error)
+}
+
+func (m *mockTokenValidator) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
+	if m.validateFunc != nil {
+		return m.validateFunc(ctx, token)
+	}
+	return nil, domain.ErrTokenInvalid
+}
+
 func newTestSvc(
 	users domain.UserRepository,
 	kc KeycloakClient,
@@ -137,7 +151,7 @@ func newTestSvc(
 	idem *idempotency.Store,
 	cache Cache,
 ) *AuthService {
-	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(), testJWTSecret)
+	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(), &mockTokenValidator{}, testJWTSecret)
 }
 
 const testJWTSecret = "test-secret-key-for-signing-tokens"
