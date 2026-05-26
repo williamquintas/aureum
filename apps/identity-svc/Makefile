@@ -20,6 +20,10 @@ migrate/up:
 migrate/down:
 	migrate -path migrations -database "$(DATABASE_URL)" down
 
+dev/run:
+	@echo "Starting identity-svc locally..."
+	$(GO) run ./cmd/server
+
 gen:
 	@echo "TODO: generate proto code"
 
