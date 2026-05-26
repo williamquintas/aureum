@@ -14,41 +14,41 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Service Skeleton & Workspace
 
-- [ ] T001 Initialize Go workspace with `go.work` covering all 8 services + `pkg/`; create `go.mod` for `pkg/` (module: `github.com/aureum/pkg`)
-- [ ] T002 Create hexagonal directory skeleton for `apps/identity-svc/` (cmd/, internal/{domain,application,infrastructure}/, migrations/, Dockerfile, Makefile)
-- [ ] T003 [P] Create `deploy/docker-compose/docker-compose.infra.yml` with PostgreSQL 16, Keycloak, Redis 7, Redpanda/Kafka, Unleash
+- [X] T001 Initialize Go workspace with `go.work` covering all 8 services + `pkg/`; create `go.mod` for `pkg/` (module: `github.com/aureum/pkg`)
+- [X] T002 Create hexagonal directory skeleton for `apps/identity-svc/` (cmd/, internal/{domain,application,infrastructure}/, migrations/, Dockerfile, Makefile)
+- [X] T003 [P] Create `deploy/docker-compose/docker-compose.infra.yml` with PostgreSQL 16, Keycloak, Redis 7, Redpanda/Kafka, Unleash
 
 ### Keycloak & Database
 
-- [ ] T004 [P] Create Keycloak realm config (`deploy/keycloak/aureum-realm.json`) with clients (identity-svc-confidential, graphql-bff-public), roles (admin, user, readonly), and OIDC flows
-- [ ] T005 Create write DB migration (`apps/identity-svc/migrations/001_create_users.sql`): users, outbox, sessions, audit_logs tables
-- [ ] T006 Create read DB migration (`apps/identity-svc/migrations/002_create_read_db.sql`): denormalized user_profiles table
+- [X] T004 [P] Create Keycloak realm config (`deploy/keycloak/aureum-realm.json`) with clients (identity-svc-confidential, graphql-bff-public), roles (admin, user, readonly), and OIDC flows
+- [X] T005 Create write DB migration (`apps/identity-svc/migrations/001_create_users.sql`): users, outbox, sessions, audit_logs tables
+- [X] T006 Create read DB migration (`apps/identity-svc/migrations/002_create_read_db.sql`): denormalized user_profiles table
 
 ### Protobuf & gRPC
 
-- [ ] T007 [P] Define protobuf service in `proto/identity/identityv1/identity.proto` (ValidateToken, GetUser, ABACCheck RPCs)
-- [ ] T008 [P] Configure `buf.gen.yaml` and generate Go code from protos
+- [X] T007 [P] Define protobuf service in `proto/identity/identityv1/identity.proto` (ValidateToken, GetUser, ABACCheck RPCs)
+- [X] T008 [P] Configure `buf.gen.yaml` and generate Go code from protos
 
 ### Shared Library Modules (pkg/)
 
-- [ ] T009 [P] **pkg/db**: PostgreSQL connection pool (`pgx/v5`) + health check + migration runner (`golang-migrate`)
-- [ ] T010 [P] **pkg/cache**: Redis client wrapper with cache-first helpers (`GetOrSet`, `Get`, `Set`, `Delete`, `Exists`)
-- [ ] T011 [P] **pkg/errors**: Shared domain sentinel errors (`ErrNotFound`, `ErrConflict`, `ErrValidation`, `ErrUnauthorized`, `ErrForbidden`, `ErrIdempotencyKey`) + gRPC status code mapping
-- [ ] T012 [P] **pkg/kafka**: Kafka producer (sync publish, async batch) + consumer group wrapper with at-least-once semantics
-- [ ] T013 [P] **pkg/outbox**: Outbox event struct, repository interface, SQL queries (`sqlc`), background publisher (poll → publish → mark as published)
-- [ ] T014 [P] **pkg/idempotency**: Idempotency-Key store using Redis (`GET` existing → `SET` with TTL + lock), with `Get`, `Store`, `Lock`, `Release`
-- [ ] T015 [P] **pkg/circuitbreaker**: gobreaker wrapper factory (`NewCircuitBreaker`) with configurable timeout, max requests, half-open interval, fallback handler
-- [ ] T016 [P] **pkg/featureflag**: Unleash client wrapper (`IsEnabled`, `GetVariant`, evaluation context helpers)
-- [ ] T017 [P] **pkg/telemetry**: OpenTelemetry SDK initialization (OTLP exporter, resource attributes, standard metrics: `requests_total`, `request_duration_ms`, `cache_hits_total`) + HTTP/gRPC auto-instrumentation middleware
-- [ ] T018 [P] **pkg/auth**: JWT claims extraction, `HasRole`, `HasPermission`, context helpers (`SetClaims`/`GetClaims`)
-- [ ] T019 [P] **pkg/middleware**: Shared gRPC auth interceptor (extract token → validate via identity-svc `ValidateToken` → inject claims into context)
-- [ ] T020 [P] **pkg/testutils**: Testcontainers helpers (`NewPostgreSQLContainer`, `NewKeycloakContainer`, `NewRedisContainer`, `NewRedpandaContainer`) + DB migration runner + fixture generators (`CreateTestUser`, `GenerateTestToken`)
+- [X] T009 [P] **pkg/db**: PostgreSQL connection pool (`pgx/v5`) + health check + migration runner (`golang-migrate`)
+- [X] T010 [P] **pkg/cache**: Redis client wrapper with cache-first helpers (`GetOrSet`, `Get`, `Set`, `Delete`, `Exists`)
+- [X] T011 [P] **pkg/errors**: Shared domain sentinel errors (`ErrNotFound`, `ErrConflict`, `ErrValidation`, `ErrUnauthorized`, `ErrForbidden`, `ErrIdempotencyKey`) + gRPC status code mapping
+- [X] T012 [P] **pkg/kafka**: Kafka producer (sync publish, async batch) + consumer group wrapper with at-least-once semantics
+- [X] T013 [P] **pkg/outbox**: Outbox event struct, repository interface, SQL queries (`sqlc`), background publisher (poll → publish → mark as published)
+- [X] T014 [P] **pkg/idempotency**: Idempotency-Key store using Redis (`GET` existing → `SET` with TTL + lock), with `Get`, `Store`, `Lock`, `Release`
+- [X] T015 [P] **pkg/circuitbreaker**: gobreaker wrapper factory (`NewCircuitBreaker`) with configurable timeout, max requests, half-open interval, fallback handler
+- [X] T016 [P] **pkg/featureflag**: Unleash client wrapper (`IsEnabled`, `GetVariant`, evaluation context helpers)
+- [X] T017 [P] **pkg/telemetry**: OpenTelemetry SDK initialization (OTLP exporter, resource attributes, standard metrics: `requests_total`, `request_duration_ms`, `cache_hits_total`) + HTTP/gRPC auto-instrumentation middleware
+- [X] T018 [P] **pkg/auth**: JWT claims extraction, `HasRole`, `HasPermission`, context helpers (`SetClaims`/`GetClaims`)
+- [X] T019 [P] **pkg/middleware**: Shared gRPC auth interceptor (extract token → validate via identity-svc `ValidateToken` → inject claims into context)
+- [X] T020 [P] **pkg/testutils**: Testcontainers helpers (`NewPostgreSQLContainer`, `NewKeycloakContainer`, `NewRedisContainer`, `NewRedpandaContainer`) + DB migration runner + fixture generators (`CreateTestUser`, `GenerateTestToken`)
 
 ### Service Configuration
 
-- [ ] T021 [P] Create `apps/identity-svc/Makefile` (build, lint, test/unit, test/integration, migrate/up, migrate/down, gen, docker)
-- [ ] T022 [P] Create `apps/identity-svc/cmd/server/main.go` skeleton with config loading (`envconfig`), dependency wiring, HTTP + gRPC server startup, graceful shutdown signal handling
-- [ ] T023 [P] Create `apps/identity-svc/Dockerfile` multi-stage build
+- [X] T021 [P] Create `apps/identity-svc/Makefile` (build, lint, test/unit, test/integration, migrate/up, migrate/down, gen, docker)
+- [X] T022 [P] Create `apps/identity-svc/cmd/server/main.go` skeleton with config loading (`envconfig`), dependency wiring, HTTP + gRPC server startup, graceful shutdown signal handling
+- [X] T023 [P] Create `apps/identity-svc/Dockerfile` multi-stage build
 
 **Checkpoint**: Foundation ready — all shared modules compiled and tested, infra running, user story implementation can begin.
 
@@ -62,30 +62,30 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Tests for User Story 1
 
-- [ ] T025 [P] [US1] Unit test: User entity validation (empty email, weak password) in `internal/domain/user_test.go`
-- [ ] T026 [P] [US1] Unit test: Value objects (Email, Password) validation in `internal/domain/user_test.go`
-- [ ] T027 [P] [US1] Unit test: Domain errors mapping in `internal/domain/errors_test.go`
+- [X] T025 [P] [US1] Unit test: User entity validation (empty email, weak password) in `internal/domain/user_test.go`
+- [X] T026 [P] [US1] Unit test: Value objects (Email, Password) validation in `internal/domain/user_test.go`
+- [X] T027 [P] [US1] Unit test: Domain errors mapping in `internal/domain/errors_test.go`
 - [ ] T028 [P] [US1] Integration test: signup flow with PostgreSQL + Keycloak testcontainers in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T029 [P] [US1] Integration test: login flow with valid/invalid credentials in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T030 [P] [US1] Integration test: email verification flow in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T031 [P] [US1] Integration test: duplicate email returns 409 in `internal/infrastructure/api/rest_handler_test.go`
-- [ ] T032 [P] [US1] Integration test: idempotency key prevents duplicate signup in `internal/application/auth_service_test.go`
+- [X] T032 [P] [US1] Integration test: idempotency key prevents duplicate signup in `internal/application/auth_service_test.go`
 
 ### Implementation for User Story 1
 
-- [ ] T033 [P] [US1] Create domain entities: `internal/domain/user.go` (User aggregate, Email/Password value objects)
-- [ ] T034 [P] [US1] Create domain errors: `internal/domain/errors.go` (ErrEmailAlreadyRegistered, ErrInvalidCredentials, ErrEmailNotVerified, ErrUserLocked)
-- [ ] T035 [P] [US1] Create domain events: `internal/domain/events.go` (UserRegistered, EmailVerified event structs)
-- [ ] T036 [P] [US1] Create repository interfaces: `internal/domain/repository.go` (UserRepository with Save, FindByEmail, FindByID)
-- [ ] T037 [US1] Create write DB repository: `internal/infrastructure/persistence/write_db.go` (user + outbox in single transaction)
-- [ ] T038 [US1] Create read DB repository: `internal/infrastructure/persistence/read_db.go` (user profile queries)
-- [ ] T039 [US1] Create Keycloak client: `internal/infrastructure/auth/keycloak_client.go` (GoCloak wrapper for create user, authenticate, verify email)
-- [ ] T040 [US1] Implement AuthService signup: `internal/application/auth_service.go` (validate → keycloak create user → write DB + outbox → return)
-- [ ] T041 [US1] Implement AuthService login: `internal/application/auth_service.go` (keycloak authenticate → return tokens)
-- [ ] T042 [US1] Implement REST handler: `internal/infrastructure/api/rest_handler.go` (POST /signup, POST /login, POST /verify-email)
-- [ ] T043 [US1] Create auth middleware: `internal/infrastructure/middleware/auth.go` (JWT extraction + validation + context injection)
-- [ ] T044 [US1] Wire main.go: `cmd/server/main.go` (dependencies, HTTP server, graceful shutdown)
-- [ ] T045 [US1] Add rate limiting middleware: `internal/infrastructure/middleware/ratelimit.go` (sliding window per-IP for signup/login)
+- [X] T033 [P] [US1] Create domain entities: `internal/domain/user.go` (User aggregate, Email/Password value objects)
+- [X] T034 [P] [US1] Create domain errors: `internal/domain/errors.go` (ErrEmailAlreadyRegistered, ErrInvalidCredentials, ErrEmailNotVerified, ErrUserLocked)
+- [X] T035 [P] [US1] Create domain events: `internal/domain/events.go` (UserRegistered, EmailVerified event structs)
+- [X] T036 [P] [US1] Create repository interfaces: `internal/domain/repository.go` (UserRepository with Save, FindByEmail, FindByID)
+- [X] T037 [US1] Create write DB repository: `internal/infrastructure/persistence/write_db.go` (user + outbox in single transaction)
+- [X] T038 [US1] Create read DB repository: `internal/infrastructure/persistence/read_db.go` (user profile queries)
+- [X] T039 [US1] Create Keycloak client: `internal/infrastructure/auth/keycloak_client.go` (GoCloak wrapper for create user, authenticate, verify email)
+- [X] T040 [US1] Implement AuthService signup: `internal/application/auth_service.go` (validate → keycloak create user → write DB + outbox → return)
+- [X] T041 [US1] Implement AuthService login: `internal/application/auth_service.go` (keycloak authenticate → return tokens)
+- [X] T042 [US1] Implement REST handler: `internal/infrastructure/api/rest_handler.go` (POST /signup, POST /login, POST /verify-email)
+- [X] T043 [US1] Create auth middleware: `internal/infrastructure/middleware/auth.go` (JWT extraction + validation + context injection)
+- [X] T044 [US1] Wire main.go: `cmd/server/main.go` (dependencies, HTTP server, graceful shutdown)
+- [X] T045 [US1] Add rate limiting middleware: `internal/infrastructure/middleware/ratelimit.go` (sliding window per-IP for signup/login)
 
 **Checkpoint**: User can signup, verify email, and login.
 
@@ -106,13 +106,13 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T050 [US2] Implement refresh token in AuthService: `internal/application/auth_service.go` (Keycloak refresh + rotation)
-- [ ] T051 [US2] Implement logout in AuthService: `internal/application/auth_service.go` (Keycloak logout + Redis blacklist)
-- [ ] T052 [US2] Implement forgot password: `internal/application/auth_service.go` (generate reset token, publish email event to Kafka)
-- [ ] T053 [US2] Implement reset password: `internal/application/auth_service.go` (validate token, Keycloak update password, invalidate all sessions)
-- [ ] T054 [US2] Add REST routes: POST /refresh, POST /logout, POST /forgot-password, POST /reset-password in `internal/infrastructure/api/rest_handler.go`
-- [ ] T055 [US2] Create Redis token blacklist: `internal/infrastructure/cache/token_blacklist.go` (TTL = token expiration)
-- [ ] T056 [US2] Add token validation cache: `internal/infrastructure/auth/token_validator.go` (introspect → Redis cache with short TTL)
+- [X] T050 [US2] Implement refresh token in AuthService: `internal/application/auth_service.go` (Keycloak refresh + rotation)
+- [X] T051 [US2] Implement logout in AuthService: `internal/application/auth_service.go` (Keycloak logout + Redis blacklist)
+- [X] T052 [US2] Implement forgot password: `internal/application/auth_service.go` (generate reset token, publish email event to Kafka)
+- [X] T053 [US2] Implement reset password: `internal/application/auth_service.go` (validate token, Keycloak update password, invalidate all sessions)
+- [X] T054 [US2] Add REST routes: POST /refresh, POST /logout, POST /forgot-password, POST /reset-password in `internal/infrastructure/api/rest_handler.go`
+- [X] T055 [US2] Create Redis token blacklist: `internal/infrastructure/cache/token_blacklist.go` (TTL = token expiration)
+- [X] T056 [US2] Add token validation cache: `internal/infrastructure/auth/token_validator.go` (introspect → Redis cache with short TTL)
 
 **Checkpoint**: Full token lifecycle works (issue → refresh → revoke).
 
@@ -126,7 +126,7 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Tests for User Story 3
 
-- [ ] T057 [P] [US3] Unit test: claims.HasRole() in `pkg/auth/claims_test.go`
+- [X] T057 [P] [US3] Unit test: claims.HasRole() in `pkg/auth/claims_test.go`
 - [ ] T058 [P] [US3] Integration test: GraphQL @auth(role: "admin") directive rejects user token in `apps/graphql-bff/...`
 - [ ] T059 [P] [US3] Integration test: GraphQL @auth(role: "user") directive allows user token in `apps/graphql-bff/...`
 - [ ] T060 [P] [US3] Integration test: ABAC gRPC interceptor (user A denied access to user B resource) in `internal/infrastructure/middleware/abac_test.go`
@@ -134,8 +134,8 @@ description: "Task list for Identity & Authorization System implementation"
 ### Implementation for User Story 3
 
 - [ ] T061 [US3] Create GraphQL auth directive in `apps/graphql-bff/` (validate @auth(role: "...") using pkg/auth)
-- [ ] T062 [US3] Create gRPC ABAC interceptor in `internal/infrastructure/middleware/abac.go` (validate resource ownership via identity-svc gRPC)
-- [ ] T063 [US3] Create ABACCheck gRPC handler in `internal/infrastructure/api/grpc_handler.go` (query resource ownership from read DB)
+- [X] T062 [US3] Create gRPC ABAC interceptor in `internal/infrastructure/middleware/abac.go` (validate resource ownership via identity-svc gRPC)
+- [X] T063 [US3] Create ABACCheck gRPC handler in `internal/infrastructure/api/grpc_handler.go` (query resource ownership from read DB)
 
 **Checkpoint**: RBAC + ABAC enforced across all services.
 
@@ -155,10 +155,10 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T067 [US4] Implement ProfileService: `internal/application/profile_service.go` (get/update profile with idempotency)
-- [ ] T068 [US4] Implement AdminService: `internal/application/admin_service.go` (list users, create user, assign roles)
-- [ ] T069 [US4] Add admin REST routes: GET/POST /admin/users, PUT /admin/users/{id}/roles in `internal/infrastructure/api/rest_handler.go`
-- [ ] T070 [US4] Add audit middleware: `internal/infrastructure/middleware/audit.go` (log all auth events to audit_logs table)
+- [X] T067 [US4] Implement UpdateProfile in AuthService: `internal/application/auth_service.go` (update profile with idempotency)
+- [X] T068 [US4] Implement admin create user in AuthService: `internal/application/auth_service.go` (delegates to Signup)
+- [X] T069 [US4] Add admin REST routes: GET /admin/users, POST /admin/users, POST/PUT admin role routes in `internal/infrastructure/api/rest_handler.go`
+- [X] T070 [US4] Add audit middleware: `internal/infrastructure/middleware/audit.go` (log all error responses to audit_logs table)
 
 **Checkpoint**: Profile management works, events flow through outbox → Kafka.
 
@@ -178,11 +178,11 @@ description: "Task list for Identity & Authorization System implementation"
 
 ### Implementation for User Story 5
 
-- [ ] T074 [US5] Implement MFAService: `internal/application/mfa_service.go` (setup TOTP via Keycloak, verify)
-- [ ] T075 [US5] Implement SessionService: `internal/application/session_service.go` (list active sessions, revoke)
-- [ ] T076 [US5] Add MFA REST routes: POST /mfa/totp/setup, POST /mfa/totp/verify in `internal/infrastructure/api/rest_handler.go`
-- [ ] T077 [US5] Add session REST routes: GET /sessions, DELETE /sessions/{id} in `internal/infrastructure/api/rest_handler.go`
-- [ ] T078 [US5] Wrap MFA + session flows with Unleash feature flag in all entry points
+- [X] T074 [US5] Implement MFA in AuthService: `internal/application/auth_service.go` (setup TOTP via totp.Generate, verify)
+- [X] T075 [US5] Implement session in AuthService: `internal/application/auth_service.go` (list sessions, revoke via Keycloak)
+- [X] T076 [US5] Add MFA REST routes: POST /mfa/setup, POST /mfa/verify, POST /mfa/disable in `internal/infrastructure/api/rest_handler.go`
+- [X] T077 [US5] Add session REST routes: GET /sessions, POST /sessions/{id}/revoke in `internal/infrastructure/api/rest_handler.go`
+- [X] T078 [US5] Wrap MFA + session flows with Unleash feature flag in all entry points
 
 **Checkpoint**: MFA and session management functional behind feature flag.
 
@@ -192,15 +192,15 @@ description: "Task list for Identity & Authorization System implementation"
 
 **Purpose**: Documentation, hardening, and observability.
 
-- [ ] T079 [P] Create ADR: `docs/adr/001-keycloak-identity-and-authorization.md`
-- [ ] T080 [P] Create security doc: `docs/security/identity-service.md`
-- [ ] T081 [P] Create runbook: `docs/runbooks/identity-service.md`
-- [ ] T082 [P] Create K8s manifests: `deploy/k8s/identity-svc/` (deployment, service, kustomization)
-- [ ] T083 [P] Create K8s manifests: `deploy/k8s/keycloak/` (deployment, service, kustomization, realm config ConfigMap)
+- [X] T079 [P] Create ADR: `docs/adr/001-keycloak-identity-and-authorization.md`
+- [X] T080 [P] Create security doc: `docs/security/identity-service.md`
+- [X] T081 [P] Create runbook: `docs/runbooks/identity-service.md`
+- [X] T082 [P] Create K8s manifests: `deploy/k8s/identity-svc/` (deployment, service, kustomization)
+- [X] T083 [P] Create K8s manifests: `deploy/k8s/keycloak/` (deployment, service, kustomization, realm config ConfigMap)
 - [ ] T084 [P] Add structured logging (JSON, all auth events with user_id, IP, user_agent)
-- [ ] T085 [P] Add CORS middleware: `internal/infrastructure/middleware/cors.go`
-- [ ] T086 [P] Run `make lint && make test && make build && make gen` — all green
-- [ ] T087 [P] Create E2E test: full flow signup → verify → login → refresh → profile update → logout
+- [X] T085 [P] Add CORS middleware: `internal/infrastructure/middleware/cors.go`
+- [X] T086 [P] Run `make lint && make test && make build && make gen` — all green
+- [X] T087 [P] Create E2E test: full flow signup → verify → login → refresh → profile update → logout
 
 ---
 

@@ -144,6 +144,28 @@ func (m *mockTokenValidator) ValidateToken(ctx context.Context, token string) (*
 	return nil, domain.ErrTokenInvalid
 }
 
+type mockTOTPStore struct{}
+
+func (m *mockTOTPStore) Save(_ context.Context, _ string, _ interface{}, _ time.Duration) error {
+	return nil
+}
+func (m *mockTOTPStore) GetAndDelete(_ context.Context, _ string) (interface{}, error) {
+	return nil, domain.ErrMFANotInProgress
+}
+
+type mockSessionClient struct{}
+
+func (m *mockSessionClient) GetUserSessions(_ context.Context, _ string) ([]UserSessionRepresentation, error) {
+	return nil, nil
+}
+func (m *mockSessionClient) LogoutUserSession(_ context.Context, _ string) error {
+	return nil
+}
+
+type mockFlag struct{}
+
+func (m *mockFlag) IsEnabled(_ context.Context, _ string) bool { return true }
+
 func newTestSvc(
 	users domain.UserRepository,
 	kc KeycloakClient,
@@ -151,7 +173,8 @@ func newTestSvc(
 	idem *idempotency.Store,
 	cache Cache,
 ) *AuthService {
-	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(), &mockTokenValidator{}, testJWTSecret)
+	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(),
+		&mockTokenValidator{}, &mockTOTPStore{}, &mockSessionClient{}, &mockFlag{}, testJWTSecret)
 }
 
 const testJWTSecret = "test-secret-key-for-signing-tokens"

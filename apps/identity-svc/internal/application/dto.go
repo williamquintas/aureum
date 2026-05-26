@@ -103,3 +103,36 @@ type UserListResponse struct {
 	Users []UserProfileResponse `json:"users"`
 	Total int                   `json:"total"`
 }
+
+type EnableMFAResponse struct {
+	Secret    string `json:"secret"`
+	QRCodeURL string `json:"qr_code_url"`
+}
+
+type VerifyMFARequest struct {
+	Code string `json:"code"`
+}
+
+type DisableMFARequest struct {
+	Password string `json:"password"`
+}
+
+type SessionResponse struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	IPAddress  string    `json:"ip_address"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastAccess time.Time `json:"last_access"`
+	ExpiresAt  time.Time `json:"expires_at"`
+}
+
+type UpdateProfileRequest struct {
+	Name      string `json:"name,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+type AdminCreateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+}

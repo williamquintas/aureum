@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/aureum/identity-svc/internal/infrastructure/middleware"
 	"github.com/aureum/identity-svc/internal/infrastructure/persistence"
 	"github.com/aureum/pkg/cache"
+	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
 	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
 )
@@ -42,10 +44,34 @@ type Config struct {
 	KeycloakClientID  string `envconfig:"KEYCLOAK_CLIENT_ID" default:"identity-svc-confidential"`
 	KeycloakClientSec string `envconfig:"KEYCLOAK_CLIENT_SECRET" required:"true"`
 	JWTSecret         string `envconfig:"JWT_SECRET" required:"true"`
+	UnleashURL        string `envconfig:"UNLEASH_URL"`
+	UnleashToken      string `envconfig:"UNLEASH_TOKEN"`
+	EnabledFlags      string `envconfig:"ENABLED_FLAGS"`
 	RateLimitPerIP    int    `envconfig:"RATE_LIMIT_PER_IP" default:"5"`
 	RateLimitWindow   string `envconfig:"RATE_LIMIT_WINDOW" default:"15m"`
 	CacheTTL          string `envconfig:"CACHE_TTL" default:"5m"`
 	IdempotencyTTL    string `envconfig:"IDEMPOTENCY_TTL" default:"24h"`
+}
+
+type envFlag struct {
+	flags []string
+}
+
+func (e *envFlag) IsEnabled(_ context.Context, flag string) bool {
+	for _, f := range e.flags {
+		if strings.TrimSpace(f) == flag {
+			return true
+		}
+	}
+	return false
+}
+
+type unleashFlag struct {
+	client *ff.Client
+}
+
+func (u *unleashFlag) IsEnabled(ctx context.Context, flag string) bool {
+	return u.client.IsEnabled(ctx, flag)
 }
 
 func main() {
@@ -64,6 +90,7 @@ func run() int {
 		return 1
 	}
 
+	corsMiddleware := middleware.CORS([]string{"http://localhost:3000", "http://localhost:5173"})
 	writePool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Error("failed to connect to write database", "error", err)
@@ -98,6 +125,7 @@ func run() int {
 	idempStore := idempotency.NewStore(rdb)
 	keycloakClient := kc.NewKeycloakClient(cfg.KeycloakURL, cfg.KeycloakRealm, cfg.KeycloakClientID, cfg.KeycloakClientSec)
 	tokenBlacklist := appcache.NewTokenBlacklist(rdb)
+	totpStore := appcache.NewTOTPStore(rdb)
 
 	writeRepo := persistence.NewUserWriteRepository(writePool)
 	outboxRepo := persistence.NewOutboxRepository(writePool)
@@ -108,9 +136,24 @@ func run() int {
 	}
 	tokenValidator := kc.NewCachedTokenValidator(keycloakClient, redisCache, cacheTTL)
 
+	var flagClient application.FeatureFlag
+	if cfg.UnleashURL != "" && cfg.UnleashToken != "" {
+		uc, err := ff.NewClient(cfg.UnleashURL, "identity-svc", cfg.UnleashToken)
+		if err != nil {
+			log.Error("failed to create unleash client", "error", err)
+			return 1
+		}
+		defer func() { _ = uc.Close() }()
+		flagClient = &unleashFlag{client: uc}
+	} else {
+		flags := strings.Split(cfg.EnabledFlags, ",")
+		flagClient = &envFlag{flags: flags}
+	}
+
 	authSvc := application.NewAuthService(
 		writeRepo, keycloakClient, outboxRepo,
-		idempStore, redisCache, tokenBlacklist, tokenValidator, cfg.JWTSecret,
+		idempStore, redisCache, tokenBlacklist, tokenValidator,
+		totpStore, keycloakClient, flagClient, cfg.JWTSecret,
 	)
 	authzSvc := application.NewAuthorizationService(writeRepo, roleRepo)
 
@@ -122,13 +165,16 @@ func run() int {
 		rateLimitWindow = 15 * time.Minute
 	}
 	rateLimiter := middleware.NewRateLimiter(rdb, cfg.RateLimitPerIP, rateLimitWindow)
+	auditLogger := middleware.NewAuditLogger(writePool)
 
 	r := chi.NewRouter()
+	r.Use(corsMiddleware)
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(rateLimiter.Middleware)
+	r.Use(auditLogger.Middleware)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

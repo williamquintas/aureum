@@ -32,11 +32,18 @@ func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtSecret))
 		r.Get("/me", h.GetProfile)
+		r.Put("/me", h.UpdateProfile)
 		r.Post("/refresh", h.RefreshToken)
 		r.Post("/logout", h.Logout)
+		r.Post("/mfa/setup", h.SetupMFA)
+		r.Post("/mfa/verify", h.VerifyMFA)
+		r.Post("/mfa/disable", h.DisableMFA)
+		r.Get("/sessions", h.ListSessions)
+		r.Post("/sessions/{id}/revoke", h.RevokeSession)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
+			r.Post("/admin/users", h.AdminCreateUser)
 			r.Post("/admin/users/{id}/assign-role", h.AssignRole)
 			r.Post("/admin/users/{id}/remove-role", h.RemoveRole)
 			r.Get("/admin/users", h.ListUsers)
@@ -216,6 +223,29 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
+	var req application.AdminCreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.authService.AdminCreateUser(r.Context(), req)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrEmailAlreadyRegistered):
+			writeError(w, http.StatusConflict, err.Error())
+		case errors.Is(err, domain.ErrInvalidEmail), errors.Is(err, domain.ErrWeakPassword):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, resp)
+}
+
 func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
 	var req application.AssignRoleRequest
@@ -305,6 +335,147 @@ func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	var req application.UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	idempotencyKey := r.Header.Get("Idempotency-Key")
+
+	if err := h.authService.UpdateProfile(r.Context(), claims.Subject, req, idempotencyKey); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			writeError(w, http.StatusNotFound, "user not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	resp, err := h.authService.SetupMFA(r.Context(), claims.Subject)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrMFAAlreadyEnabled):
+			writeError(w, http.StatusConflict, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	var req application.VerifyMFARequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.VerifyAndEnableMFA(r.Context(), claims.Subject, req.Code); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrMFANotInProgress):
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, domain.ErrMFAInvalidCode):
+			writeError(w, http.StatusBadRequest, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	var req application.DisableMFARequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.DisableMFA(r.Context(), claims.Subject, req.Password); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrMFANotInProgress):
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, domain.ErrInvalidCredentials):
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+		default:
+			writeError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	sessions, err := h.authService.ListSessions(r.Context(), claims.Subject)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sessions)
+}
+
+func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	sessionID := chi.URLParam(r, "id")
+	if sessionID == "" {
+		writeError(w, http.StatusBadRequest, "session id required")
+		return
+	}
+
+	if err := h.authService.RevokeSession(r.Context(), sessionID); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

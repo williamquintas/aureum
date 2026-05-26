@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect
@@ -25,6 +26,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.16 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/segmentio/kafka-go v0.4.47 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	golang.org/x/crypto v0.49.0 // indirect

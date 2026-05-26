@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-svc
+  namespace: default
+  labels:
+    app: identity-svc
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: identity-svc
+  template:
+    metadata:
+      labels:
+        app: identity-svc
+    spec:
+      containers:
+        - name: identity-svc
+          image: aureum/identity-svc:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 9090
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: GRPC_PORT
+              value: "9090"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: identity-db
+                  key: write-dsn
+            - name: READ_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: identity-db
+                  key: read-dsn
+            - name: REDIS_ADDR
+              value: "redis:6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: KEYCLOAK_URL
+              value: "http://keycloak:8080"
+            - name: KEYCLOAK_REALM
+              value: "aureum"
+            - name: KEYCLOAK_CLIENT_ID
+              value: "identity-svc-confidential"
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: client-secret
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: identity-svc
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

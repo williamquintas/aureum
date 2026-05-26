@@ -224,6 +224,52 @@ func (c *Client) UpdatePassword(ctx context.Context, userID, newPassword string)
 	return nil
 }
 
+func (c *Client) GetUserSessions(ctx context.Context, userID string) ([]application.UserSessionRepresentation, error) {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	kcSessions, err := c.client.GetUserSessions(ctx, token.AccessToken, c.realm, userID)
+	if err != nil {
+		return nil, fmt.Errorf("keycloak get user sessions: %w", err)
+	}
+
+	sessions := make([]application.UserSessionRepresentation, 0, len(kcSessions))
+	for _, ks := range kcSessions {
+		s := application.UserSessionRepresentation{
+			ID:        safeDeref(ks.ID),
+			UserID:    safeDeref(ks.UserID),
+			IPAddress: safeDeref(ks.IPAddress),
+		}
+		if ks.Start != nil {
+			s.Start = time.UnixMilli(*ks.Start)
+		}
+		if ks.LastAccess != nil {
+			s.LastAccess = time.UnixMilli(*ks.LastAccess)
+		}
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
+}
+
+func (c *Client) LogoutUserSession(ctx context.Context, sessionID string) error {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.client.LogoutUserSession(ctx, token.AccessToken, c.realm, sessionID)
+}
+
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+func safeDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

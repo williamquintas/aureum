@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pquerna/otp/totp"
 
 	"github.com/aureum/identity-svc/internal/domain"
 	authpkg "github.com/aureum/pkg/auth"
@@ -67,6 +68,29 @@ type TokenBlacklist interface {
 	IsBlacklisted(ctx context.Context, jti string) (bool, error)
 }
 
+type FeatureFlag interface {
+	IsEnabled(ctx context.Context, flag string) bool
+}
+
+type TOTPStore interface {
+	Save(ctx context.Context, userID string, data interface{}, ttl time.Duration) error
+	GetAndDelete(ctx context.Context, userID string) (interface{}, error)
+}
+
+type UserSessionRepresentation struct {
+	ID         string
+	UserID     string
+	IPAddress  string
+	Start      time.Time
+	LastAccess time.Time
+	Expires    time.Time
+}
+
+type KeycloakClientSession interface {
+	GetUserSessions(ctx context.Context, userID string) ([]UserSessionRepresentation, error)
+	LogoutUserSession(ctx context.Context, sessionID string) error
+}
+
 type AuthService struct {
 	users          domain.UserRepository
 	keycloak       KeycloakClient
@@ -75,6 +99,9 @@ type AuthService struct {
 	cache          Cache
 	blacklist      TokenBlacklist
 	tokenValidator TokenValidator
+	totpStore      TOTPStore
+	sessionClient  KeycloakClientSession
+	featureFlag    FeatureFlag
 	jwtSecret      []byte
 }
 
@@ -92,6 +119,9 @@ func NewAuthService(
 	cache Cache,
 	blacklist TokenBlacklist,
 	tokenValidator TokenValidator,
+	totpStore TOTPStore,
+	sessionClient KeycloakClientSession,
+	featureFlag FeatureFlag,
 	jwtSecret string,
 ) *AuthService {
 	return &AuthService{
@@ -102,6 +132,9 @@ func NewAuthService(
 		cache:          cache,
 		blacklist:      blacklist,
 		tokenValidator: tokenValidator,
+		totpStore:      totpStore,
+		sessionClient:  sessionClient,
+		featureFlag:    featureFlag,
 		jwtSecret:      []byte(jwtSecret),
 	}
 }
@@ -383,4 +416,199 @@ func (s *AuthService) GetProfile(ctx context.Context, userID string) (*UserProfi
 		return nil, err
 	}
 	return &cached, nil
+}
+
+func (s *AuthService) SetupMFA(ctx context.Context, userID string) (*EnableMFAResponse, error) {
+	if !s.featureFlag.IsEnabled(ctx, "mfa") {
+		return nil, domain.ErrFeatureDisabled
+	}
+	user, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.MFAEnabled {
+		return nil, domain.ErrMFAAlreadyEnabled
+	}
+
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "Aureum",
+		AccountName: user.Email,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.totpStore.Save(ctx, userID, map[string]interface{}{
+		"secret":     key.Secret(),
+		"qr_code":    key.URL(),
+		"user_id":    userID,
+		"expires_at": time.Now().Add(10 * time.Minute).Unix(),
+	}, 10*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EnableMFAResponse{
+		Secret:    key.Secret(),
+		QRCodeURL: key.URL(),
+	}, nil
+}
+
+func (s *AuthService) VerifyAndEnableMFA(ctx context.Context, userID, code string) error {
+	if !s.featureFlag.IsEnabled(ctx, "mfa") {
+		return domain.ErrFeatureDisabled
+	}
+	dataRaw, err := s.totpStore.GetAndDelete(ctx, userID)
+	if err != nil {
+		return domain.ErrMFANotInProgress
+	}
+
+	data, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return domain.ErrMFANotInProgress
+	}
+
+	secret, ok := data["secret"].(string)
+	if !ok {
+		return domain.ErrMFANotInProgress
+	}
+
+	valid := totp.Validate(code, secret)
+	if !valid {
+		return domain.ErrMFAInvalidCode
+	}
+
+	user, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	user.MFAEnabled = true
+	if err := s.users.Update(ctx, user); err != nil {
+		return err
+	}
+
+	event, err := outbox.NewEvent("user", userID, "MFAEnabled", domain.MFAEnabledEvent{
+		UserID:    userID,
+		Timestamp: time.Now().Unix(),
+	})
+	if err == nil {
+		_ = s.outbox.Save(ctx, nil, event)
+	}
+
+	return nil
+}
+
+func (s *AuthService) DisableMFA(ctx context.Context, userID, password string) error {
+	if !s.featureFlag.IsEnabled(ctx, "mfa") {
+		return domain.ErrFeatureDisabled
+	}
+	user, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !user.MFAEnabled {
+		return domain.ErrMFANotInProgress
+	}
+
+	_, err = s.keycloak.Authenticate(ctx, user.Email, password)
+	if err != nil {
+		return domain.ErrInvalidCredentials
+	}
+
+	user.MFAEnabled = false
+	if err := s.users.Update(ctx, user); err != nil {
+		return err
+	}
+
+	event, err := outbox.NewEvent("user", userID, "MFADisabled", domain.MFADisabledEvent{
+		UserID:    userID,
+		Timestamp: time.Now().Unix(),
+	})
+	if err == nil {
+		_ = s.outbox.Save(ctx, nil, event)
+	}
+
+	return nil
+}
+
+func (s *AuthService) ListSessions(ctx context.Context, userID string) ([]SessionResponse, error) {
+	if !s.featureFlag.IsEnabled(ctx, "sessions") {
+		return nil, domain.ErrFeatureDisabled
+	}
+	rawSessions, err := s.sessionClient.GetUserSessions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]SessionResponse, 0, len(rawSessions))
+	for _, us := range rawSessions {
+		sessions = append(sessions, SessionResponse{
+			ID:         us.ID,
+			UserID:     us.UserID,
+			IPAddress:  us.IPAddress,
+			CreatedAt:  us.Start,
+			LastAccess: us.LastAccess,
+			ExpiresAt:  us.Expires,
+		})
+	}
+	return sessions, nil
+}
+
+func (s *AuthService) RevokeSession(ctx context.Context, sessionID string) error {
+	if !s.featureFlag.IsEnabled(ctx, "sessions") {
+		return domain.ErrFeatureDisabled
+	}
+	return s.sessionClient.LogoutUserSession(ctx, sessionID)
+}
+
+func (s *AuthService) UpdateProfile(
+	ctx context.Context, userID string, req UpdateProfileRequest, idempotencyKey string,
+) error {
+	if idempotencyKey != "" {
+		var existing interface{}
+		err := s.idempotency.Get(ctx, idempotencyKey, &existing)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, pkgErr.ErrNotFound) {
+			return err
+		}
+	}
+
+	user, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+	if req.AvatarURL != "" {
+		user.AvatarURL = req.AvatarURL
+	}
+
+	if err := s.users.Update(ctx, user); err != nil {
+		return err
+	}
+
+	event, err := outbox.NewEvent("user", userID, "UserProfileUpdated", domain.UserProfileUpdatedEvent{
+		UserID:    userID,
+		Email:     user.Email,
+		Timestamp: time.Now().Unix(),
+	})
+	if err == nil {
+		_ = s.outbox.Save(ctx, nil, event)
+	}
+
+	if idempotencyKey != "" {
+		ttl, _ := time.ParseDuration("24h")
+		_ = s.idempotency.Store(ctx, idempotencyKey, true, ttl)
+	}
+
+	return nil
+}
+
+func (s *AuthService) AdminCreateUser(ctx context.Context, req AdminCreateUserRequest) (*SignupResponse, error) {
+	return s.Signup(ctx, SignupRequest(req), "")
 }
