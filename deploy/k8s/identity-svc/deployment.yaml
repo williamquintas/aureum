@@ -22,7 +22,8 @@ spec:
     spec:
       containers:
         - name: identity-svc
-          image: aureum/identity-svc:latest
+          image: aureum/identity-svc:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               protocol: TCP
