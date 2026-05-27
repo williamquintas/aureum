@@ -4,3 +4,8 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - service.yaml
+
+configMapGenerator:
+  - name: keycloak-realm
+    files:
+      - aureum-realm.json

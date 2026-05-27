@@ -8,47 +8,14 @@
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "rememberMe": true,
-  "verifyEmail": true,
+  "verifyEmail": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "passwordPolicy": "length(8) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1)",
   "defaultRoles": [],
-  "requiredActions": [
-    {
-      "alias": "VERIFY_EMAIL",
-      "name": "Verify Email",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 0,
-      "config": {}
-    },
-    {
-      "alias": "UPDATE_PROFILE",
-      "name": "Update Profile",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 40,
-      "config": {}
-    },
-    {
-      "alias": "CONFIGURE_TOTP",
-      "name": "Configure OTP",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 10,
-      "config": {}
-    },
-    {
-      "alias": "UPDATE_PASSWORD",
-      "name": "Update Password",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 30,
-      "config": {}
-    }
-  ],
+  "requiredActions": [],
   "roles": {
     "realm": [
       {
@@ -80,11 +47,10 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
       "protocol": "openid-connect",
       "clientAuthenticatorType": "client-secret",
-      "secret": "placeholder-secret",
       "defaultRoles": [],
-      "directAccessGrantsEnabled": true,
       "redirectUris": [],
       "webOrigins": [],
       "attributes": {
