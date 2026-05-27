@@ -32,7 +32,7 @@ CREATE TRIGGER set_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TABLE outbox (
+CREATE TABLE IF NOT EXISTS outbox_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     aggregate_type VARCHAR(255) NOT NULL,
     aggregate_id VARCHAR(255) NOT NULL,
@@ -43,11 +43,11 @@ CREATE TABLE outbox (
     indexed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX idx_outbox_unpublished ON outbox(published_at) WHERE published_at IS NULL;
-CREATE INDEX idx_outbox_indexed ON outbox(indexed) WHERE indexed = FALSE;
-CREATE INDEX idx_outbox_aggregate ON outbox(aggregate_type, aggregate_id);
-CREATE INDEX idx_outbox_event_type ON outbox(event_type);
-CREATE INDEX idx_outbox_created_at ON outbox(created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_unpublished ON outbox_events(published_at) WHERE published_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_outbox_indexed ON outbox_events(indexed) WHERE indexed = FALSE;
+CREATE INDEX IF NOT EXISTS idx_outbox_aggregate ON outbox_events(aggregate_type, aggregate_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_event_type ON outbox_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON outbox_events(created_at);
 
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

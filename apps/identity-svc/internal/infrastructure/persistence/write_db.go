@@ -147,7 +147,7 @@ func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 }
 
 func (r *OutboxRepository) Save(ctx context.Context, tx any, event *outbox.Event) error {
-	query := `INSERT INTO outbox (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
 	_, err := r.pool.Exec(ctx, query,

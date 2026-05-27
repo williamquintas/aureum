@@ -60,7 +60,7 @@ curl -f http://keycloak:8080/health/ready
 redis-cli -h redis ping
 
 # Check outbox lag
-psql -d identity_write -c "SELECT COUNT(*) FROM outbox WHERE published_at IS NULL;"
+psql -d identity_write -c "SELECT COUNT(*) FROM outbox_events WHERE published_at IS NULL;"
 
 # Check Kafka consumer lag
 kafka-consumer-groups --bootstrap-server kafka:9092 \
