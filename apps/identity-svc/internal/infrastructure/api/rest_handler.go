@@ -70,7 +70,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidEmail), errors.Is(err, domain.ErrWeakPassword):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}

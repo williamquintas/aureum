@@ -42,7 +42,7 @@ func (c *Client) CreateUser(ctx context.Context, email, password, name string) (
 	}
 
 	attrs := map[string][]string{
-		"email_verified": {"false"},
+		"email_verified": {"true"},
 	}
 	user := gocloak.User{
 		Email:      &email,
