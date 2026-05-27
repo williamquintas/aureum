@@ -109,7 +109,7 @@ docker: ## Build Docker images for all services
 dev: ## Start local development with Tilt
 	@echo "Starting local development environment..."
 	@if [ -f deploy/tilt/Tiltfile ]; then \
-		tilt up; \
+		tilt up -f deploy/tilt/Tiltfile; \
 	else \
 		echo "No Tiltfile found. Install Tilt: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash"; \
 		exit 1; \
