@@ -50,7 +50,7 @@ lint: ## Run golangci-lint on workspace modules
 .PHONY: test/unit
 test/unit: ## Run unit tests (short mode, no external deps)
 	@echo "Running unit tests..."
-	$(GO) test -short -race -count=1 ./apps/identity-svc/... ./pkg/... ./proto/...
+	$(GO) test -short -race -count=1 ./apps/identity-svc/... ./apps/transaction-svc/... ./pkg/... ./proto/...
 
 .PHONY: test/integration
 test/integration: ## Run integration tests (requires testcontainers)
