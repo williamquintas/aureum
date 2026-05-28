@@ -148,13 +148,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T048 [US4] Create `apps/graphql-bff/graph/schema.graphqls` with full GraphQL schema (types, enums, queries, connections, page info) following `contracts/graphql-bff-schema.md`
-- [ ] T049 [US4] Generate gqlgen models via `cd apps/graphql-bff && go run github.com/99designs/gqlgen generate`
-- [ ] T050 [P] [US4] Create `apps/graphql-bff/graph/resolver.go` with resolver root structure
-- [ ] T051 [P] [US4] Create `apps/graphql-bff/graph/query.resolver.go` with query resolvers for income, fixedExpense, variableExpense, incomes, fixedExpenses, variableExpenses
-- [ ] T052 [US4] Implement `transactions` unified query resolver in `apps/graphql-bff/graph/query.resolver.go` — fetches all three types from transaction-svc gRPC, returns as `Transaction` union
-- [ ] T053 [US4] Implement `me` query resolver — fetches user profile from identity-svc gRPC, returns user details (graceful degradation on failure)
-- [ ] T054 [US4] Implement auth directive resolver in `apps/graphql-bff/graph/directive.go` — validates Keycloak JWT, extracts user ID, injects into context
+- [x] T048 [US4] Create `apps/graphql-bff/graph/schema.graphqls` with full GraphQL schema (types, enums, queries, connections, page info) following `contracts/graphql-bff-schema.md`
+- [x] T049 [US4] Generate gqlgen models via `gqlgen generate`
+- [x] T050 [P] [US4] Create `apps/graphql-bff/graph/resolver.go` with resolver root structure
+- [x] T051 [P] [US4] Create `apps/graphql-bff/graph/resolver.go` with query resolvers for income, fixedExpense, variableExpense, incomes, fixedExpenses, variableExpenses
+- [x] T052 [US4] Implement `transactions` unified query resolver — fetches all three types from transaction-svc gRPC, returns as `Transaction` union
+- [x] T053 [US4] Implement `me` query resolver — fetches user profile from identity-svc gRPC, returns user details
+- [x] T054 [US4] Implement auth directive resolver in `apps/graphql-bff/graph/directive.go` — validates Keycloak JWT via identity-svc ValidateToken, extracts user ID, injects into context
 
 **Checkpoint**: GraphQL BFF fully functional, all queries return data
 
