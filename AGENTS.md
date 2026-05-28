@@ -132,6 +132,7 @@ When modifying services, document the impact:
 - `.github/workflows/` — CI/CD workflows
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+This feature implements a transactions service and GraphQL BFF.
+Read the plan at: specs/001-transactions-service/plan.md
+Key docs: data-model.md, research.md, quickstart.md, contracts/
 <!-- SPECKIT END -->
