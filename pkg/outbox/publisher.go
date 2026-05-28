@@ -12,14 +12,16 @@ import (
 type Publisher struct {
 	store    *Store
 	producer *kafka.Producer
+	topic    string
 	ticker   *time.Ticker
 	stopCh   chan struct{}
 }
 
-func NewPublisher(store *Store, producer *kafka.Producer, interval time.Duration) *Publisher {
+func NewPublisher(store *Store, producer *kafka.Producer, topic string, interval time.Duration) *Publisher {
 	return &Publisher{
 		store:    store,
 		producer: producer,
+		topic:    topic,
 		ticker:   time.NewTicker(interval),
 		stopCh:   make(chan struct{}),
 	}
@@ -61,7 +63,7 @@ func (p *Publisher) publishPending(ctx context.Context) {
 			continue
 		}
 
-		if err := p.producer.Publish(ctx, event.EventType, []byte(event.AggregateID), data); err != nil {
+		if err := p.producer.Publish(ctx, p.topic, []byte(event.AggregateID), data); err != nil {
 			log.Printf("outbox: failed to publish event %s: %v", event.ID, err)
 			continue
 		}
