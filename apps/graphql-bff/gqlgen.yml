@@ -1,0 +1,23 @@
+schema:
+  - graph/schema.graphqls
+exec:
+  filename: graph/generated.go
+  package: graph
+model:
+  filename: graph/model/models_gen.go
+  package: model
+resolver:
+  filename: graph/resolver.go
+  type: Resolver
+  package: graph
+
+autobind:
+  - github.com/aureum/graphql-bff/graph/model
+
+models:
+  DateTime:
+    model: github.com/99designs/gqlgen/graphql.Time
+  Date:
+    model: github.com/aureum/graphql-bff/graph/model.Date
+  Cents:
+    model: github.com/99designs/gqlgen/graphql.Int64

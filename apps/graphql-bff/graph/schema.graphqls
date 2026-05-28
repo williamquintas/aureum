@@ -1,0 +1,181 @@
+scalar DateTime
+scalar Date
+scalar Cents
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum IncomeType {
+  SALARY
+  FREELANCE
+  INVESTMENT
+  BUSINESS
+  REFUND
+  OTHER
+}
+
+enum ExpenseType {
+  ESSENTIAL
+  DISCRETIONARY
+  OCCASIONAL
+  EMERGENCY
+  OTHER
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  BANK_TRANSFER
+  PIX
+  OTHER
+}
+
+type Income {
+  id: ID!
+  userId: ID!
+  description: String!
+  source: String!
+  incomeType: IncomeType!
+  receivedDate: Date!
+  receivedAmount: Cents!
+  status: TransactionStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FixedExpense {
+  id: ID!
+  userId: ID!
+  description: String!
+  category: String!
+  dayOfMonth: Int!
+  paymentMethod: PaymentMethod!
+  status: TransactionStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type VariableExpense {
+  id: ID!
+  userId: ID!
+  description: String!
+  destination: String!
+  category: String!
+  expenseType: ExpenseType!
+  paymentMethod: PaymentMethod!
+  paymentDate: Date!
+  paidAmount: Cents!
+  status: TransactionStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+union Transaction = Income | FixedExpense | VariableExpense
+
+type TransactionEdge {
+  node: Transaction!
+  cursor: String!
+}
+
+type TransactionConnection {
+  edges: [TransactionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type UserProfile {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+directive @auth(role: String!) on FIELD_DEFINITION
+
+type Query {
+  income(id: ID!): Income! @auth(role: "user")
+  fixedExpense(id: ID!): FixedExpense! @auth(role: "user")
+  variableExpense(id: ID!): VariableExpense! @auth(role: "user")
+
+  incomes(
+    first: Int = 20
+    after: String
+    status: TransactionStatus
+    dateFrom: Date
+    dateTo: Date
+  ): IncomeConnection! @auth(role: "user")
+
+  fixedExpenses(
+    first: Int = 20
+    after: String
+    status: TransactionStatus
+  ): FixedExpenseConnection! @auth(role: "user")
+
+  variableExpenses(
+    first: Int = 20
+    after: String
+    status: TransactionStatus
+    dateFrom: Date
+    dateTo: Date
+    category: String
+  ): VariableExpenseConnection! @auth(role: "user")
+
+  transactions(
+    first: Int = 20
+    after: String
+    type: TransactionTypeFilter
+    dateFrom: Date
+    dateTo: Date
+  ): TransactionConnection! @auth(role: "user")
+
+  me: UserProfile! @auth(role: "user")
+}
+
+enum TransactionTypeFilter {
+  INCOME
+  FIXED_EXPENSE
+  VARIABLE_EXPENSE
+}
+
+type IncomeConnection {
+  edges: [IncomeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type IncomeEdge {
+  node: Income!
+  cursor: String!
+}
+
+type FixedExpenseConnection {
+  edges: [FixedExpenseEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type FixedExpenseEdge {
+  node: FixedExpense!
+  cursor: String!
+}
+
+type VariableExpenseConnection {
+  edges: [VariableExpenseEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type VariableExpenseEdge {
+  node: VariableExpense!
+  cursor: String!
+}

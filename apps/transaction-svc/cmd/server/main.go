@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/pkg/idempotency"
@@ -121,10 +122,23 @@ func loadConfig() config {
 func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	userID := extractUserIDFromToken(ctx)
 	if userID == "" {
+		userID = extractUserIDFromMetadata(ctx)
+	}
+	if userID == "" {
 		userID = "system"
 	}
 	ctx = context.WithValue(ctx, "user_id", userID)
 	return handler(ctx, req)
+}
+
+func extractUserIDFromMetadata(ctx context.Context) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		values := md.Get("x-user-id")
+		if len(values) > 0 {
+			return values[0]
+		}
+	}
+	return ""
 }
 
 func extractUserIDFromToken(ctx context.Context) string {
