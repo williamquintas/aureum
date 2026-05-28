@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -77,6 +80,11 @@ type TOTPStore interface {
 	GetAndDelete(ctx context.Context, userID string) (interface{}, error)
 }
 
+type EmailOTPStore interface {
+	Save(ctx context.Context, email, otp string, ttl time.Duration) error
+	GetAndDelete(ctx context.Context, email string) (string, error)
+}
+
 type UserSessionRepresentation struct {
 	ID         string
 	UserID     string
@@ -100,6 +108,7 @@ type AuthService struct {
 	blacklist      TokenBlacklist
 	tokenValidator TokenValidator
 	totpStore      TOTPStore
+	emailOTPStore  EmailOTPStore
 	sessionClient  KeycloakClientSession
 	featureFlag    FeatureFlag
 	jwtSecret      []byte
@@ -120,6 +129,7 @@ func NewAuthService(
 	blacklist TokenBlacklist,
 	tokenValidator TokenValidator,
 	totpStore TOTPStore,
+	emailOTPStore EmailOTPStore,
 	sessionClient KeycloakClientSession,
 	featureFlag FeatureFlag,
 	jwtSecret string,
@@ -133,10 +143,19 @@ func NewAuthService(
 		blacklist:      blacklist,
 		tokenValidator: tokenValidator,
 		totpStore:      totpStore,
+		emailOTPStore:  emailOTPStore,
 		sessionClient:  sessionClient,
 		featureFlag:    featureFlag,
 		jwtSecret:      []byte(jwtSecret),
 	}
+}
+
+func generateOTP() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", fmt.Errorf("failed to generate OTP: %w", err)
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
 func (s *AuthService) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
@@ -187,7 +206,8 @@ func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotency
 		CustomAttributes: map[string]interface{}{},
 	}
 
-	if err := s.users.Save(ctx, user); err != nil {
+	otp, err := generateOTP()
+	if err != nil {
 		return nil, err
 	}
 
@@ -200,14 +220,42 @@ func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotency
 	if err != nil {
 		return nil, err
 	}
-	if err := s.outbox.Save(ctx, nil, event); err != nil {
+
+	otpEvent, err := outbox.NewEvent("user", user.ID, "EmailOtpGenerated", domain.EmailOtpGeneratedEvent{
+		UserID: user.ID,
+		Email:  user.Email,
+		OTP:    otp,
+		TTL:    600,
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	resp := &SignupResponse{
-		ID:     user.ID,
-		Email:  user.Email,
-		Status: string(user.Status),
+	var resp *SignupResponse
+	err = s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Save(txCtx, user); err != nil {
+			return err
+		}
+		if err := s.outbox.Save(txCtx, nil, event); err != nil {
+			return err
+		}
+		if err := s.outbox.Save(txCtx, nil, otpEvent); err != nil {
+			return err
+		}
+		resp = &SignupResponse{
+			ID:     user.ID,
+			Email:  user.Email,
+			Status: string(user.Status),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	otpTTL := 10 * time.Minute
+	if err := s.emailOTPStore.Save(ctx, user.Email, otp, otpTTL); err != nil {
+		return nil, err
 	}
 
 	if idempotencyKey != "" {
@@ -247,16 +295,22 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 
 	now := time.Now()
 	user.LastLoginAt = &now
-	_ = s.users.Update(ctx, user)
 
-	event, err := outbox.NewEvent("user", user.ID, "UserLoggedIn", domain.UserLoggedInEvent{
+	event, eventErr := outbox.NewEvent("user", user.ID, "UserLoggedIn", domain.UserLoggedInEvent{
 		UserID:    user.ID,
 		Email:     user.Email,
 		Timestamp: now.Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
-	}
+
+	_ = s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Update(txCtx, user); err != nil {
+			return err
+		}
+		if eventErr == nil {
+			return s.outbox.Save(txCtx, nil, event)
+		}
+		return nil
+	})
 
 	return tokens, nil
 }
@@ -265,6 +319,14 @@ func (s *AuthService) VerifyEmail(ctx context.Context, req VerifyEmailRequest) e
 	_, err := domain.NewEmail(req.Email)
 	if err != nil {
 		return err
+	}
+
+	storedOTP, err := s.emailOTPStore.GetAndDelete(ctx, req.Email)
+	if err != nil {
+		return domain.ErrOTPExpired
+	}
+	if storedOTP != req.OTP {
+		return domain.ErrInvalidOTP
 	}
 
 	user, err := s.users.FindByEmail(ctx, req.Email)
@@ -278,20 +340,22 @@ func (s *AuthService) VerifyEmail(ctx context.Context, req VerifyEmailRequest) e
 
 	user.EmailVerified = true
 	user.Status = domain.UserStatusActive
-	if err := s.users.Update(ctx, user); err != nil {
-		return err
-	}
 
 	event, err := outbox.NewEvent("user", user.ID, "EmailVerified", domain.EmailVerifiedEvent{
 		UserID:    user.ID,
 		Email:     user.Email,
 		Timestamp: time.Now().Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Update(txCtx, user); err != nil {
+			return err
+		}
+		return s.outbox.Save(txCtx, nil, event)
+	})
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (*LoginResponse, error) {
@@ -383,11 +447,11 @@ func (s *AuthService) ResetPassword(ctx context.Context, req ResetPasswordReques
 		Email:     user.Email,
 		Timestamp: time.Now().Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return s.outbox.Save(ctx, nil, event)
 }
 
 func (s *AuthService) GetProfile(ctx context.Context, userID string) (*UserProfileResponse, error) {
@@ -483,20 +547,21 @@ func (s *AuthService) VerifyAndEnableMFA(ctx context.Context, userID, code strin
 		return err
 	}
 
-	user.MFAEnabled = true
-	if err := s.users.Update(ctx, user); err != nil {
-		return err
-	}
-
 	event, err := outbox.NewEvent("user", userID, "MFAEnabled", domain.MFAEnabledEvent{
 		UserID:    userID,
 		Timestamp: time.Now().Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	user.MFAEnabled = true
+	return s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Update(txCtx, user); err != nil {
+			return err
+		}
+		return s.outbox.Save(txCtx, nil, event)
+	})
 }
 
 func (s *AuthService) DisableMFA(ctx context.Context, userID, password string) error {
@@ -516,20 +581,21 @@ func (s *AuthService) DisableMFA(ctx context.Context, userID, password string) e
 		return domain.ErrInvalidCredentials
 	}
 
-	user.MFAEnabled = false
-	if err := s.users.Update(ctx, user); err != nil {
-		return err
-	}
-
 	event, err := outbox.NewEvent("user", userID, "MFADisabled", domain.MFADisabledEvent{
 		UserID:    userID,
 		Timestamp: time.Now().Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	user.MFAEnabled = false
+	return s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Update(txCtx, user); err != nil {
+			return err
+		}
+		return s.outbox.Save(txCtx, nil, event)
+	})
 }
 
 func (s *AuthService) ListSessions(ctx context.Context, userID string) ([]SessionResponse, error) {
@@ -588,17 +654,22 @@ func (s *AuthService) UpdateProfile(
 		user.AvatarURL = req.AvatarURL
 	}
 
-	if err := s.users.Update(ctx, user); err != nil {
-		return err
-	}
-
 	event, err := outbox.NewEvent("user", userID, "UserProfileUpdated", domain.UserProfileUpdatedEvent{
 		UserID:    userID,
 		Email:     user.Email,
 		Timestamp: time.Now().Unix(),
 	})
-	if err == nil {
-		_ = s.outbox.Save(ctx, nil, event)
+	if err != nil {
+		return err
+	}
+
+	if err := s.users.WithTx(ctx, func(txCtx context.Context) error {
+		if err := s.users.Update(txCtx, user); err != nil {
+			return err
+		}
+		return s.outbox.Save(txCtx, nil, event)
+	}); err != nil {
+		return err
 	}
 
 	if idempotencyKey != "" {

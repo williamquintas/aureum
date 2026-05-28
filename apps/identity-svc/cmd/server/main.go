@@ -28,6 +28,8 @@ import (
 	"github.com/aureum/pkg/cache"
 	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
+	"github.com/aureum/pkg/kafka"
+	"github.com/aureum/pkg/outbox"
 	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
 )
 
@@ -126,6 +128,18 @@ func run() int {
 	keycloakClient := kc.NewKeycloakClient(cfg.KeycloakURL, cfg.KeycloakRealm, cfg.KeycloakClientID, cfg.KeycloakClientSec)
 	tokenBlacklist := appcache.NewTokenBlacklist(rdb)
 	totpStore := appcache.NewTOTPStore(rdb)
+	emailOTPStore := appcache.NewEmailOTPStore(rdb)
+
+	kafkaProducer, err := kafka.NewProducer(strings.Split(cfg.KafkaBrokers, ","))
+	if err != nil {
+		log.Error("failed to create kafka producer", "error", err)
+		return 1
+	}
+	defer kafkaProducer.Close()
+
+	outboxStore := outbox.NewStore(writePool)
+	outboxPublisher := outbox.NewPublisher(outboxStore, kafkaProducer, "identity-events", 5*time.Second)
+	outboxPublisher.Start(ctx)
 
 	writeRepo := persistence.NewUserWriteRepository(writePool)
 	outboxRepo := persistence.NewOutboxRepository(writePool)
@@ -153,7 +167,7 @@ func run() int {
 	authSvc := application.NewAuthService(
 		writeRepo, keycloakClient, outboxRepo,
 		idempStore, redisCache, tokenBlacklist, tokenValidator,
-		totpStore, keycloakClient, flagClient, cfg.JWTSecret,
+		totpStore, emailOTPStore, keycloakClient, flagClient, cfg.JWTSecret,
 	)
 	authzSvc := application.NewAuthorizationService(writeRepo, roleRepo)
 
@@ -219,6 +233,8 @@ func run() int {
 	sig := <-quit
 
 	log.Info("shutting down", "signal", sig.String())
+
+	outboxPublisher.Stop()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()

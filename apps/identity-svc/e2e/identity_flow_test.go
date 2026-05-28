@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,10 +117,14 @@ func TestIdentityFlow(t *testing.T) {
 		require.Contains(t, e.Error, "email not verified")
 	})
 
+	var otp string
+
 	t.Run("verify_email", func(t *testing.T) {
+		otp = getRedisOTP(t, email)
+		require.NotEmpty(t, otp)
 		resp := client.post(t, "/verify-email", map[string]string{
 			"email": email,
-			"otp":   "000000",
+			"otp":   otp,
 		}, nil)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		resp.Body.Close()
@@ -204,4 +209,14 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getRedisOTP(t *testing.T, email string) string {
+	t.Helper()
+	addr := getEnv("REDIS_ADDR", "localhost:6379")
+	rdb := redis.NewClient(&redis.Options{Addr: addr})
+	defer rdb.Close()
+	val, err := rdb.GetDel(context.Background(), "otp:verify:"+email).Result()
+	require.NoError(t, err)
+	return val
 }

@@ -89,6 +89,7 @@ type mockUserRepo struct {
 	findByIDFunc         func(ctx context.Context, id string) (*domain.User, error)
 	findByKeycloakIDFunc func(ctx context.Context, keycloakID string) (*domain.User, error)
 	updateFunc           func(ctx context.Context, user *domain.User) error
+	withTxFunc           func(ctx context.Context, fn func(context.Context) error) error
 }
 
 func (m *mockUserRepo) Save(ctx context.Context, user *domain.User) error {
@@ -114,6 +115,12 @@ func (m *mockUserRepo) Update(ctx context.Context, user *domain.User) error {
 }
 func (m *mockUserRepo) List(ctx context.Context, offset, limit int) ([]*domain.User, error) {
 	return nil, nil
+}
+func (m *mockUserRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	if m.withTxFunc != nil {
+		return m.withTxFunc(ctx, fn)
+	}
+	return fn(ctx)
 }
 
 func newMockOutbox() *mockOutbox {
@@ -153,6 +160,15 @@ func (m *mockTOTPStore) GetAndDelete(_ context.Context, _ string) (interface{}, 
 	return nil, domain.ErrMFANotInProgress
 }
 
+type mockEmailOTPStore struct{}
+
+func (m *mockEmailOTPStore) Save(_ context.Context, _ string, _ string, _ time.Duration) error {
+	return nil
+}
+func (m *mockEmailOTPStore) GetAndDelete(_ context.Context, _ string) (string, error) {
+	return "", domain.ErrOTPExpired
+}
+
 type mockSessionClient struct{}
 
 func (m *mockSessionClient) GetUserSessions(_ context.Context, _ string) ([]UserSessionRepresentation, error) {
@@ -174,7 +190,8 @@ func newTestSvc(
 	cache Cache,
 ) *AuthService {
 	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(),
-		&mockTokenValidator{}, &mockTOTPStore{}, &mockSessionClient{}, &mockFlag{}, testJWTSecret)
+		&mockTokenValidator{}, &mockTOTPStore{}, &mockEmailOTPStore{},
+		&mockSessionClient{}, &mockFlag{}, testJWTSecret)
 }
 
 const testJWTSecret = "test-secret-key-for-signing-tokens"
