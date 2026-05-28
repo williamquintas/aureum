@@ -91,14 +91,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T030 [P] [US1] Implement CreateIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — validates input, calls application service, returns gRPC response
-- [ ] T031 [P] [US1] Implement GetIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — queries read DB, returns income record
-- [ ] T032 [P] [US1] Implement UpdateIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — partial update with idempotency
-- [ ] T033 [P] [US1] Implement DeleteIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — soft delete (sets deleted_at)
-- [ ] T034 [P] [US1] Implement ListIncomes RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — cursor-based pagination with date/status filters
-- [ ] T035 [US1] Add domain event for income creation in `apps/transaction-svc/internal/domain/events.go` (IncomeCreated, IncomeUpdated, IncomeDeleted) with outbox integration
+- [x] T030 [P] [US1] Implement CreateIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — validates input, calls application service, returns gRPC response
+- [x] T031 [P] [US1] Implement GetIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — queries read DB, returns income record
+- [x] T032 [P] [US1] Implement UpdateIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — partial update with idempotency
+- [x] T033 [P] [US1] Implement DeleteIncome RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — soft delete (sets deleted_at)
+- [x] T034 [P] [US1] Implement ListIncomes RPC in `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` — cursor-based pagination with date/status filters
+- [x] T035 [US1] Add domain event for income creation in `apps/transaction-svc/internal/domain/events.go` (IncomeCreated, IncomeUpdated, IncomeDeleted) with outbox integration
 
-**Checkpoint**: Income CRUD fully functional via gRPC
+**Checkpoint**: Income CRUD fully functional via gRPC ✅
 
 ---
 
@@ -110,14 +110,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T036 [P] [US2] Implement CreateFixedExpense RPC in gRPC handler
-- [ ] T037 [P] [US2] Implement GetFixedExpense RPC in gRPC handler
-- [ ] T038 [P] [US2] Implement UpdateFixedExpense RPC in gRPC handler
-- [ ] T039 [P] [US2] Implement DeleteFixedExpense RPC in gRPC handler
-- [ ] T040 [P] [US2] Implement ListFixedExpenses RPC in gRPC handler with day range and status filters
-- [ ] T041 [US2] Add domain events for fixed expense CRUD operations
+- [x] T036 [P] [US2] Implement CreateFixedExpense RPC in gRPC handler
+- [x] T037 [P] [US2] Implement GetFixedExpense RPC in gRPC handler
+- [x] T038 [P] [US2] Implement UpdateFixedExpense RPC in gRPC handler
+- [x] T039 [P] [US2] Implement DeleteFixedExpense RPC in gRPC handler
+- [x] T040 [P] [US2] Implement ListFixedExpenses RPC in gRPC handler with day range and status filters
+- [x] T041 [US2] Add domain events for fixed expense CRUD operations
 
-**Checkpoint**: FixedExpense CRUD fully functional via gRPC
+**Checkpoint**: FixedExpense CRUD fully functional via gRPC ✅
 
 ---
 
@@ -129,12 +129,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Implement CreateVariableExpense RPC in gRPC handler
-- [ ] T043 [P] [US3] Implement GetVariableExpense RPC in gRPC handler
-- [ ] T044 [P] [US3] Implement UpdateVariableExpense RPC in gRPC handler
-- [ ] T045 [P] [US3] Implement DeleteVariableExpense RPC in gRPC handler
-- [ ] T046 [P] [US3] Implement ListVariableExpenses RPC in gRPC handler with date range, status, category filters
-- [ ] T047 [US3] Add domain events for variable expense CRUD operations
+- [x] T042 [P] [US3] Implement CreateVariableExpense RPC in gRPC handler
+- [x] T043 [P] [US3] Implement GetVariableExpense RPC in gRPC handler
+- [x] T044 [P] [US3] Implement UpdateVariableExpense RPC in gRPC handler
+- [x] T045 [P] [US3] Implement DeleteVariableExpense RPC in gRPC handler
+- [x] T046 [P] [US3] Implement ListVariableExpenses RPC in gRPC handler with date range, status, category filters
+- [x] T047 [US3] Add domain events for variable expense CRUD operations
 
 **Checkpoint**: VariableExpense CRUD fully functional via gRPC
 
