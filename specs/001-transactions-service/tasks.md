@@ -23,13 +23,13 @@
 
 **Purpose**: Initialize Go modules, project structure, and tooling for both services
 
-- [ ] T001 Create `apps/transaction-svc/go.mod` with module `github.com/aureum/transaction-svc` and required dependencies (pgx, redis, kafka-go, gRPC, testcontainers, testify)
-- [ ] T002 Create `apps/graphql-bff/go.mod` with module `github.com/aureum/graphql-bff` and required dependencies (gqlgen, chi, redis, gRPC client, testify)
-- [ ] T003 [P] Create `apps/transaction-svc/Dockerfile` following identity-svc Dockerfile pattern
-- [ ] T004 [P] Create `apps/graphql-bff/Dockerfile` following identity-svc Dockerfile pattern
-- [ ] T005 [P] Create `apps/transaction-svc/Makefile` with targets: build, test, lint, migrate
-- [ ] T006 [P] Create `apps/graphql-bff/Makefile` with targets: build, test, lint, gen
-- [ ] T007 Create `apps/transaction-svc/.env.example` with required environment variables
+- [x] T001 Create `apps/transaction-svc/go.mod` with module `github.com/aureum/transaction-svc` and required dependencies (pgx, redis, kafka-go, gRPC, testcontainers, testify)
+- [x] T002 Create `apps/graphql-bff/go.mod` with module `github.com/aureum/graphql-bff` and required dependencies (gqlgen, chi, redis, gRPC client, testify)
+- [x] T003 [P] Create `apps/transaction-svc/Dockerfile` following identity-svc Dockerfile pattern
+- [x] T004 [P] Create `apps/graphql-bff/Dockerfile` following identity-svc Dockerfile pattern
+- [x] T005 [P] Create `apps/transaction-svc/Makefile` with targets: build, test, lint, migrate
+- [x] T006 [P] Create `apps/graphql-bff/Makefile` with targets: build, test, lint, gen
+- [x] T007 Create `apps/transaction-svc/.env.example` with required environment variables
 
 ---
 
@@ -41,34 +41,34 @@
 
 ### Proto Definitions
 
-- [ ] T008 Create `proto/aureum/transactions/v1/transactions.proto` with messages and service definition for all three entity types (per `contracts/transaction-svc-grpc.md`)
-- [ ] T009 Generate Go code from proto definitions via `make gen`
+- [x] T008 Create `proto/aureum/transactions/v1/transactions.proto` with messages and service definition for all three entity types (per `contracts/transaction-svc-grpc.md`)
+- [x] T009 Generate Go code from proto definitions via `make gen`
 
 ### Domain Layer
 
-- [ ] T010 Create `apps/transaction-svc/internal/domain/errors.go` with domain errors for transactions service (ErrNotFound, ErrValidation, ErrNegativeAmount, ErrInvalidStatus, ErrInvalidDay, etc.)
-- [ ] T011 Create `apps/transaction-svc/internal/domain/income.go` with Income entity, CreateIncomeInput, IncomeType enum, IncomeStatus enum, and NewIncome constructor with validation
-- [ ] T012 Create `apps/transaction-svc/internal/domain/fixed_expense.go` with FixedExpense entity, CreateFixedExpenseInput, PaymentMethod enum, and NewFixedExpense constructor with day_of_month validation
-- [ ] T013 Create `apps/transaction-svc/internal/domain/variable_expense.go` with VariableExpense entity, CreateVariableExpenseInput, ExpenseType enum, and NewVariableExpense constructor with amount validation
-- [ ] T014 Create `apps/transaction-svc/internal/domain/repository.go` with repository interfaces: IncomeRepository, FixedExpenseRepository, VariableExpenseRepository (Save, FindByID, Update, Delete, List methods + WithTx each)
+- [x] T010 Create `apps/transaction-svc/internal/domain/errors.go` with domain errors for transactions service (ErrNotFound, ErrValidation, ErrNegativeAmount, ErrInvalidStatus, ErrInvalidDay, etc.)
+- [x] T011 Create `apps/transaction-svc/internal/domain/income.go` with Income entity, CreateIncomeInput, IncomeType enum, IncomeStatus enum, and NewIncome constructor with validation
+- [x] T012 Create `apps/transaction-svc/internal/domain/fixed_expense.go` with FixedExpense entity, CreateFixedExpenseInput, PaymentMethod enum, and NewFixedExpense constructor with day_of_month validation
+- [x] T013 Create `apps/transaction-svc/internal/domain/variable_expense.go` with VariableExpense entity, CreateVariableExpenseInput, ExpenseType enum, and NewVariableExpense constructor with amount validation
+- [x] T014 Create `apps/transaction-svc/internal/domain/repository.go` with repository interfaces: IncomeRepository, FixedExpenseRepository, VariableExpenseRepository (Save, FindByID, Update, Delete, List methods + WithTx each)
 
 ### Database
 
-- [ ] T015 Create `apps/transaction-svc/migrations/001_create_incomes_table.sql` with CREATE TABLE incomes (id UUID PK, user_id UUID, description, source, income_type, received_date, received_amount BIGINT, status, created_at, updated_at, deleted_at) and indexes (user_id + received_date, user_id + status)
-- [ ] T016 [P] Create `apps/transaction-svc/migrations/002_create_fixed_expenses_table.sql` with CREATE TABLE fixed_expenses (id UUID PK, user_id UUID, description, category, day_of_month INT, payment_method, status, created_at, updated_at, deleted_at) and indexes (user_id + day_of_month, user_id + status)
-- [ ] T017 [P] Create `apps/transaction-svc/migrations/003_create_variable_expenses_table.sql` with CREATE TABLE variable_expenses (id UUID PK, user_id UUID, description, destination, category, expense_type, payment_method, payment_date, paid_amount BIGINT, status, created_at, updated_at, deleted_at) and indexes (user_id + payment_date, user_id + status, user_id + category)
-- [ ] T018 Create `apps/transaction-svc/internal/infrastructure/persistence/write_db.go` with write repository implementation (CQRS write path) using pgx for all three entity types: Save(), Update(), Delete()
-- [ ] T019 Create `apps/transaction-svc/internal/infrastructure/persistence/read_db.go` with read repository implementation (CQRS read path) using pgx for all three entity types: FindByID(), List() with filters (date range, status, category, cursor-based pagination)
+- [x] T015 Create `apps/transaction-svc/migrations/001_create_incomes_table.sql` with CREATE TABLE incomes (id UUID PK, user_id UUID, description, source, income_type, received_date, received_amount BIGINT, status, created_at, updated_at, deleted_at) and indexes (user_id + received_date, user_id + status)
+- [x] T016 [P] Create `apps/transaction-svc/migrations/002_create_fixed_expenses_table.sql` with CREATE TABLE fixed_expenses (id UUID PK, user_id UUID, description, category, day_of_month INT, payment_method, status, created_at, updated_at, deleted_at) and indexes (user_id + day_of_month, user_id + status)
+- [x] T017 [P] Create `apps/transaction-svc/migrations/003_create_variable_expenses_table.sql` with CREATE TABLE variable_expenses (id UUID PK, user_id UUID, description, destination, category, expense_type, payment_method, payment_date, paid_amount BIGINT, status, created_at, updated_at, deleted_at) and indexes (user_id + payment_date, user_id + status, user_id + category)
+- [x] T018 Create `apps/transaction-svc/internal/infrastructure/persistence/shared.go` and three entity-specific repos (income_repo.go, fixed_expense_repo.go, variable_expense_repo.go) — CQRS write+read repositories with pgx, filters, cursor-based pagination
+- [x] T019 [absorbed by T018] Entity-specific repos combine write+read paths per CQRS pattern
 
 ### Application Layer
 
-- [ ] T020 Create `apps/transaction-svc/internal/application/dto.go` with request/response DTOs for all three entity types
-- [ ] T021 Create `apps/transaction-svc/internal/application/service.go` with TransactionService struct orchestrating domain validation, repository calls, outbox events, idempotency checks, and cache management for all entity types
+- [x] T020 Create `apps/transaction-svc/internal/application/dto.go` with request/response DTOs for all three entity types
+- [x] T021 Create `apps/transaction-svc/internal/application/service.go` with TransactionService struct orchestrating domain validation, repository calls, outbox events, idempotency checks, and cache management for all entity types
 
 ### gRPC
 
-- [ ] T022 Create `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` with gRPC server implementing TransactionService (from proto), handling auth via Keycloak JWT middleware, and delegating to application service
-- [ ] T023 Create `apps/transaction-svc/cmd/server/main.go` with dependency injection wiring: DB connection, Redis client, repository instances, application service, gRPC server mux, health check endpoint, signal handling
+- [x] T022 Create `apps/transaction-svc/internal/infrastructure/api/grpc_handler.go` with gRPC server implementing TransactionService (from proto), handling auth via Keycloak JWT middleware, and delegating to application service
+- [x] T023 Create `apps/transaction-svc/cmd/server/main.go` with dependency injection wiring: DB connection, Redis client, repository instances, application service, gRPC server mux, health check endpoint, signal handling
 
 ### GraphQL BFF Foundation
 
