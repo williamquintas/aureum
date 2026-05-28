@@ -12,18 +12,20 @@ Implement a complete identity and authorization system for the Aureum fintech pl
 
 **Language/Version**: Go 1.23+
 
-**Primary Dependencies**: 
-- `github.com/Nerzal/gocloak` (Keycloak admin API client)
-- `github.com/gorilla/mux` (REST routing) or `go.charcutter/chi`
+**Primary Dependencies (actual)**:
+- `github.com/Nerzal/gocloak/v13` (Keycloak admin API client)
+- `github.com/go-chi/chi/v5` (REST routing)
 - `google.golang.org/grpc` (internal gRPC)
-- `github.com/99designs/gqlgen` (GraphQL BFF)
 - `github.com/jackc/pgx/v5` (PostgreSQL driver)
 - `github.com/redis/go-redis/v9`
-- `github.com/segmentio/kafka-go` or `confluent-kafka-go`
-- `github.com/sony/gobreaker` (circuit breaker)
-- `go.opentelemetry.io/otel`
-- `github.com/Unleash/unleash-client-go` (feature flags)
-- `github.com/joho/godotenv` / `github.com/kelseyhightower/envconfig`
+- `github.com/segmentio/kafka-go` (Kafka producer/consumer)
+- `github.com/sony/gobreaker` (circuit breaker — pkg exists, not yet wired)
+- `go.opentelemetry.io/otel` (pkg exists, wired in P1.5)
+- `github.com/Unleash/unleash-client-go/v3` (feature flags — wired)
+- `github.com/kelseyhightower/envconfig` (config loading)
+- `github.com/golang-jwt/jwt/v5` (JWT tokens)
+- `github.com/pquerna/otp` (TOTP for MFA)
+- `github.com/testcontainers/testcontainers-go` (integration tests)
 
 **Storage**: PostgreSQL 16 (write DB + outbox + read DB), Redis 7 (cache + idempotency + token blacklist)
 
@@ -50,19 +52,17 @@ Implement a complete identity and authorization system for the Aureum fintech pl
 
 **Scale/Scope**: Single-team monorepo, ~8 services, initially 1K-10K users
 
-## Constitution Check
+## Constitution Check — Actual Status
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-| Gate | Status |
-|------|--------|
-| Hexagonal architecture (domain → application → infrastructure) | ✅ Spec-compliant |
-| CQRS (write DB + outbox / read DB + cache-first) | ✅ Spec-compliant |
-| Idempotency-Key on all mutations | ✅ Spec-compliant |
-| Feature flags (Unleash) on new flows | ✅ Spec-compliant |
-| Circuit breaker (gobreaker) on external calls | ✅ Spec-compliant |
-| Outbox → Kafka for domain events | ✅ Spec-compliant |
-| OpenTelemetry metrics + tracing | ✅ Spec-compliant |
+| Gate | Original Plan | Current Status |
+|------|--------------|----------------|
+| Hexagonal architecture (domain → application → infrastructure) | ✅ Spec-compliant | ✅ Domain imports only stdlib; app depends on domain; infra depends on both |
+| CQRS (write DB + outbox / read DB + cache-first) | ✅ Spec-compliant | ✅ Write DB + outbox_events in pgx transactions; user_profiles read model with cache-first |
+| Idempotency-Key on all mutations | ✅ Spec-compliant | ✅ All mutations check idempotency via Redis |
+| Feature flags (Unleash) on new flows | ✅ Spec-compliant | ✅ MFA/sessions behind Unleash; env-var fallback |
+| Circuit breaker (gobreaker) on external calls | ✅ Spec-compliant | ⚠️ `pkg/circuitbreaker` exists but **never wired** into identity-svc (FR-020) |
+| Outbox → Kafka for domain events | ✅ Spec-compliant | ✅ Publisher wired in main.go, topic `identity-events`, 5s poll, Start/Stop |
+| OpenTelemetry metrics + tracing | ✅ Spec-compliant | ✅ Wired in P1.5; OTLP gRPC exporter, HTTP + gRPC middleware, metrics, context propagation |
 
 ## Project Structure
 
@@ -76,112 +76,64 @@ docs/specs/
     └── tasks.md               # Tasks (/speckit.tasks output)
 ```
 
-### Source Code
+### Actual Source Code (as implemented)
+
+*Note: Several files proposed in the original plan were consolidated or relocated during implementation.*
 
 ```text
 apps/identity-svc/
 ├── cmd/server/
-│   └── main.go                    # Entrypoint, wire dependencies
+│   └── main.go                    # Entrypoint, wire dependencies, Start/Stop lifecycle
 ├── internal/
 │   ├── domain/
-│   │   ├── user.go                # User entity, value objects (Email, CPF, Password)
-│   │   ├── session.go             # Session entity
-│   │   ├── audit_log.go           # AuditLog entity
-│   │   ├── repository.go          # Repository interfaces (UserRepository, SessionRepository, AuditLogRepository)
-│   │   ├── errors.go              # Domain errors (ErrEmailAlreadyRegistered, ErrInvalidCredentials, etc.)
-│   │   └── events.go              # Domain events (UserRegistered, UserLoggedIn, etc.)
+│   │   ├── user.go                # User entity, value objects (Email, Password)
+│   │   ├── authorization.go       # RBAC roles + ABAC evaluation engine
+│   │   ├── repository.go          # Repository interfaces (UserRepository + WithTx)
+│   │   ├── errors.go              # 23 sentinel errors
+│   │   └── events.go              # 11 domain event types
 │   ├── application/
-│   │   ├── auth_service.go        # Signup, login, logout, refresh, forgot/reset password
-│   │   ├── profile_service.go     # Profile CRUD, email verification
-│   │   ├── admin_service.go       # Admin user management, role assignment
-│   │   ├── mfa_service.go         # TOTP setup, validation
-│   │   ├── session_service.go     # List/revoke sessions
+│   │   ├── auth_service.go        # All service methods in one file:
+│   │   │                          #   Signup, Login, VerifyEmail, Refresh, Logout,
+│   │   │                          #   Forgot/ResetPassword, GetProfile, UpdateProfile,
+│   │   │                          #   AdminCreateUser, SetupMFA, VerifyAndEnableMFA,
+│   │   │                          #   DisableMFA, ListSessions, RevokeSession
+│   │   ├── authorization_service.go # Role assign/remove, admin user list, ABAC check
 │   │   └── dto.go                 # Request/response DTOs
 │   └── infrastructure/
 │       ├── persistence/
-│       │   ├── write_db.go        # Write repository (user write + outbox in transaction)
-│       │   └── read_db.go         # Read repository (queries, denormalized)
+│       │   ├── write_db.go        # Write repository (user + outbox in pgx transaction)
+│       │   ├── read_db.go         # Read repository (denormalized user_profiles)
+│       │   ├── role_repo.go       # Role CRUD
+│       │   ├── user_list.go       # Paginated user listing
+│       │   └── audit_repo.go      # Audit log repository (async writes)
 │       ├── auth/
-│       │   ├── keycloak_client.go # GoCloak wrapper (user CRUD, token validation, role management)
-│       │   └── token_validator.go # JWT validation + Redis cache
+│       │   ├── keycloak_client.go # GoCloak v13 wrapper (8 operations)
+│       │   └── token_validator.go # Redis-cached Keycloak introspection
 │       ├── cache/
-│       │   └── redis_cache.go     # Cache-first wrapper for Redis
-│       ├── idempotency/
-│       │   └── idempotency.go     # Idempotency-Key check + store
-│       ├── messaging/
-│       │   ├── outbox_publisher.go # Outbox polling + publishing to Kafka
-│       │   └── kafka_producer.go  # Kafka producer wrapper
+│       │   ├── token_blacklist.go # Redis token blacklist (TTL = token expiry)
+│       │   ├── totp_store.go      # Redis TOTP temp store (10min TTL)
+│       │   └── email_otp_store.go # Redis email OTP store (single-use, TTL-bound)
 │       ├── api/
-│       │   ├── rest_handler.go    # REST routes (signup, login, profile, admin)
-│       │   └── grpc_handler.go    # gRPC server (token validation for other services)
+│       │   ├── rest_handler.go    # 16 REST endpoints (signup, login, profile, admin, MFA, sessions)
+│       │   └── grpc_handler.go    # gRPC server (ValidateToken, GetUser, ABACCheck)
 │       ├── middleware/
 │       │   ├── auth.go            # JWT extraction + validation middleware
-│       │   ├── abac.go            # ABAC policy enforcement gRPC interceptor
-│       │   ├── ratelimit.go       # Rate limiting middleware
+│       │   ├── ratelimit.go       # Sliding window rate limiter (Redis sorted-set)
 │       │   ├── cors.go            # CORS middleware
-│       │   └── audit.go           # Audit logging middleware
-│       ├── featureflag/
-│       │   └── unleash.go         # Unleash client wrapper
-│       └── telemetry/
-│           └── otel.go            # OpenTelemetry setup (metrics + tracing)
+│       │   └── audit.go           # Audit logging middleware (all auth events)
+│       │   └── [abac.go]          # NOT YET CREATED (T062 — planned gRPC ABAC interceptor)
+│       ├── kafka/
+│       │   ├── producer.go        # Kafka producer (identity-svc specific wrapper)
+│       │   └── read_model.go      # Read model projection consumer
+│       └── featureflag/
+│           └── unleash.go         # Unleash client wrapper
 ├── migrations/
-│   ├── 001_create_users.sql       # Write DB schema (users, outbox, sessions, audit_logs)
-│   └── 002_create_read_db.sql     # Read DB schema (denormalized users)
-├── Dockerfile
-└── Makefile
-
-pkg/
-├── auth/
-│   ├── claims.go                  # JWT claims extraction + role/ABAC validation
-│   └── context.go                 # Context helpers (SetClaims, GetClaims)
-├── cache/
-│   └── redis.go                   # Redis client wrapper, cache-first helpers
-├── circuitbreaker/
-│   └── breaker.go                 # gobreaker wrapper (circuit breaker factory)
-├── db/
-│   ├── postgres.go                # PostgreSQL connection pool setup
-│   └── migrate.go                 # Migration runner (golang-migrate)
-├── errors/
-│   └── errors.go                  # Shared domain errors + gRPC error mapping
-├── kafka/
-│   ├── producer.go                # Kafka producer (sync + async)
-│   └── consumer.go                # Kafka consumer group wrapper
-├── featureflag/
-│   └── unleash.go                 # Unleash client wrapper (isEnabled, variants)
-├── idempotency/
-│   └── idempotency.go             # Idempotency-Key store (Redis + TTL)
-├── middleware/
-│   └── auth.go                    # Shared gRPC auth interceptor (calls identity-svc)
-├── outbox/
-│   ├── outbox.go                  # Outbox event struct + repository interface
-│   ├── publisher.go               # Background publisher (poll → Kafka)
-│   └── sqlc_models.go             # Outbox table queries (sqlc)
-├── telemetry/
-│   ├── otel.go                    # OpenTelemetry SDK init (traces + metrics)
-│   ├── middleware.go              # HTTP/gRPC auto-instrumentation
-│   └── metrics.go                 # Standard metric definitions
-└── testutils/
-    ├── containers.go              # Testcontainers (PostgreSQL, Keycloak, Redis, Redpanda)
-    ├── fixtures.go                # Test fixture helpers (create user, generate token)
-    └── db.go                      # Test DB setup (migrate + truncate)
-
-proto/identity/identityv1/
-├── identity.proto                 # gRPC service: ValidateToken, GetUser, ABACCheck
-
-deploy/
-├── docker-compose/
-│   └── docker-compose.infra.yml   # PostgreSQL, Keycloak, Redis, Redpanda/Kafka
-├── keycloak/
-│   └── aureum-realm.json          # Keycloak realm export (clients, roles, auth flows)
-└── k8s/
-    ├── identity-svc/
-    │   ├── deployment.yaml
-    │   ├── service.yaml
-    │   └── kustomization.yaml
-    └── keycloak/
-        ├── deployment.yaml
-        ├── service.yaml
-        └── kustomization.yaml
+│   ├── 001_create_users.sql       # Write DB: users, outbox_events, sessions, audit_logs
+│   ├── 002_create_read_db.sql     # Read DB: user_profiles denormalized
+│   └── 003_create_user_roles.sql  # RBAC: user_roles table
+├── Dockerfile                     # Multi-stage build
+├── Makefile
+└── .air.toml                     # Air hot-reload config
 ```
 
 ## Complexity Tracking

@@ -71,6 +71,8 @@ description: "Task list for Identity & Authorization System implementation"
 - [ ] T031 [P] [US1] Integration test: duplicate email returns 409 in `internal/infrastructure/api/rest_handler_test.go`
 - [X] T032 [P] [US1] Integration test: idempotency key prevents duplicate signup in `internal/application/auth_service_test.go`
 
+> **Note**: T028-T031 were originally planned as testcontainers-based integration tests. P0.5 covered these with httptest + mocked dependencies (31 tests in `rest_handler_test.go`). True testcontainers integration tests remain as future work.
+
 ### Implementation for User Story 1
 
 - [X] T033 [P] [US1] Create domain entities: `internal/domain/user.go` (User aggregate, Email/Password value objects)
@@ -86,6 +88,8 @@ description: "Task list for Identity & Authorization System implementation"
 - [X] T043 [US1] Create auth middleware: `internal/infrastructure/middleware/auth.go` (JWT extraction + validation + context injection)
 - [X] T044 [US1] Wire main.go: `cmd/server/main.go` (dependencies, HTTP server, graceful shutdown)
 - [X] T045 [US1] Add rate limiting middleware: `internal/infrastructure/middleware/ratelimit.go` (sliding window per-IP for signup/login)
+
+> **Note**: T045 rate limiter uses **fixed-window** (Redis INCR + TTL), not the sliding window specified in FR-016. This is tracked as P1.4.
 
 **Checkpoint**: User can signup, verify email, and login.
 
@@ -103,6 +107,8 @@ description: "Task list for Identity & Authorization System implementation"
 - [ ] T047 [P] [US2] Integration test: token reuse detection (replay → family invalidation) in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T048 [P] [US2] Integration test: logout invalidates tokens in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T049 [P] [US2] Integration test: forgot password → reset → login with new password in `internal/infrastructure/api/rest_handler_test.go`
+
+> **Note**: P0.5 added httptest-based unit tests covering logout, refresh, and forgot/reset flows. True testcontainers integration tests remain.
 
 ### Implementation for User Story 2
 
@@ -134,8 +140,10 @@ description: "Task list for Identity & Authorization System implementation"
 ### Implementation for User Story 3
 
 - [ ] T061 [US3] Create GraphQL auth directive in `apps/graphql-bff/` (validate @auth(role: "...") using pkg/auth)
-- [X] T062 [US3] Create gRPC ABAC interceptor in `internal/infrastructure/middleware/abac.go` (validate resource ownership via identity-svc gRPC)
+- [ ] T062 [US3] Create gRPC ABAC interceptor in `internal/infrastructure/middleware/abac.go` (validate resource ownership via identity-svc gRPC)
 - [X] T063 [US3] Create ABACCheck gRPC handler in `internal/infrastructure/api/grpc_handler.go` (query resource ownership from read DB)
+
+> **Note**: T062 shows as [X] in original plan, but `internal/infrastructure/middleware/abac.go` was never created. The ABACCheck gRPC handler (T063) exists, but the interceptor middleware that would call it does not. ABAC evaluation logic exists in domain layer (`domain.authorization.EvaluateABAC`).
 
 **Checkpoint**: RBAC + ABAC enforced across all services.
 
@@ -153,12 +161,16 @@ description: "Task list for Identity & Authorization System implementation"
 - [ ] T065 [P] [US4] Integration test: admin creates user via admin API in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T066 [P] [US4] Integration test: outbox publisher publishes to Kafka in `internal/infrastructure/messaging/outbox_publisher_test.go`
 
+> **Note**: P0.5 added httptest-based unit tests for profile update and admin endpoints. The outbox publisher integration test (T066) remains.
+
 ### Implementation for User Story 4
 
 - [X] T067 [US4] Implement UpdateProfile in AuthService: `internal/application/auth_service.go` (update profile with idempotency)
 - [X] T068 [US4] Implement admin create user in AuthService: `internal/application/auth_service.go` (delegates to Signup)
 - [X] T069 [US4] Add admin REST routes: GET /admin/users, POST /admin/users, POST/PUT admin role routes in `internal/infrastructure/api/rest_handler.go`
 - [X] T070 [US4] Add audit middleware: `internal/infrastructure/middleware/audit.go` (log all error responses to audit_logs table)
+
+> **Note**: T070 audit middleware only logs HTTP 4xx/5xx responses. P1.3 will extend it to log all auth events (login, logout, MFA toggle, etc.) regardless of HTTP status.
 
 **Checkpoint**: Profile management works, events flow through outbox → Kafka.
 
@@ -176,6 +188,8 @@ description: "Task list for Identity & Authorization System implementation"
 - [ ] T072 [P] [US5] Integration test: list sessions returns active sessions in `internal/infrastructure/api/rest_handler_test.go`
 - [ ] T073 [P] [US5] Integration test: revoke session removes from active list in `internal/infrastructure/api/rest_handler_test.go`
 
+> **Note**: P0.5 added httptest-based unit tests for MFA setup/verify/disable and session list/revoke. True Keycloak testcontainers integration tests remain.
+
 ### Implementation for User Story 5
 
 - [X] T074 [US5] Implement MFA in AuthService: `internal/application/auth_service.go` (setup TOTP via totp.Generate, verify)
@@ -183,6 +197,8 @@ description: "Task list for Identity & Authorization System implementation"
 - [X] T076 [US5] Add MFA REST routes: POST /mfa/setup, POST /mfa/verify, POST /mfa/disable in `internal/infrastructure/api/rest_handler.go`
 - [X] T077 [US5] Add session REST routes: GET /sessions, POST /sessions/{id}/revoke in `internal/infrastructure/api/rest_handler.go`
 - [X] T078 [US5] Wrap MFA + session flows with Unleash feature flag in all entry points
+
+> **Note**: TOTP is set up and verified via MFA endpoints, but **login does not enforce MFA** — if user has MFA enabled, login still succeeds without TOTP code. This is recorded as a spec gap.
 
 **Checkpoint**: MFA and session management functional behind feature flag.
 
@@ -204,6 +220,86 @@ description: "Task list for Identity & Authorization System implementation"
 
 ---
 
+## Phase 8: Production Hardening — P0/P1 Fixes (Identity-Fixes Plan)
+
+**Purpose**: Critical production blockers (P0) and important items (P1) required for production readiness. Implemented as part of the `identity-fixes` plan.
+
+### P0 — Production Blockers
+
+- [X] **P0.1 — Fix outbox table name mismatch** Aligned migration table name `outbox` → `outbox_events` across `migrations/001_create_users.sql`, `write_db.go`, and `deploy/k8s/db-migrate/configmap.yaml`
+- [X] **P0.2 — Wire outbox publisher to Kafka** Configured Kafka producer in `main.go` via `KAFKA_BROKERS` env var; created `outbox.NewPublisher` with topic `identity-events` and 5s poll interval; called `Start(ctx)` in goroutine and `Stop()` in shutdown sequence
+- [X] **P0.3 — Transactional outbox** Added `WithTx` to `domain.UserRepository`; implemented context-based transaction propagation in `UserWriteRepository`; `Signup`, `VerifyEmail`, `Login`, `UpdateProfile`, `VerifyAndEnableMFA`, `DisableMFA` now wrap DB writes + outbox events in same pgx transaction
+- [X] **P0.4 — Email OTP validation** Added `cache/email_otp_store.go` (Redis-backed, TTL-bound, single-use); `Signup` generates 6-digit OTP via `crypto/rand`, stores in Redis, emits `EmailOtpGeneratedEvent`; `VerifyEmail` validates OTP from Redis before calling Keycloak; returns 410 on expired OTP
+- [X] **P0.5 — Infrastructure tests** Created 71 tests across 5 packages (API, middleware, cache, persistence, auth) — httptest for REST/gRPC handlers, miniredis for cache stores, testcontainers for PostgreSQL persistence, httptest server for Keycloak mock
+
+### P1 — Important for MVP
+
+- [X] **P1.1 — Account lockout** Redis-based failed login counter (per-email, 15-min TTL); auto-locks user after 5 failures; returns 429 with `Retry-After` header; counter resets on successful login or after TTL expires
+- [X] **P1.2 — Read model projection** Kafka consumer (`pkg/kafka/consumer.go`) with group `identity-read-model`; `ReadModelProjector` handles `UserRegistered`, `UserProfileUpdated`, `EmailVerified`, `UserRoleChanged` events; populates `user_profiles` read table; wired in `main.go` as goroutine; graceful shutdown via ctx cancellation; includes `UserProfileUpdatedHash` migration for `user_profiles`
+- [X] **P1.3 — Complete audit logging** All auth events (login, logout, token refresh, password change, MFA toggle, role change, profile update) logged to `audit_logs` table with user_id, email, action, IP, user_agent, timestamp, success/failure, and details (JSONB); separate `AuditRepository` in persistence layer with channels for async writes; `GetUserAgent` helper in middleware; `NewAuditLogger` optionally accepts external repo
+- [X] **P1.4 — Sliding window rate limiter** Redis sorted-set based sliding window (per-IP for unauthenticated, per-user for authenticated); configurable limits per endpoint; X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers; `newSlidingWindowRateLimiter` factory; config struct with global defaults and per-route overrides; old fixed-window implementation fully replaced
+- [X] **P1.5 — OpenTelemetry instrumentation** OTLP gRPC exporter; resource attributes (service.name, service.version, deploy.environment); HTTP middleware with route pattern span names, duration histogram, status code attrs; gRPC unary interceptor; standard metrics: `http.requests_total`, `http.request_duration_ms`; context propagation; graceful shutdown with timeout
+- [ ] **P1.6 — Health endpoint with dependency checks** Health endpoint returning 200/503 with per-dependency status (PostgreSQL, Redis, Keycloak); success criteria defined but implementation pending
+
+---
+
+## Phase 9: Remaining Gaps (Backlog)
+
+**Purpose**: Items still missing after Phases 1-8, organized by priority.
+
+### Spec FRs Not Implemented
+
+- [ ] **FR-005**: Refresh token replay detection — token family invalidation on rotation replay
+- [ ] **FR-008 (partial)**: Password history (store last 5 hashes, prevent reuse)
+- [ ] **FR-008 (partial)**: Password 90-day expiry enforcement
+- [ ] **FR-011**: GraphQL @auth directive in `apps/graphql-bff/`
+- [ ] **FR-020**: Circuit breaker (`gobreaker`) on all external gRPC calls
+
+### Integration Tests (testcontainers)
+
+- [ ] T028–T031: US1 integration tests (signup, login, verify-email, duplicate email)
+- [ ] T046–T049: US2 integration tests (refresh, replay, logout, forgot/reset)
+- [ ] T060: ABAC gRPC interceptor integration test
+- [ ] T064–T066: US4 integration tests (profile, admin, outbox to Kafka)
+- [ ] T071–T073: US5 integration tests (TOTP, sessions, revoke)
+
+### Implementation Gaps
+
+- [ ] T062: gRPC ABAC interceptor (`internal/infrastructure/middleware/abac.go`)
+- [ ] T084: Structured JSON logging for all auth events
+- [ ] **Resend OTP endpoint** (spec edge case: expired OTP)
+- [ ] **CPF validation** (column exists, no endpoint/validation)
+- [ ] **MFA enforcement on login** (TOTP setup works but login doesn't require it)
+- [ ] **Bug B3**: Logout calls `LogoutAllSessions` — too aggressive (should only blacklist token)
+- [ ] **Bug B6**: `AssignRole` returns wrong error on duplicate (`ErrRoleNotFound` instead of "already assigned")
+- [ ] **Bug B8**: Dev secrets hardcoded in `deploy/k8s/kustomization.yaml`
+- [ ] **Bug B9**: `AdminCreateUser` ignores admin-specified roles (always assigns `user`)
+
+### Documentation Gaps
+
+- [ ] Missing: `docs/specs/identity-service/plan.md` referenced by ADR, spec, security doc, runbook
+- [ ] Missing: OpenAPI/Swagger spec for REST endpoints
+- [ ] Missing: Developer onboarding guide for identity-svc
+
+### Infrastructure Gaps
+
+- [ ] K8s overlays: `dev/staging/prod` directories empty
+- [ ] Terraform environments: `dev/staging/prod` directories empty
+- [ ] Grafana dashboards + Prometheus alert rules (referenced in runbook)
+- [ ] Loki log collection not configured
+- [ ] mTLS between services not configured
+- [ ] External Secrets / Vault not wired
+
+### Build Tooling Gaps
+
+- [ ] `make test/e2e` target missing
+- [ ] `make coverage` target missing
+- [ ] `make dev/infra` target missing
+- [ ] `make tidy` target missing
+- [ ] `make gen` (protoc) — stub only
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -215,12 +311,14 @@ description: "Task list for Identity & Authorization System implementation"
 - **US4 — Profile & Events (Phase 5)**: Depends on Phase 1 + US1 (user exists) + US2 (auth middleware)
 - **US5 — MFA & Sessions (Phase 6)**: Depends on Phase 1 + US1 + US2
 - **Polish (Phase 7)**: Depends on all completed user stories
+- **Production Hardening (Phase 8)**: Depends on Phases 1-7
 
 ### Parallel Opportunities
 
 - All [P] tasks within a phase can run in parallel
 - Phase 1 T003, T004, T007-T020 are fully parallel
 - Each user story can be worked on by a different developer after Phase 1 completes
+- P1.1-P1.6 in Phase 8 can run in parallel
 
 ### Execution Order (Single Developer)
 
@@ -232,4 +330,6 @@ Phase 1 T001-T024 (shared modules + infra)
   → Phase 5 T064-T070 (US4)
   → Phase 6 T071-T078 (US5)
   → Phase 7 T079-T087 (Polish)
+  → Phase 8 P0.1-P0.5 → P1.1-P1.6 (Production Hardening)
+  → Phase 9 (Remaining Backlog)
 ```
