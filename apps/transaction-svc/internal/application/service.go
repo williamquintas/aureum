@@ -25,6 +25,8 @@ type Service struct {
 	variableExpenses domain.VariableExpenseRepository
 	outbox           OutboxRepository
 	idempotency      IdempotencyStore
+	cache            Cache
+	featureFlag      FeatureFlag
 }
 
 func NewService(
@@ -33,6 +35,8 @@ func NewService(
 	variableExpenses domain.VariableExpenseRepository,
 	outbox OutboxRepository,
 	idempotency IdempotencyStore,
+	cache Cache,
+	featureFlag FeatureFlag,
 ) *Service {
 	return &Service{
 		incomes:          incomes,
@@ -40,7 +44,13 @@ func NewService(
 		variableExpenses: variableExpenses,
 		outbox:           outbox,
 		idempotency:      idempotency,
+		cache:            cache,
+		featureFlag:      featureFlag,
 	}
+}
+
+func cacheKey(prefix, id string) string {
+	return "txn:" + prefix + ":" + id
 }
 
 // ── Income ──────────────────────────────────────────────────────────────────
@@ -125,11 +135,19 @@ func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*C
 }
 
 func (s *Service) GetIncome(ctx context.Context, id, userID string) (*GetIncomeResponse, error) {
+	key := cacheKey("income", id)
+	if s.cache != nil {
+		var cached GetIncomeResponse
+		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
+			return &cached, nil
+		}
+	}
+
 	income, err := s.incomes.FindByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &GetIncomeResponse{
+	resp := &GetIncomeResponse{
 		ID:             income.ID,
 		UserID:         income.UserID,
 		Description:    income.Description,
@@ -140,7 +158,11 @@ func (s *Service) GetIncome(ctx context.Context, id, userID string) (*GetIncomeR
 		Status:         string(income.Status),
 		CreatedAt:      income.CreatedAt.Unix(),
 		UpdatedAt:      income.UpdatedAt.Unix(),
-	}, nil
+	}
+	if s.cache != nil {
+		_ = s.cache.Set(ctx, key, resp, 5*time.Minute)
+	}
+	return resp, nil
 }
 
 func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*GetIncomeResponse, error) {
@@ -227,10 +249,17 @@ func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*G
 		_ = s.idempotency.Store(ctx, req.IdempotencyKey, resp, 24*time.Hour)
 	}
 
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("income", req.ID))
+	}
+
 	return resp, nil
 }
 
 func (s *Service) DeleteIncome(ctx context.Context, id, userID string) error {
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("income", id))
+	}
 	return s.incomes.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.incomes.Delete(txCtx, id, userID); err != nil {
 			return err
@@ -352,11 +381,19 @@ func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpense
 }
 
 func (s *Service) GetFixedExpense(ctx context.Context, id, userID string) (*CreateFixedExpenseResponse, error) {
+	key := cacheKey("fixed_expense", id)
+	if s.cache != nil {
+		var cached CreateFixedExpenseResponse
+		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
+			return &cached, nil
+		}
+	}
+
 	expense, err := s.fixedExpenses.FindByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &CreateFixedExpenseResponse{
+	resp := &CreateFixedExpenseResponse{
 		ID:            expense.ID,
 		UserID:        expense.UserID,
 		Description:   expense.Description,
@@ -366,7 +403,11 @@ func (s *Service) GetFixedExpense(ctx context.Context, id, userID string) (*Crea
 		Status:        string(expense.Status),
 		CreatedAt:     expense.CreatedAt.Unix(),
 		UpdatedAt:     expense.UpdatedAt.Unix(),
-	}, nil
+	}
+	if s.cache != nil {
+		_ = s.cache.Set(ctx, key, resp, 5*time.Minute)
+	}
+	return resp, nil
 }
 
 func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpenseRequest) (*CreateFixedExpenseResponse, error) {
@@ -447,10 +488,17 @@ func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpense
 		_ = s.idempotency.Store(ctx, req.IdempotencyKey, resp, 24*time.Hour)
 	}
 
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("fixed_expense", req.ID))
+	}
+
 	return resp, nil
 }
 
 func (s *Service) DeleteFixedExpense(ctx context.Context, id, userID string) error {
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("fixed_expense", id))
+	}
 	return s.fixedExpenses.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.fixedExpenses.Delete(txCtx, id, userID); err != nil {
 			return err
@@ -584,11 +632,19 @@ func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableE
 }
 
 func (s *Service) GetVariableExpense(ctx context.Context, id, userID string) (*CreateVariableExpenseResponse, error) {
+	key := cacheKey("variable_expense", id)
+	if s.cache != nil {
+		var cached CreateVariableExpenseResponse
+		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
+			return &cached, nil
+		}
+	}
+
 	expense, err := s.variableExpenses.FindByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &CreateVariableExpenseResponse{
+	resp := &CreateVariableExpenseResponse{
 		ID:            expense.ID,
 		UserID:        expense.UserID,
 		Description:   expense.Description,
@@ -601,7 +657,11 @@ func (s *Service) GetVariableExpense(ctx context.Context, id, userID string) (*C
 		Status:        string(expense.Status),
 		CreatedAt:     expense.CreatedAt.Unix(),
 		UpdatedAt:     expense.UpdatedAt.Unix(),
-	}, nil
+	}
+	if s.cache != nil {
+		_ = s.cache.Set(ctx, key, resp, 5*time.Minute)
+	}
+	return resp, nil
 }
 
 func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableExpenseRequest) (*CreateVariableExpenseResponse, error) {
@@ -698,10 +758,17 @@ func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableE
 		_ = s.idempotency.Store(ctx, req.IdempotencyKey, resp, 24*time.Hour)
 	}
 
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("variable_expense", req.ID))
+	}
+
 	return resp, nil
 }
 
 func (s *Service) DeleteVariableExpense(ctx context.Context, id, userID string) error {
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, cacheKey("variable_expense", id))
+	}
 	return s.variableExpenses.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.variableExpenses.Delete(txCtx, id, userID); err != nil {
 			return err

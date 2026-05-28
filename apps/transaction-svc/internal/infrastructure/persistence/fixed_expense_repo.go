@@ -176,7 +176,6 @@ func (r *FixedExpenseRepo) Count(ctx context.Context, userID string, filter doma
 	if filter.DayTo != nil {
 		args = append(args, *filter.DayTo)
 		conditions = append(conditions, fmt.Sprintf("day_of_month<=$%d", argIdx))
-		argIdx++
 	}
 
 	query := fmt.Sprintf("SELECT COUNT(*) FROM fixed_expenses WHERE %s", strings.Join(conditions, " AND "))

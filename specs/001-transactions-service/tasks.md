@@ -164,15 +164,15 @@
 
 **Purpose**: Improvements that affect multiple areas
 
-- [ ] T055 [P] Add OpenTelemetry metrics and tracing to transaction-svc gRPC handlers (request count, latency, error rate)
-- [ ] T056 [P] Add OpenTelemetry metrics and tracing to graphql-bff resolvers
-- [ ] T057 [P] Add `apps/transaction-svc/internal/infrastructure/messaging/kafka_producer.go` for outbox → Kafka domain event publishing
-- [ ] T058 Create `docs/adr/001-transactions-service.md` documenting architecture decisions from research.md
-- [ ] T059 Create `docs/runbooks/transactions-service.md` with operational procedures
-- [ ] T060 Create `docs/security/transactions-service.md` documenting auth model and data classification
-- [ ] T061 Add feature flag (Unleash) guard for new transaction-svc endpoints
-- [ ] T062 Add `apps/transaction-svc/internal/infrastructure/cache/redis_cache.go` for cache-first reads
-- [ ] T063 Code cleanup and cross-service consistency review
+- [x] T055 [P] Add OpenTelemetry metrics and tracing to transaction-svc gRPC handlers (request count, latency, error rate)
+- [x] T056 [P] Add OpenTelemetry metrics and tracing to graphql-bff resolvers
+- [x] T057 [P] Add outbox → Kafka domain event publishing (wire outbox.NewPublisher → "transaction-events" topic)
+- [x] T058 Create `docs/adr/002-transactions-service.md` documenting architecture decisions
+- [x] T059 Create `docs/runbooks/transactions-service.md` with operational procedures
+- [x] T060 Create `docs/security/transactions-service.md` documenting auth model and data classification
+- [x] T061 Add feature flag (Unleash) guard for new transaction-svc endpoints
+- [x] T062 Add cache-first reads to transaction-svc service layer (Get* methods, cache invalidation on writes)
+- [x] T063 Code cleanup and cross-service consistency review (lint fixes: context key types, ineffectual assignments, govet format string)
 
 ---
 

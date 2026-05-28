@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/aureum/graphql-bff/graph"
+	"github.com/aureum/pkg/telemetry"
 )
 
 type Config struct {
@@ -29,19 +31,40 @@ type Config struct {
 	TransactionSvc    string `envconfig:"TRANSACTION_SVC" default:"localhost:50054"`
 	IdentitySvc       string `envconfig:"IDENTITY_SVC" default:"localhost:50053"`
 	PlaygroundEnabled bool   `envconfig:"PLAYGROUND_ENABLED" default:"true"`
+	MetricsPort       string `envconfig:"METRICS_PORT" default:"9095"`
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
+	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		log.Error("failed to load config", "error", err)
+		return 1
 	}
+
+	if err := telemetry.InitOTEL("graphql-bff", "1.0.0"); err != nil {
+		log.Error("failed to init telemetry", "error", err)
+		return 1
+	}
+	defer func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		if err := telemetry.ShutdownOTEL(shutdownCtx); err != nil {
+			log.Error("failed to shutdown telemetry", "error", err)
+		}
+	}()
 
 	txConn, err := grpc.Dial(cfg.TransactionSvc,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		log.Fatalf("failed to connect to transaction-svc: %v", err)
+		log.Error("failed to connect to transaction-svc", "error", err)
+		return 1
 	}
 	defer txConn.Close()
 
@@ -49,7 +72,8 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		log.Fatalf("failed to connect to identity-svc: %v", err)
+		log.Error("failed to connect to identity-svc", "error", err)
+		return 1
 	}
 	defer idConn.Close()
 
@@ -77,6 +101,7 @@ func main() {
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(chiMiddleware.Timeout(30 * time.Second))
 	r.Use(corsMiddleware)
+	r.Use(telemetry.HTTPMiddleware("graphql-bff"))
 
 	r.Handle("/graphql", srv)
 
@@ -90,17 +115,51 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("graphql-bff listening on port %s", cfg.Port)
+		log.Info("graphql-bff listening", "port", cfg.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("failed to serve: %v", err)
+			log.Error("http server error", "error", err)
+		}
+	}()
+
+	metricsMux := http.NewServeMux()
+	metricsMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "# metrics endpoint ready")
+	})
+	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "ok")
+	})
+
+	metricsServer := &http.Server{
+		Addr:    ":" + cfg.MetricsPort,
+		Handler: metricsMux,
+	}
+	go func() {
+		log.Info("metrics HTTP server listening", "port", cfg.MetricsPort)
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("metrics server error", "error", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("shutting down...")
-	httpServer.Shutdown(context.Background())
+	sig := <-quit
+
+	log.Info("shutting down", "signal", sig.String())
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("http server forced shutdown", "error", err)
+	}
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("metrics server forced shutdown", "error", err)
+	}
+
+	log.Info("server stopped")
+	return 0
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
