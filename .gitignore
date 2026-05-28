@@ -76,4 +76,5 @@ deploy/terraform/*.tfplan
 *.bak
 *.tmp
 /server
+apps/identity-svc/server
 go.work
