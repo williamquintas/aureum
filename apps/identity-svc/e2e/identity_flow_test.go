@@ -99,6 +99,7 @@ func TestIdentityFlow(t *testing.T) {
 			"password": password,
 			"name":     "E2E User",
 		}, nil)
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
 		var s signupResp
 		decodeResp(t, resp, &s)
@@ -111,6 +112,7 @@ func TestIdentityFlow(t *testing.T) {
 			"email":    email,
 			"password": password,
 		}, nil)
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusForbidden, resp.StatusCode)
 		var e errorResp
 		decodeResp(t, resp, &e)
@@ -126,8 +128,8 @@ func TestIdentityFlow(t *testing.T) {
 			"email": email,
 			"otp":   otp,
 		}, nil)
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
 	})
 
 	var tokens loginResp
@@ -137,6 +139,7 @@ func TestIdentityFlow(t *testing.T) {
 			"email":    email,
 			"password": password,
 		}, nil)
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		decodeResp(t, resp, &tokens)
 		require.NotEmpty(t, tokens.AccessToken)
@@ -148,6 +151,7 @@ func TestIdentityFlow(t *testing.T) {
 		resp := client.get(t, "/me", map[string]string{
 			"Authorization": "Bearer " + tokens.AccessToken,
 		})
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		var p profileResp
 		decodeResp(t, resp, &p)
@@ -161,6 +165,7 @@ func TestIdentityFlow(t *testing.T) {
 		}, map[string]string{
 			"Authorization": "Bearer " + tokens.AccessToken,
 		})
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		var newTokens loginResp
 		decodeResp(t, resp, &newTokens)
@@ -176,12 +181,13 @@ func TestIdentityFlow(t *testing.T) {
 			"Authorization":   "Bearer " + tokens.AccessToken,
 			"Idempotency-Key": "e2e-update-profile",
 		})
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
 
 		resp2 := client.get(t, "/me", map[string]string{
 			"Authorization": "Bearer " + tokens.AccessToken,
 		})
+		defer func() { _ = resp2.Body.Close() }()
 		var p profileResp
 		decodeResp(t, resp2, &p)
 		require.Equal(t, "Updated Name", p.Name)
@@ -191,16 +197,16 @@ func TestIdentityFlow(t *testing.T) {
 		resp := client.post(t, "/logout", nil, map[string]string{
 			"Authorization": "Bearer " + tokens.AccessToken,
 		})
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
 	})
 
 	t.Run("forgot_password", func(t *testing.T) {
 		resp := client.post(t, "/forgot-password", map[string]string{
 			"email": email,
 		}, nil)
+		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
 	})
 }
 
@@ -215,7 +221,7 @@ func getRedisOTP(t *testing.T, email string) string {
 	t.Helper()
 	addr := getEnv("REDIS_ADDR", "localhost:6379")
 	rdb := redis.NewClient(&redis.Options{Addr: addr})
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 	val, err := rdb.GetDel(context.Background(), "otp:verify:"+email).Result()
 	require.NoError(t, err)
 	return val

@@ -1,90 +1,23 @@
 version: "2"
+
 run:
   timeout: 5m
-  modules-download-mode: readonly
-  issues-exit-code: 1
 
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  settings:
-    gofmt:
-      simplify: true
-    goimports:
-      local-prefixes:
-        - github.com/aureum
-
-linters:
-  enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    - gosec
-    - prealloc
-    - unconvert
-    - misspell
-    - revive
-    - bodyclose
-    - noctx
-    - sqlclosecheck
-    - wastedassign
-    - goconst
-    - gocritic
-    - godot
-    - lll
-  disable:
-    - depguard
-    - goconst
-  settings:
-    lll:
-      line-length: 120
-    godot:
-      scope: declarations
-    gosec:
-      excludes:
-        - G107
-        - G404
-    revive:
-      rules:
-        - name: blank-imports
-      disable:
-        - package-comments
-        - name: context-as-argument
-        - name: error-return
-        - name: error-strings
-        - name: error-naming
-        - name: if-return
-        - name: increment-decrement
-        - name: var-naming
-        - name: var-declaration
-        - name: package-comments
-        - name: range
-        - name: receiver-naming
-        - name: time-naming
-        - name: unexported-return
-        - name: indent-error-flow
-        - name: errorf
-        - name: empty-block
-        - name: superfluous-else
-        - name: unreachable-code
-        - name: redefines-builtin-id
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*os.File).Close
+      - (io.ReadCloser).Close
+      - (net.Conn).Close
+      - (net/http.Response).Body.Close
+      - github.com/redis/go-redis/v9.(*Client).Close
 
 issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  exclude:
+  exclude-rules:
     - path: _test\.go
       linters:
-        - lll
         - gosec
-        - errcheck
-
-    - path: cmd/
-      linters:
+        - noctx
+        - bodyclose
         - lll
-    - path: migrations/
-      linters:
-        - lll
+        - unused

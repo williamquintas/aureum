@@ -46,22 +46,6 @@ func generateTestToken(t *testing.T, userID string, roles ...string) string {
 	return signed
 }
 
-func setClaimsOnCtx(ctx context.Context, userID string, roles ...string) context.Context {
-	if len(roles) == 0 {
-		roles = []string{"user"}
-	}
-	claims := &auth.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject: userID,
-			ID:      "test-jti-" + userID,
-		},
-		Email: "user@example.com",
-		Name:  "Test User",
-		Roles: roles,
-	}
-	return auth.SetClaims(ctx, claims)
-}
-
 // ---------------------------------------------------------------------------
 // Mock types
 // ---------------------------------------------------------------------------

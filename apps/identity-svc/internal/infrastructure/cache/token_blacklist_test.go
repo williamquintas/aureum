@@ -16,7 +16,7 @@ import (
 func TestTokenBlacklist_Add(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	bl := cache.NewTokenBlacklist(client)
 	ctx := context.Background()
 
@@ -52,7 +52,7 @@ func TestTokenBlacklist_IsBlacklisted_False(t *testing.T) {
 func TestTokenBlacklist_Expiration(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	bl := cache.NewTokenBlacklist(client)
 	ctx := context.Background()
 
@@ -91,7 +91,7 @@ func TestTokenBlacklist_MultipleTokens(t *testing.T) {
 func TestTokenBlacklist_TableDriven(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	bl := cache.NewTokenBlacklist(client)
 	ctx := context.Background()
 

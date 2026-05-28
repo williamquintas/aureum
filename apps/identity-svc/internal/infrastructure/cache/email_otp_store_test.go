@@ -16,7 +16,7 @@ import (
 func TestEmailOTPStore_Save(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	store := cache.NewEmailOTPStore(client)
 	ctx := context.Background()
 
@@ -51,7 +51,7 @@ func TestEmailOTPStore_GetAndDelete_NotFound(t *testing.T) {
 func TestEmailOTPStore_GetAndDelete_RemovesKey(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	store := cache.NewEmailOTPStore(client)
 	ctx := context.Background()
 
@@ -68,7 +68,7 @@ func TestEmailOTPStore_GetAndDelete_RemovesKey(t *testing.T) {
 func TestEmailOTPStore_Expiration(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
+	t.Cleanup(func() { _ = client.Close() })
 	store := cache.NewEmailOTPStore(client)
 	ctx := context.Background()
 
