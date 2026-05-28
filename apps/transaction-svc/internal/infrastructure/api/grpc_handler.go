@@ -497,9 +497,17 @@ func offsetFromToken(token string) int {
 	return offset
 }
 
+type ctxKey string
+
+const userIDKey ctxKey = "user_id"
+
 func mustExtractUserID(ctx context.Context) string {
-	uid, _ := ctx.Value("user_id").(string)
+	uid, _ := ctx.Value(userIDKey).(string)
 	return uid
+}
+
+func UserContext(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
 }
 
 func mapError(err error) error {

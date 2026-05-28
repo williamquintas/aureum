@@ -17,7 +17,7 @@ import (
 )
 
 func userCtx() context.Context {
-	return context.WithValue(context.Background(), "user_id", "user-1")
+	return UserContext(context.Background(), "user-1")
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ func newSvc(
 	fixedExpenses domain.FixedExpenseRepository,
 	variableExpenses domain.VariableExpenseRepository,
 ) *application.Service {
-	return application.NewService(incomes, fixedExpenses, variableExpenses, &mockOutbox{}, &mockIdempotency{})
+	return application.NewService(incomes, fixedExpenses, variableExpenses, &mockOutbox{}, &mockIdempotency{}, nil, nil)
 }
 
 func incomeSvc() *application.Service {

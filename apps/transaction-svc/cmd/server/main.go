@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -15,7 +19,12 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/aureum/pkg/cache"
+	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
+	"github.com/aureum/pkg/kafka"
+	"github.com/aureum/pkg/outbox"
+	"github.com/aureum/pkg/telemetry"
 
 	transactionv1 "github.com/aureum/proto/gen/transaction/transactionv1"
 	"github.com/aureum/transaction-svc/internal/application"
@@ -24,37 +33,90 @@ import (
 )
 
 func main() {
-	cfg := loadConfig()
+	os.Exit(run())
+}
 
+func run() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	cfg := loadConfig()
+
+	if err := telemetry.InitOTEL("transaction-svc", "1.0.0"); err != nil {
+		log.Error("failed to init telemetry", "error", err)
+		return 1
+	}
+	defer func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		if err := telemetry.ShutdownOTEL(shutdownCtx); err != nil {
+			log.Error("failed to shutdown telemetry", "error", err)
+		}
+	}()
+
 	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		log.Error("failed to connect to database", "error", err)
+		return 1
 	}
 	defer dbPool.Close()
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.RedisURL,
 	})
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Error("failed to connect to redis", "error", err)
+		return 1
+	}
 	defer rdb.Close()
 
-	outboxRepo := persistence.NewOutboxRepository(dbPool)
+	redisCache, err := cache.NewRedisCache(cfg.RedisURL, "", 0)
+	if err != nil {
+		log.Error("failed to create redis cache", "error", err)
+		return 1
+	}
+	defer redisCache.Close()
 
+	outboxRepo := persistence.NewOutboxRepository(dbPool)
 	incomeRepo := persistence.NewIncomeRepo(dbPool)
 	fixedExpenseRepo := persistence.NewFixedExpenseRepo(dbPool)
 	variableExpenseRepo := persistence.NewVariableExpenseRepo(dbPool)
-
 	idempStore := idempotency.NewStore(rdb)
+
+	kafkaProducer, err := kafka.NewProducer(cfg.KafkaBrokers)
+	if err != nil {
+		log.Error("failed to create kafka producer", "error", err)
+		return 1
+	}
+	defer kafkaProducer.Close()
+
+	outboxStore := outbox.NewStore(dbPool)
+	outboxPublisher := outbox.NewPublisher(outboxStore, kafkaProducer, "transaction-events", 5*time.Second)
+	outboxPublisher.Start(ctx)
+
+	var flagClient application.FeatureFlag
+	if cfg.UnleashURL != "" && cfg.UnleashToken != "" {
+		uc, err := ff.NewClient(cfg.UnleashURL, "transaction-svc", cfg.UnleashToken)
+		if err != nil {
+			log.Error("failed to create unleash client", "error", err)
+			return 1
+		}
+		defer func() { _ = uc.Close() }()
+		flagClient = &unleashFlag{client: uc}
+	} else {
+		flags := strings.Split(cfg.EnabledFlags, ",")
+		flagClient = &envFlag{flags: flags}
+	}
 
 	svc := application.NewService(
 		incomeRepo, fixedExpenseRepo, variableExpenseRepo,
-		outboxRepo, idempStore,
+		outboxRepo, idempStore, redisCache, flagClient,
 	)
 
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(authInterceptor),
+		telemetry.GRPCUnaryInterceptor(),
 	)
 
 	handler := api.NewGRPCHandler(svc)
@@ -63,21 +125,55 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GRPCPort))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Error("failed to listen", "error", err)
+		return 1
 	}
 
 	go func() {
-		log.Printf("transaction-svc listening on port %s", cfg.GRPCPort)
+		log.Info("transaction-svc listening", "port", cfg.GRPCPort)
 		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			log.Error("gRPC server error", "error", err)
+		}
+	}()
+
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "# metrics endpoint ready")
+	}))
+	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "ok")
+	})
+
+	metricsServer := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.MetricsPort),
+		Handler: metricsMux,
+	}
+	go func() {
+		log.Info("metrics HTTP server listening", "port", cfg.MetricsPort)
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("metrics server error", "error", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("shutting down...")
+	sig := <-quit
+
+	log.Info("shutting down", "signal", sig.String())
+
+	outboxPublisher.Stop()
 	grpcServer.GracefulStop()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("metrics server forced shutdown", "error", err)
+	}
+
+	log.Info("server stopped")
+	return 0
 }
 
 type config struct {
@@ -86,6 +182,11 @@ type config struct {
 	RedisURL     string
 	KafkaBrokers []string
 	JWTSecret    string
+	MetricsPort  string
+	UnleashURL   string
+	UnleashToken string
+	EnabledFlags string
+	CacheTTL     string
 }
 
 func loadConfig() config {
@@ -109,6 +210,10 @@ func loadConfig() config {
 	if secret == "" {
 		log.Fatal("JWT_SECRET is required")
 	}
+	metricsPort := os.Getenv("METRICS_PORT")
+	if metricsPort == "" {
+		metricsPort = "9094"
+	}
 
 	return config{
 		GRPCPort:     port,
@@ -116,8 +221,38 @@ func loadConfig() config {
 		RedisURL:     redisURL,
 		KafkaBrokers: []string{brokers},
 		JWTSecret:    secret,
+		MetricsPort:  metricsPort,
+		UnleashURL:   os.Getenv("UNLEASH_URL"),
+		UnleashToken: os.Getenv("UNLEASH_TOKEN"),
+		EnabledFlags: os.Getenv("ENABLED_FLAGS"),
+		CacheTTL:     os.Getenv("CACHE_TTL"),
 	}
 }
+
+type envFlag struct {
+	flags []string
+}
+
+func (e *envFlag) IsEnabled(_ context.Context, flag string) bool {
+	for _, f := range e.flags {
+		if strings.TrimSpace(f) == flag {
+			return true
+		}
+	}
+	return false
+}
+
+type unleashFlag struct {
+	client *ff.Client
+}
+
+func (u *unleashFlag) IsEnabled(ctx context.Context, flag string) bool {
+	return u.client.IsEnabled(ctx, flag)
+}
+
+type ctxKey string
+
+const userIDKey ctxKey = "user_id"
 
 func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	userID := extractUserIDFromToken(ctx)
@@ -127,7 +262,7 @@ func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServe
 	if userID == "" {
 		userID = "system"
 	}
-	ctx = context.WithValue(ctx, "user_id", userID)
+	ctx = context.WithValue(ctx, userIDKey, userID)
 	return handler(ctx, req)
 }
 
