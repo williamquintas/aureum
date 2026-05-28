@@ -19,4 +19,5 @@ var (
 	ErrMFAInvalidCode         = errors.New("invalid MFA verification code")
 	ErrSessionNotFound        = errors.New("session not found")
 	ErrFeatureDisabled        = errors.New("feature is disabled")
+	ErrOTPExpired             = errors.New("verification code expired")
 )

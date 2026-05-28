@@ -111,9 +111,12 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.VerifyEmail(r.Context(), req); err != nil {
-		if errors.Is(err, domain.ErrInvalidOTP) {
+		switch {
+		case errors.Is(err, domain.ErrInvalidOTP):
 			writeError(w, http.StatusBadRequest, "invalid verification code")
-		} else {
+		case errors.Is(err, domain.ErrOTPExpired):
+			writeError(w, http.StatusGone, "verification code expired")
+		default:
 			writeError(w, http.StatusInternalServerError, "internal error")
 		}
 		return

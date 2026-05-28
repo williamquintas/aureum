@@ -52,6 +52,13 @@ type PasswordResetCompletedEvent struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+type EmailOtpGeneratedEvent struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+	OTP    string `json:"otp"`
+	TTL    int    `json:"ttl"`
+}
+
 type MFAEnabledEvent struct {
 	UserID    string `json:"user_id"`
 	Timestamp int64  `json:"timestamp"`
