@@ -34,10 +34,12 @@ func withTx(pool *pgxpool.Pool, ctx context.Context, fn func(context.Context) er
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
 
 	txCtx := context.WithValue(ctx, txKey{}, tx)
 	if err := fn(txCtx); err != nil {
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			return fmt.Errorf("tx fn error: %w, rollback error: %w", err, rbErr)
+		}
 		return err
 	}
 

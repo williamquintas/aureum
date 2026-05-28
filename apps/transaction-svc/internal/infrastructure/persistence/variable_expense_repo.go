@@ -190,7 +190,6 @@ func (r *VariableExpenseRepo) Count(ctx context.Context, userID string, filter d
 	if filter.Category != nil {
 		args = append(args, *filter.Category)
 		conditions = append(conditions, fmt.Sprintf("category=$%d", argIdx))
-		argIdx++
 	}
 
 	query := fmt.Sprintf("SELECT COUNT(*) FROM variable_expenses WHERE %s", strings.Join(conditions, " AND "))

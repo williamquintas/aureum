@@ -449,7 +449,7 @@ func mapGRPCError(err error) error {
 	case codes.NotFound:
 		return fmt.Errorf("not found: %s", st.Message())
 	default:
-		return fmt.Errorf(st.Message())
+		return fmt.Errorf("identity-svc error: %s", st.Message())
 	}
 }
 

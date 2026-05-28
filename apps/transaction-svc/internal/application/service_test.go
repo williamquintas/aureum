@@ -210,7 +210,7 @@ func newTestSvc(
 	outbox OutboxRepository,
 	idempotency IdempotencyStore,
 ) *Service {
-	return NewService(incomes, fixedExpenses, variableExpenses, outbox, idempotency)
+	return NewService(incomes, fixedExpenses, variableExpenses, outbox, idempotency, nil, nil)
 }
 
 func defaultIncome() *domain.Income {

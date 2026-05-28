@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	outboxpkg "github.com/aureum/pkg/outbox"
+	"github.com/aureum/pkg/outbox"
+	"github.com/aureum/transaction-svc/internal/domain"
 )
 
 type OutboxRepository struct {
@@ -20,23 +20,47 @@ func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 }
 
 func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
+	switch e := event.(type) {
+	case outbox.Event:
+		return r.saveOutboxEvent(ctx, &e)
+	case *outbox.Event:
+		return r.saveOutboxEvent(ctx, e)
+	case domain.TransactionEvent:
+		return r.saveTransactionEvent(ctx, &e)
+	case *domain.TransactionEvent:
+		return r.saveTransactionEvent(ctx, e)
+	default:
+		return r.saveRawEvent(ctx, event)
+	}
+}
+
+func (r *OutboxRepository) saveOutboxEvent(ctx context.Context, e *outbox.Event) error {
 	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
+	return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
+}
 
-	switch e := event.(type) {
-	case outboxpkg.Event:
-		return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
-	case *outboxpkg.Event:
-		return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
-	default:
-		payload, err := json.Marshal(event)
-		if err != nil {
-			return err
-		}
-		id := uuid.New().String()
-		now := time.Now().UTC()
-		return r.exec(ctx, query, id, "transaction", "", "TransactionEvent", payload, &now)
+func (r *OutboxRepository) saveTransactionEvent(ctx context.Context, e *domain.TransactionEvent) error {
+	payload, err := json.Marshal(e.Payload)
+	if err != nil {
+		return err
 	}
+	id := e.EntityID
+	now := time.Now().UTC()
+	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+	return r.exec(ctx, query, id, "transaction", e.EntityID, string(e.Type), payload, &now)
+}
+
+func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) error {
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+	return r.exec(ctx, query, "", "transaction", "", "TransactionEvent", payload, &now)
 }
 
 func (r *OutboxRepository) exec(ctx context.Context, query string, args ...interface{}) error {
