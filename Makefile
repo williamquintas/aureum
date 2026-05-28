@@ -40,9 +40,9 @@ gen: ## Generate protobuf code using buf
 # ─── Linting ─────────────────────────────────────────────────────────────────
 
 .PHONY: lint
-lint: ## Run golangci-lint on all services
+lint: ## Run golangci-lint on workspace modules
 	@echo "Running linter..."
-	$(GOLANGCI_LINT) run ./... --timeout=5m
+	$(GOLANGCI_LINT) run ./apps/identity-svc/... ./pkg/... ./proto/... --timeout=5m
 	@echo "✓ Lint passed"
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
