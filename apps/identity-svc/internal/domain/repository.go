@@ -9,6 +9,7 @@ type UserRepository interface {
 	FindByKeycloakID(ctx context.Context, keycloakID string) (*User, error)
 	Update(ctx context.Context, user *User) error
 	List(ctx context.Context, offset, limit int) ([]*User, error)
+	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
 type RoleRepository interface {

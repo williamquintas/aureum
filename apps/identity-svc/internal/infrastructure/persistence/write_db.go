@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,8 +18,29 @@ type UserWriteRepository struct {
 	pool *pgxpool.Pool
 }
 
+type txKey struct{}
+
+func getTx(ctx context.Context) pgx.Tx {
+	tx, _ := ctx.Value(txKey{}).(pgx.Tx)
+	return tx
+}
+
 func NewUserWriteRepository(pool *pgxpool.Pool) *UserWriteRepository {
 	return &UserWriteRepository{pool: pool}
+}
+
+func (r *UserWriteRepository) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	txCtx := context.WithValue(ctx, txKey{}, tx)
+	if err := fn(txCtx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *UserWriteRepository) Save(ctx context.Context, user *domain.User) error {
@@ -27,6 +49,17 @@ func (r *UserWriteRepository) Save(ctx context.Context, user *domain.User) error
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 		RETURNING id, created_at, updated_at`
 
+	if tx := getTx(ctx); tx != nil {
+		return tx.QueryRow(ctx, query,
+			user.KeycloakID,
+			user.Email,
+			false,
+			string(user.Status),
+			user.Name,
+			user.Roles,
+			json.RawMessage(`{}`),
+		).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	}
 	return r.pool.QueryRow(ctx, query,
 		user.KeycloakID,
 		user.Email,
@@ -85,6 +118,14 @@ func (r *UserWriteRepository) Update(ctx context.Context, user *domain.User) err
 		return err
 	}
 
+	if tx := getTx(ctx); tx != nil {
+		_, err = tx.Exec(ctx, query,
+			user.Email, user.EmailVerified, string(user.Status), user.Name,
+			user.AvatarURL, user.CPF, user.MFAEnabled, user.Roles,
+			json.RawMessage(attrs), user.LastLoginAt, user.ID,
+		)
+		return err
+	}
 	_, err = r.pool.Exec(ctx, query,
 		user.Email, user.EmailVerified, string(user.Status), user.Name,
 		user.AvatarURL, user.CPF, user.MFAEnabled, user.Roles,
@@ -150,10 +191,26 @@ func (r *OutboxRepository) Save(ctx context.Context, tx any, event *outbox.Event
 	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err := r.pool.Exec(ctx, query,
-		event.ID, event.AggregateType, event.AggregateID,
-		event.EventType, event.Payload, event.CreatedAt,
-	)
+	var err error
+	switch t := tx.(type) {
+	case pgx.Tx:
+		_, err = t.Exec(ctx, query,
+			event.ID, event.AggregateType, event.AggregateID,
+			event.EventType, event.Payload, event.CreatedAt,
+		)
+	default:
+		if t := getTx(ctx); t != nil {
+			_, err = t.Exec(ctx, query,
+				event.ID, event.AggregateType, event.AggregateID,
+				event.EventType, event.Payload, event.CreatedAt,
+			)
+		} else {
+			_, err = r.pool.Exec(ctx, query,
+				event.ID, event.AggregateType, event.AggregateID,
+				event.EventType, event.Payload, event.CreatedAt,
+			)
+		}
+	}
 	return err
 }
 
