@@ -124,6 +124,62 @@ A user accesses a unified dashboard via GraphQL that aggregates their income, fi
 - **SC-004**: The BFF returns transaction data within 2 seconds even when the identity service is unavailable (graceful degradation).
 - **SC-005**: 100% of transaction records are correctly associated with the authenticated user with no data leakage between users.
 
+## Infrastructure Requirements
+
+### Databases
+
+- PostgreSQL 16 with two databases:
+  - `transaction_write` — write model (incomes, fixed_expenses, variable_expenses + outbox_events + triggers)
+  - `transaction_read` — read model (read-optimized views: income_views, fixed_expense_views, variable_expense_views)
+
+### Environment Variables
+
+**transaction-svc**:
+| Variable | Description |
+|---|---|
+| `WRITE_DB_DSN` | Write database connection string |
+| `READ_DB_DSN` | Read database connection string |
+| `REDIS_ADDR` | Redis address |
+| `KAFKA_BROKERS` | Kafka broker list |
+| `JWT_SECRET` | JWT signing/validation secret |
+| `GRPC_PORT` | gRPC server port (default: 50054) |
+| `OTEL_ENDPOINT` | OpenTelemetry collector endpoint |
+
+**graphql-bff**:
+| Variable | Description |
+|---|---|
+| `TRANSACTION_SVC_ADDR` | transaction-svc gRPC address |
+| `IDENTITY_SVC_ADDR` | identity-svc gRPC address |
+| `REDIS_ADDR` | Redis address |
+| `JWT_SECRET` | JWT validation secret |
+| `HTTP_PORT` | HTTP server port (default: 8082) |
+| `OTEL_ENDPOINT` | OpenTelemetry collector endpoint |
+
+### Ports
+
+| Service | Protocol | Port |
+|---|---|---|
+| transaction-svc | gRPC | 50054 |
+| graphql-bff | HTTP (GraphQL) | 8082 |
+
+### Kubernetes
+
+- **Kustomize structure**: `base/` (common config) + `overlays/{dev,staging,prod}` (environment patches)
+- **Secrets**: `transaction-db` (write-dsn, read-dsn), `transaction-svc` (jwt-secret)
+- **Overlay patches**: dev (1 replica, debug logging, playground), staging (2 replicas), prod (3 replicas, HPA at 70% CPU, PDB minAvailable: 2)
+- **DB migrations**: ConfigMap-based init container runs migration SQL against both databases
+
+### Tilt Dev Environment
+
+- Uses `custom_build` (not `docker_build`) due to Docker 28.0.1 BuildKit API incompatibility when Dockerfile path is outside the build context
+- Live-update sync paths: `apps/*`, `pkg/`, `proto/`, `go.work`, `go.work.sum`
+- Port forwards: 50054, 8082
+- Resource labels for service grouping
+
+### Docker Compose (Local Development)
+
+Both services can run in Docker Compose alongside existing infra (postgres, redis, kafka). Health checks required for dependency ordering.
+
 ## Assumptions
 
 - The identity service exists and provides user profile data via an internal API.

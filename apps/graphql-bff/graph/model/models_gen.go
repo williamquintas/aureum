@@ -14,6 +14,124 @@ type Transaction interface {
 	IsTransaction()
 }
 
+type AssetAllocation struct {
+	AssetType    AssetType `json:"assetType"`
+	Invested     int64     `json:"invested"`
+	CurrentValue int64     `json:"currentValue"`
+	Percentage   float64   `json:"percentage"`
+}
+
+type Budget struct {
+	ID          string            `json:"id"`
+	UserID      string            `json:"userId"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Period      BudgetPeriod      `json:"period"`
+	TotalLimit  int64             `json:"totalLimit"`
+	SpentAmount int64             `json:"spentAmount"`
+	Status      BudgetStatus      `json:"status"`
+	StartDate   time.Time         `json:"startDate"`
+	EndDate     time.Time         `json:"endDate"`
+	Categories  []*BudgetCategory `json:"categories"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+}
+
+type BudgetCategory struct {
+	ID          string `json:"id"`
+	BudgetID    string `json:"budgetId"`
+	Name        string `json:"name"`
+	LimitAmount int64  `json:"limitAmount"`
+	SpentAmount int64  `json:"spentAmount"`
+	Category    string `json:"category"`
+}
+
+type BudgetConnection struct {
+	Edges      []*BudgetEdge `json:"edges"`
+	PageInfo   *PageInfo     `json:"pageInfo"`
+	TotalCount int           `json:"totalCount"`
+}
+
+type BudgetEdge struct {
+	Node   *Budget `json:"node"`
+	Cursor string  `json:"cursor"`
+}
+
+type BudgetSummary struct {
+	BudgetID        string             `json:"budgetId"`
+	TotalLimit      int64              `json:"totalLimit"`
+	TotalSpent      int64              `json:"totalSpent"`
+	Remaining       int64              `json:"remaining"`
+	UsagePercentage float64            `json:"usagePercentage"`
+	CategoryCount   int                `json:"categoryCount"`
+	Categories      []*CategorySummary `json:"categories"`
+}
+
+type CategorySummary struct {
+	CategoryID      string  `json:"categoryId"`
+	Name            string  `json:"name"`
+	Category        string  `json:"category"`
+	LimitAmount     int64   `json:"limitAmount"`
+	SpentAmount     int64   `json:"spentAmount"`
+	Remaining       int64   `json:"remaining"`
+	UsagePercentage float64 `json:"usagePercentage"`
+}
+
+type CreditCard struct {
+	ID              string    `json:"id"`
+	UserID          string    `json:"userId"`
+	Name            string    `json:"name"`
+	Brand           CardBrand `json:"brand"`
+	CardType        CardType  `json:"cardType"`
+	LastFourDigits  string    `json:"lastFourDigits"`
+	ClosingDay      int       `json:"closingDay"`
+	DueDay          int       `json:"dueDay"`
+	CreditLimit     int64     `json:"creditLimit"`
+	AvailableCredit int64     `json:"availableCredit"`
+	Active          bool      `json:"active"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
+}
+
+type CreditCardConnection struct {
+	Edges      []*CreditCardEdge `json:"edges"`
+	PageInfo   *PageInfo         `json:"pageInfo"`
+	TotalCount int               `json:"totalCount"`
+}
+
+type CreditCardEdge struct {
+	Node   *CreditCard `json:"node"`
+	Cursor string      `json:"cursor"`
+}
+
+type Debt struct {
+	ID              string     `json:"id"`
+	UserID          string     `json:"userId"`
+	Name            string     `json:"name"`
+	Description     string     `json:"description"`
+	DebtType        DebtType   `json:"debtType"`
+	TotalAmount     int64      `json:"totalAmount"`
+	RemainingAmount int64      `json:"remainingAmount"`
+	InterestRate    int64      `json:"interestRate"`
+	StartDate       time.Time  `json:"startDate"`
+	ExpectedEndDate time.Time  `json:"expectedEndDate"`
+	Status          DebtStatus `json:"status"`
+	Creditor        string     `json:"creditor"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
+}
+
+type DebtConnection struct {
+	Edges      []*DebtEdge `json:"edges"`
+	PageInfo   *PageInfo   `json:"pageInfo"`
+	TotalCount int         `json:"totalCount"`
+}
+
+type DebtEdge struct {
+	Node   *Debt  `json:"node"`
+	Cursor string `json:"cursor"`
+}
+
 type FixedExpense struct {
 	ID            string            `json:"id"`
 	UserID        string            `json:"userId"`
@@ -65,11 +183,139 @@ type IncomeEdge struct {
 	Cursor string  `json:"cursor"`
 }
 
+type Investment struct {
+	ID            string           `json:"id"`
+	UserID        string           `json:"userId"`
+	Name          string           `json:"name"`
+	Ticker        string           `json:"ticker"`
+	AssetType     AssetType        `json:"assetType"`
+	Quantity      int64            `json:"quantity"`
+	AveragePrice  int64            `json:"averagePrice"`
+	TotalInvested int64            `json:"totalInvested"`
+	Status        InvestmentStatus `json:"status"`
+	Broker        string           `json:"broker"`
+	CreatedAt     time.Time        `json:"createdAt"`
+	UpdatedAt     time.Time        `json:"updatedAt"`
+}
+
+type InvestmentConnection struct {
+	Edges      []*InvestmentEdge `json:"edges"`
+	PageInfo   *PageInfo         `json:"pageInfo"`
+	TotalCount int               `json:"totalCount"`
+}
+
+type InvestmentEdge struct {
+	Node   *Investment `json:"node"`
+	Cursor string      `json:"cursor"`
+}
+
+type InvestmentTransaction struct {
+	ID              string                    `json:"id"`
+	InvestmentID    string                    `json:"investmentId"`
+	UserID          string                    `json:"userId"`
+	TransactionType InvestmentTransactionType `json:"transactionType"`
+	Quantity        int64                     `json:"quantity"`
+	UnitPrice       int64                     `json:"unitPrice"`
+	TotalAmount     int64                     `json:"totalAmount"`
+	TransactionDate time.Time                 `json:"transactionDate"`
+	Notes           string                    `json:"notes"`
+	CreatedAt       time.Time                 `json:"createdAt"`
+}
+
+type InvestmentTransactionConnection struct {
+	Edges      []*InvestmentTransactionEdge `json:"edges"`
+	PageInfo   *PageInfo                    `json:"pageInfo"`
+	TotalCount int                          `json:"totalCount"`
+}
+
+type InvestmentTransactionEdge struct {
+	Node   *InvestmentTransaction `json:"node"`
+	Cursor string                 `json:"cursor"`
+}
+
+type Invoice struct {
+	ID             string        `json:"id"`
+	CreditCardID   string        `json:"creditCardId"`
+	UserID         string        `json:"userId"`
+	ReferenceMonth string        `json:"referenceMonth"`
+	TotalAmount    int64         `json:"totalAmount"`
+	PaidAmount     int64         `json:"paidAmount"`
+	Status         InvoiceStatus `json:"status"`
+	ClosingDate    time.Time     `json:"closingDate"`
+	DueDate        time.Time     `json:"dueDate"`
+	CreatedAt      time.Time     `json:"createdAt"`
+	UpdatedAt      time.Time     `json:"updatedAt"`
+}
+
+type InvoiceConnection struct {
+	Edges      []*InvoiceEdge `json:"edges"`
+	PageInfo   *PageInfo      `json:"pageInfo"`
+	TotalCount int            `json:"totalCount"`
+}
+
+type InvoiceEdge struct {
+	Node   *Invoice `json:"node"`
+	Cursor string   `json:"cursor"`
+}
+
+type InvoiceTransaction struct {
+	ID              string    `json:"id"`
+	InvoiceID       string    `json:"invoiceId"`
+	UserID          string    `json:"userId"`
+	Description     string    `json:"description"`
+	Amount          int64     `json:"amount"`
+	Category        string    `json:"category"`
+	TransactionDate time.Time `json:"transactionDate"`
+	Installments    int       `json:"installments"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
+type InvoiceTransactionConnection struct {
+	Edges      []*InvoiceTransactionEdge `json:"edges"`
+	PageInfo   *PageInfo                 `json:"pageInfo"`
+	TotalCount int                       `json:"totalCount"`
+}
+
+type InvoiceTransactionEdge struct {
+	Node   *InvoiceTransaction `json:"node"`
+	Cursor string              `json:"cursor"`
+}
+
 type PageInfo struct {
 	HasNextPage     bool    `json:"hasNextPage"`
 	HasPreviousPage bool    `json:"hasPreviousPage"`
 	StartCursor     *string `json:"startCursor,omitempty"`
 	EndCursor       *string `json:"endCursor,omitempty"`
+}
+
+type Payment struct {
+	ID          string    `json:"id"`
+	DebtID      string    `json:"debtId"`
+	UserID      string    `json:"userId"`
+	Amount      int64     `json:"amount"`
+	PaymentDate time.Time `json:"paymentDate"`
+	Notes       string    `json:"notes"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type PaymentConnection struct {
+	Edges      []*PaymentEdge `json:"edges"`
+	PageInfo   *PageInfo      `json:"pageInfo"`
+	TotalCount int            `json:"totalCount"`
+}
+
+type PaymentEdge struct {
+	Node   *Payment `json:"node"`
+	Cursor string   `json:"cursor"`
+}
+
+type PortfolioSummary struct {
+	TotalInvested     int64              `json:"totalInvested"`
+	CurrentValue      int64              `json:"currentValue"`
+	TotalReturn       int64              `json:"totalReturn"`
+	ReturnPercentage  float64            `json:"returnPercentage"`
+	ActiveInvestments int                `json:"activeInvestments"`
+	Allocation        []*AssetAllocation `json:"allocation"`
 }
 
 type Query struct {
@@ -118,6 +364,453 @@ type VariableExpenseConnection struct {
 type VariableExpenseEdge struct {
 	Node   *VariableExpense `json:"node"`
 	Cursor string           `json:"cursor"`
+}
+
+type AssetType string
+
+const (
+	AssetTypeStock          AssetType = "STOCK"
+	AssetTypeEtf            AssetType = "ETF"
+	AssetTypeRealEstateFund AssetType = "REAL_ESTATE_FUND"
+	AssetTypeTreasury       AssetType = "TREASURY"
+	AssetTypeCdb            AssetType = "CDB"
+	AssetTypeLci            AssetType = "LCI"
+	AssetTypeLca            AssetType = "LCA"
+	AssetTypeCrypto         AssetType = "CRYPTO"
+	AssetTypePension        AssetType = "PENSION"
+	AssetTypeFund           AssetType = "FUND"
+	AssetTypeDollar         AssetType = "DOLLAR"
+	AssetTypeGold           AssetType = "GOLD"
+	AssetTypeOtherAsset     AssetType = "OTHER_ASSET"
+)
+
+var AllAssetType = []AssetType{
+	AssetTypeStock,
+	AssetTypeEtf,
+	AssetTypeRealEstateFund,
+	AssetTypeTreasury,
+	AssetTypeCdb,
+	AssetTypeLci,
+	AssetTypeLca,
+	AssetTypeCrypto,
+	AssetTypePension,
+	AssetTypeFund,
+	AssetTypeDollar,
+	AssetTypeGold,
+	AssetTypeOtherAsset,
+}
+
+func (e AssetType) IsValid() bool {
+	switch e {
+	case AssetTypeStock, AssetTypeEtf, AssetTypeRealEstateFund, AssetTypeTreasury, AssetTypeCdb, AssetTypeLci, AssetTypeLca, AssetTypeCrypto, AssetTypePension, AssetTypeFund, AssetTypeDollar, AssetTypeGold, AssetTypeOtherAsset:
+		return true
+	}
+	return false
+}
+
+func (e AssetType) String() string {
+	return string(e)
+}
+
+func (e *AssetType) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AssetType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AssetType", str)
+	}
+	return nil
+}
+
+func (e AssetType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AssetType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AssetType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type BudgetPeriod string
+
+const (
+	BudgetPeriodMonthly   BudgetPeriod = "MONTHLY"
+	BudgetPeriodBimonthly BudgetPeriod = "BIMONTHLY"
+	BudgetPeriodQuarterly BudgetPeriod = "QUARTERLY"
+	BudgetPeriodSemestral BudgetPeriod = "SEMESTRAL"
+	BudgetPeriodYearly    BudgetPeriod = "YEARLY"
+	BudgetPeriodCustom    BudgetPeriod = "CUSTOM"
+)
+
+var AllBudgetPeriod = []BudgetPeriod{
+	BudgetPeriodMonthly,
+	BudgetPeriodBimonthly,
+	BudgetPeriodQuarterly,
+	BudgetPeriodSemestral,
+	BudgetPeriodYearly,
+	BudgetPeriodCustom,
+}
+
+func (e BudgetPeriod) IsValid() bool {
+	switch e {
+	case BudgetPeriodMonthly, BudgetPeriodBimonthly, BudgetPeriodQuarterly, BudgetPeriodSemestral, BudgetPeriodYearly, BudgetPeriodCustom:
+		return true
+	}
+	return false
+}
+
+func (e BudgetPeriod) String() string {
+	return string(e)
+}
+
+func (e *BudgetPeriod) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = BudgetPeriod(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid BudgetPeriod", str)
+	}
+	return nil
+}
+
+func (e BudgetPeriod) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *BudgetPeriod) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e BudgetPeriod) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type BudgetStatus string
+
+const (
+	BudgetStatusActive    BudgetStatus = "ACTIVE"
+	BudgetStatusPaused    BudgetStatus = "PAUSED"
+	BudgetStatusCompleted BudgetStatus = "COMPLETED"
+	BudgetStatusCancelled BudgetStatus = "CANCELLED"
+)
+
+var AllBudgetStatus = []BudgetStatus{
+	BudgetStatusActive,
+	BudgetStatusPaused,
+	BudgetStatusCompleted,
+	BudgetStatusCancelled,
+}
+
+func (e BudgetStatus) IsValid() bool {
+	switch e {
+	case BudgetStatusActive, BudgetStatusPaused, BudgetStatusCompleted, BudgetStatusCancelled:
+		return true
+	}
+	return false
+}
+
+func (e BudgetStatus) String() string {
+	return string(e)
+}
+
+func (e *BudgetStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = BudgetStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid BudgetStatus", str)
+	}
+	return nil
+}
+
+func (e BudgetStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *BudgetStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e BudgetStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type CardBrand string
+
+const (
+	CardBrandVisa       CardBrand = "VISA"
+	CardBrandMastercard CardBrand = "MASTERCARD"
+	CardBrandAmex       CardBrand = "AMEX"
+	CardBrandElo        CardBrand = "ELO"
+	CardBrandHipercard  CardBrand = "HIPERCARD"
+	CardBrandDiners     CardBrand = "DINERS"
+	CardBrandOtherBrand CardBrand = "OTHER_BRAND"
+)
+
+var AllCardBrand = []CardBrand{
+	CardBrandVisa,
+	CardBrandMastercard,
+	CardBrandAmex,
+	CardBrandElo,
+	CardBrandHipercard,
+	CardBrandDiners,
+	CardBrandOtherBrand,
+}
+
+func (e CardBrand) IsValid() bool {
+	switch e {
+	case CardBrandVisa, CardBrandMastercard, CardBrandAmex, CardBrandElo, CardBrandHipercard, CardBrandDiners, CardBrandOtherBrand:
+		return true
+	}
+	return false
+}
+
+func (e CardBrand) String() string {
+	return string(e)
+}
+
+func (e *CardBrand) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CardBrand(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CardBrand", str)
+	}
+	return nil
+}
+
+func (e CardBrand) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CardBrand) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CardBrand) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type CardType string
+
+const (
+	CardTypeCredit   CardType = "CREDIT"
+	CardTypeDebit    CardType = "DEBIT"
+	CardTypeMultiple CardType = "MULTIPLE"
+)
+
+var AllCardType = []CardType{
+	CardTypeCredit,
+	CardTypeDebit,
+	CardTypeMultiple,
+}
+
+func (e CardType) IsValid() bool {
+	switch e {
+	case CardTypeCredit, CardTypeDebit, CardTypeMultiple:
+		return true
+	}
+	return false
+}
+
+func (e CardType) String() string {
+	return string(e)
+}
+
+func (e *CardType) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CardType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CardType", str)
+	}
+	return nil
+}
+
+func (e CardType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CardType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CardType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DebtStatus string
+
+const (
+	DebtStatusActive    DebtStatus = "ACTIVE"
+	DebtStatusPaused    DebtStatus = "PAUSED"
+	DebtStatusPaidOff   DebtStatus = "PAID_OFF"
+	DebtStatusDefaulted DebtStatus = "DEFAULTED"
+	DebtStatusSettled   DebtStatus = "SETTLED"
+)
+
+var AllDebtStatus = []DebtStatus{
+	DebtStatusActive,
+	DebtStatusPaused,
+	DebtStatusPaidOff,
+	DebtStatusDefaulted,
+	DebtStatusSettled,
+}
+
+func (e DebtStatus) IsValid() bool {
+	switch e {
+	case DebtStatusActive, DebtStatusPaused, DebtStatusPaidOff, DebtStatusDefaulted, DebtStatusSettled:
+		return true
+	}
+	return false
+}
+
+func (e DebtStatus) String() string {
+	return string(e)
+}
+
+func (e *DebtStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DebtStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DebtStatus", str)
+	}
+	return nil
+}
+
+func (e DebtStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DebtStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DebtStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DebtType string
+
+const (
+	DebtTypePersonalLoan   DebtType = "PERSONAL_LOAN"
+	DebtTypeStudentLoan    DebtType = "STUDENT_LOAN"
+	DebtTypeMortgage       DebtType = "MORTGAGE"
+	DebtTypeCarLoan        DebtType = "CAR_LOAN"
+	DebtTypeCreditCardDebt DebtType = "CREDIT_CARD_DEBT"
+	DebtTypeMedicalDebt    DebtType = "MEDICAL_DEBT"
+	DebtTypeOtherDebt      DebtType = "OTHER_DEBT"
+)
+
+var AllDebtType = []DebtType{
+	DebtTypePersonalLoan,
+	DebtTypeStudentLoan,
+	DebtTypeMortgage,
+	DebtTypeCarLoan,
+	DebtTypeCreditCardDebt,
+	DebtTypeMedicalDebt,
+	DebtTypeOtherDebt,
+}
+
+func (e DebtType) IsValid() bool {
+	switch e {
+	case DebtTypePersonalLoan, DebtTypeStudentLoan, DebtTypeMortgage, DebtTypeCarLoan, DebtTypeCreditCardDebt, DebtTypeMedicalDebt, DebtTypeOtherDebt:
+		return true
+	}
+	return false
+}
+
+func (e DebtType) String() string {
+	return string(e)
+}
+
+func (e *DebtType) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DebtType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DebtType", str)
+	}
+	return nil
+}
+
+func (e DebtType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DebtType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DebtType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type ExpenseType string
@@ -239,6 +932,183 @@ func (e *IncomeType) UnmarshalJSON(b []byte) error {
 }
 
 func (e IncomeType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type InvestmentStatus string
+
+const (
+	InvestmentStatusActive    InvestmentStatus = "ACTIVE"
+	InvestmentStatusSold      InvestmentStatus = "SOLD"
+	InvestmentStatusCancelled InvestmentStatus = "CANCELLED"
+)
+
+var AllInvestmentStatus = []InvestmentStatus{
+	InvestmentStatusActive,
+	InvestmentStatusSold,
+	InvestmentStatusCancelled,
+}
+
+func (e InvestmentStatus) IsValid() bool {
+	switch e {
+	case InvestmentStatusActive, InvestmentStatusSold, InvestmentStatusCancelled:
+		return true
+	}
+	return false
+}
+
+func (e InvestmentStatus) String() string {
+	return string(e)
+}
+
+func (e *InvestmentStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = InvestmentStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid InvestmentStatus", str)
+	}
+	return nil
+}
+
+func (e InvestmentStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *InvestmentStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e InvestmentStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type InvestmentTransactionType string
+
+const (
+	InvestmentTransactionTypeBuy          InvestmentTransactionType = "BUY"
+	InvestmentTransactionTypeSell         InvestmentTransactionType = "SELL"
+	InvestmentTransactionTypeDividend     InvestmentTransactionType = "DIVIDEND"
+	InvestmentTransactionTypeJcp          InvestmentTransactionType = "JCP"
+	InvestmentTransactionTypeAmortization InvestmentTransactionType = "AMORTIZATION"
+)
+
+var AllInvestmentTransactionType = []InvestmentTransactionType{
+	InvestmentTransactionTypeBuy,
+	InvestmentTransactionTypeSell,
+	InvestmentTransactionTypeDividend,
+	InvestmentTransactionTypeJcp,
+	InvestmentTransactionTypeAmortization,
+}
+
+func (e InvestmentTransactionType) IsValid() bool {
+	switch e {
+	case InvestmentTransactionTypeBuy, InvestmentTransactionTypeSell, InvestmentTransactionTypeDividend, InvestmentTransactionTypeJcp, InvestmentTransactionTypeAmortization:
+		return true
+	}
+	return false
+}
+
+func (e InvestmentTransactionType) String() string {
+	return string(e)
+}
+
+func (e *InvestmentTransactionType) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = InvestmentTransactionType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid InvestmentTransactionType", str)
+	}
+	return nil
+}
+
+func (e InvestmentTransactionType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *InvestmentTransactionType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e InvestmentTransactionType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type InvoiceStatus string
+
+const (
+	InvoiceStatusOpen    InvoiceStatus = "OPEN"
+	InvoiceStatusClosed  InvoiceStatus = "CLOSED"
+	InvoiceStatusPaid    InvoiceStatus = "PAID"
+	InvoiceStatusOverdue InvoiceStatus = "OVERDUE"
+)
+
+var AllInvoiceStatus = []InvoiceStatus{
+	InvoiceStatusOpen,
+	InvoiceStatusClosed,
+	InvoiceStatusPaid,
+	InvoiceStatusOverdue,
+}
+
+func (e InvoiceStatus) IsValid() bool {
+	switch e {
+	case InvoiceStatusOpen, InvoiceStatusClosed, InvoiceStatusPaid, InvoiceStatusOverdue:
+		return true
+	}
+	return false
+}
+
+func (e InvoiceStatus) String() string {
+	return string(e)
+}
+
+func (e *InvoiceStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = InvoiceStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid InvoiceStatus", str)
+	}
+	return nil
+}
+
+func (e InvoiceStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *InvoiceStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e InvoiceStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -348,7 +348,7 @@ git clone https://github.com/williamquintas/aureum.git && cd aureum && make init
 | Step | Resource |
 |------|----------|
 | Understand the architecture | [architecture.md](architecture.md) |
-| Set up local development | [runbooks/local-development.md](runbooks/local-development.md) |
+| Set up local development | [runbooks/dev-environment.md](runbooks/dev-environment.md) |
 | Learn about deployments | [runbooks/deployment.md](runbooks/deployment.md) |
 | Explore the GraphQL API | `http://localhost:8080/graphql` (GraphQL Playground) |
 | View ADR decisions | `docs/adr/` |
