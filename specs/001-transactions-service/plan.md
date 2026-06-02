@@ -26,11 +26,19 @@ The service exposes gRPC for inter-service communication (transaction-svc provid
 - `github.com/99designs/gqlgen` — GraphQL schema-first codegen (graphql-bff)
 - `github.com/go-chi/chi/v5` — HTTP router (graphql-bff)
 
-**Storage**: PostgreSQL 16 (write DB + read DB), Redis 7 (cache + idempotency store)
+**Storage**: PostgreSQL 16 (write DB + read DB: `transaction_write`, `transaction_read`), Redis 7 (cache + idempotency store)
 
 **Testing**: `go test` per service, table-driven unit tests (domain), integration tests with testcontainers (repositories, gRPC handlers)
 
-**Target Platform**: Linux (Kubernetes)
+**Target Platform**: Linux (Kubernetes via kind/minikube local, GKE prod)
+
+**Infrastructure Requirements**:
+- PostgreSQL databases: `transaction_write` (write model), `transaction_read` (read model) — added to init SQL
+- DB migration job: SQL for incomes, fixed_expenses, variable_expenses tables + outbox + triggers
+- K8s secrets: `transaction-db` (write-dsn, read-dsn), `transaction-svc` (jwt-secret)
+- Kustomize structure: `base/` (common config) + `overlays/{dev,staging,prod}` (environment patches) — avoids cycle error from overlay referencing parent
+- Tilt dev environment: `custom_build` (not `docker_build` — Docker 28.0.1 BuildKit API bug), live_update sync, port forwarding
+- Docker Compose: services for local development without K8s
 
 **Project Type**: Multi-service (microservice): gRPC + GraphQL backend services
 

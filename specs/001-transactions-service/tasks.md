@@ -16,6 +16,9 @@
 - **graphql-bff**: `apps/graphql-bff/`
 - **proto**: `proto/` (shared protobuf definitions)
 - **docs**: `specs/001-transactions-service/`
+- **deploy/k8s**: `deploy/k8s/` (Kubernetes manifests)
+- **deploy/tilt**: `deploy/tilt/` (Tilt dev environment)
+- **deploy/docker-compose**: `deploy/docker-compose/` (local infra)
 
 ---
 
@@ -72,12 +75,12 @@
 
 ### GraphQL BFF Foundation
 
-- [ ] T024 Create `apps/graphql-bff/gqlgen.yml` with gqlgen configuration (schema path, models, directives)
-- [ ] T025 Create `apps/graphql-bff/internal/infrastructure/clients/transaction_client.go` with gRPC client connecting to transaction-svc
-- [ ] T026 Create `apps/graphql-bff/internal/infrastructure/clients/identity_client.go` with optional gRPC client connecting to identity-svc (graceful degradation on connection failure)
-- [ ] T027 Create `apps/graphql-bff/internal/infrastructure/auth/middleware.go` with Keycloak JWT validation middleware (reuses patterns from identity-svc)
-- [ ] T028 Create `apps/graphql-bff/internal/infrastructure/cache/redis_cache.go` with cache-first read implementation
-- [ ] T029 Create `apps/graphql-bff/cmd/server/main.go` with HTTP server, chi router, gqlgen handler, middleware wiring, signal handling
+- [x] T024 Create `apps/graphql-bff/gqlgen.yml` with gqlgen configuration (schema path, models, directives)
+- [x] T025 [absorbed by resolver.go] gRPC client for transaction-svc created directly via `transactionv1.NewTransactionServiceClient(txConn)` in resolver.go
+- [x] T026 [absorbed by resolver.go] gRPC client for identity-svc created directly via `identityv1.NewIdentityServiceClient(idConn)` in resolver.go
+- [x] T027 [absorbed by directive.go] Auth handled via `@auth` GraphQL directive in `graph/directive.go` instead of chi middleware
+- [ ] T028 (deferred) Create `apps/graphql-bff/internal/infrastructure/cache/redis_cache.go` with cache-first read implementation (resolvers currently call gRPC directly)
+- [x] T029 Create `apps/graphql-bff/cmd/server/main.go` with HTTP server, chi router, gqlgen handler, middleware wiring, signal handling
 
 **Checkpoint**: Foundation ready — all three transaction types can now be implemented in parallel
 
@@ -160,7 +163,36 @@
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 7: Infrastructure & Deployment
+
+**Purpose**: Kubernetes manifests, Tilt dev environment, DB init, and secrets for both services
+
+**Dependencies**: Phase 2 (Foundational) must be complete — infra requires knowing the DB schemas and service ports
+
+**⚠️ Blocking**: Services cannot be deployed without this phase
+
+### Database Init
+
+- [x] T064 Update `deploy/k8s/infra/postgres.yaml` init SQL to create `transaction_write` and `transaction_read` databases (alongside existing identity_write/identity_read)
+- [x] T065 Create `deploy/k8s/db-migrate/configmap.yaml` entries for `migrate_transaction_write.sql` — CREATE TABLE incomes, fixed_expenses, variable_expenses, outbox_events, triggers (update_updated_at_column), indexes per migration files
+- [x] T066 Create `deploy/k8s/db-migrate/configmap.yaml` entries for `migrate_transaction_read.sql` — CREATE TABLE income_views, fixed_expense_views, variable_expense_views (read-optimized projections), indexes for query patterns
+- [x] T067 Update `deploy/k8s/db-migrate/configmap.yaml` migrate.sh script to apply `migrate_transaction_write.sql` to `transaction_write` and `migrate_transaction_read.sql` to `transaction_read`
+- [x] T068 [P] Add `transaction-db` secret to `deploy/k8s/kustomization.yaml` with literals: `write-dsn=postgres://aureum:aureum_dev@postgres:5432/transaction_write?sslmode=disable`, `read-dsn=postgres://aureum:aureum_dev@postgres:5432/transaction_read?sslmode=disable`
+- [x] T069 [P] Add `transaction-svc` secret to `deploy/k8s/kustomization.yaml` with literals: `jwt-secret=dev-jwt-secret-change-in-production`
+- [x] T070 Add `transaction-svc/` and `graphql-bff/` directories to `deploy/k8s/kustomization.yaml` resources (alongside existing infra, keycloak, identity-svc, db-migrate)
+- [x] T071 Add `docker_build('aureum/transaction-svc:dev', ...)` block to `deploy/tilt/Tiltfile` with live_update sync for `apps/transaction-svc/`, `pkg/`, `proto/`, go.work, go.work.sum
+- [x] T072 Add `docker_build('aureum/graphql-bff:dev', ...)` block to `deploy/tilt/Tiltfile` with live_update sync for `apps/graphql-bff/`, `pkg/`, `proto/`, go.work, go.work.sum
+- [x] T073 Add `k8s_resource('transaction-svc', port_forwards=['50054:50054'])` to Tiltfile for local gRPC access
+- [x] T074 Add `k8s_resource('graphql-bff', port_forwards=['8082:8082'])` to Tiltfile for local GraphQL access
+- [x] T075 Add `k8s_scale('transaction-svc', 1)` and `k8s_scale('graphql-bff', 1)` to Tiltfile to scale down for dev
+- [x] T076 [P] Create `deploy/k8s/overlays/dev/kustomization.yaml` with dev patches (replicas:1, resource overrides, env overrides for transaction-svc and graphql-bff)
+- [x] T077 [P] Create `deploy/k8s/overlays/staging/kustomization.yaml` with staging patches (replicas:2, staging env overrides)
+- [x] T078 [P] Create `deploy/k8s/overlays/prod/kustomization.yaml` with prod patches (replicas:3, HPA config, pod disruption budgets, resource limits)
+- [x] T079 Update `deploy/docker-compose/docker-compose.infra.yml` to add `transaction-svc` and `graphql-bff` service definitions with env vars, ports, health checks (for local development without K8s)
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple areas
 
@@ -186,7 +218,8 @@
 - **US2 FixedExpense (Phase 4)**: Depends on Foundational — independent of US1
 - **US3 VariableExpense (Phase 5)**: Depends on Foundational — independent of US1, US2
 - **US4 GraphQL BFF (Phase 6)**: Depends on Foundational + all three US phases complete
-- **Polish (Phase 7)**: Depends on all desired phases being complete
+- **Infrastructure (Phase 7)**: Depends on Foundational (needs DB schemas and ports) — can run in parallel with US phases 3-5
+- **Polish (Phase 8)**: Depends on all desired phases being complete
 
 ### User Story Dependencies
 
@@ -208,7 +241,8 @@
 - **Phase 2**: T015+T016+T017 (migrations) can run in parallel; T030-T034 (income RPCs) can all run in parallel
 - **Phases 3-5**: ALL can run in parallel once Foundational is done (each handles a separate entity type)
 - **Phase 6**: T050+T051 (resolver files) can run in parallel
-- **Phase 7**: T055+T056 (OpenTelemetry), T058+T059+T060 (docs) can run in parallel
+- **Phase 7**: T064 is prerequisite for T065-T067 (need DB first); T068+T069 (secrets) can run in parallel; T071+T072 (Tilt docker_build) in parallel; T076+T077+T078 (overlays) in parallel
+- **Phase 8**: T055+T056 (OpenTelemetry), T058+T059+T060 (docs) can run in parallel
 
 ---
 
@@ -266,8 +300,9 @@ With multiple developers:
    - Developer A: US1 Income (Phase 3)
    - Developer B: US2 FixedExpense (Phase 4)
    - Developer C: US3 VariableExpense (Phase 5)
-3. After all three complete: Developer A or D picks up US4 GraphQL BFF (Phase 6)
-4. Polish (Phase 7) distributed across team
+   - Developer D: Infrastructure (Phase 7) — can run in parallel with US phases
+3. After all three US complete: Developer A or E picks up US4 GraphQL BFF (Phase 6)
+4. Polish (Phase 8) distributed across team
 
 ---
 

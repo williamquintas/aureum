@@ -139,6 +139,29 @@ type Query {
   ): TransactionConnection! @auth(role: "user")
 
   me: UserProfile! @auth(role: "user")
+
+  # Budget
+  budget(id: ID!): Budget! @auth(role: "user")
+  budgets(first: Int = 20, after: String, status: BudgetStatus, dateFrom: Date, dateTo: Date): BudgetConnection! @auth(role: "user")
+  budgetSummary(id: ID!): BudgetSummary! @auth(role: "user")
+
+  # Credit Card
+  creditCard(id: ID!): CreditCard! @auth(role: "user")
+  creditCards(first: Int = 20, after: String, active: Boolean): CreditCardConnection! @auth(role: "user")
+  invoice(id: ID!): Invoice! @auth(role: "user")
+  invoices(first: Int = 20, after: String, creditCardId: String!, status: InvoiceStatus, monthFrom: String, monthTo: String): InvoiceConnection! @auth(role: "user")
+  invoiceTransactions(first: Int = 20, after: String, invoiceId: String!, category: String): InvoiceTransactionConnection! @auth(role: "user")
+
+  # Debt
+  debt(id: ID!): Debt! @auth(role: "user")
+  debts(first: Int = 20, after: String, status: DebtStatus, type: DebtType): DebtConnection! @auth(role: "user")
+  payments(first: Int = 20, after: String, debtId: String!, dateFrom: Date, dateTo: Date): PaymentConnection! @auth(role: "user")
+
+  # Investment
+  investment(id: ID!): Investment! @auth(role: "user")
+  investments(first: Int = 20, after: String, assetType: AssetType, status: InvestmentStatus): InvestmentConnection! @auth(role: "user")
+  investmentTransactions(first: Int = 20, after: String, investmentId: String!, type: InvestmentTransactionType, dateFrom: Date, dateTo: Date): InvestmentTransactionConnection! @auth(role: "user")
+  portfolioSummary: PortfolioSummary! @auth(role: "user")
 }
 
 enum TransactionTypeFilter {
@@ -179,3 +202,282 @@ type VariableExpenseEdge {
   node: VariableExpense!
   cursor: String!
 }
+
+# ── Budget Types ──────────────────────────────────────────────────────────
+
+enum BudgetPeriod {
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMESTRAL
+  YEARLY
+  CUSTOM
+}
+
+enum BudgetStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+type Budget {
+  id: ID!
+  userId: ID!
+  name: String!
+  description: String!
+  period: BudgetPeriod!
+  totalLimit: Cents!
+  spentAmount: Cents!
+  status: BudgetStatus!
+  startDate: Date!
+  endDate: Date!
+  categories: [BudgetCategory!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type BudgetCategory {
+  id: ID!
+  budgetId: ID!
+  name: String!
+  limitAmount: Cents!
+  spentAmount: Cents!
+  category: String!
+}
+
+type BudgetSummary {
+  budgetId: ID!
+  totalLimit: Cents!
+  totalSpent: Cents!
+  remaining: Cents!
+  usagePercentage: Float!
+  categoryCount: Int!
+  categories: [CategorySummary!]!
+}
+
+type CategorySummary {
+  categoryId: ID!
+  name: String!
+  category: String!
+  limitAmount: Cents!
+  spentAmount: Cents!
+  remaining: Cents!
+  usagePercentage: Float!
+}
+
+# ── Credit Card Types ────────────────────────────────────────────────────
+
+enum CardBrand {
+  VISA
+  MASTERCARD
+  AMEX
+  ELO
+  HIPERCARD
+  DINERS
+  OTHER_BRAND
+}
+
+enum CardType {
+  CREDIT
+  DEBIT
+  MULTIPLE
+}
+
+enum InvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+  OVERDUE
+}
+
+type CreditCard {
+  id: ID!
+  userId: ID!
+  name: String!
+  brand: CardBrand!
+  cardType: CardType!
+  lastFourDigits: String!
+  closingDay: Int!
+  dueDay: Int!
+  creditLimit: Cents!
+  availableCredit: Cents!
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Invoice {
+  id: ID!
+  creditCardId: ID!
+  userId: ID!
+  referenceMonth: String!
+  totalAmount: Cents!
+  paidAmount: Cents!
+  status: InvoiceStatus!
+  closingDate: Date!
+  dueDate: Date!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InvoiceTransaction {
+  id: ID!
+  invoiceId: ID!
+  userId: ID!
+  description: String!
+  amount: Cents!
+  category: String!
+  transactionDate: Date!
+  installments: Int!
+  createdAt: DateTime!
+}
+
+# ── Debt Types ───────────────────────────────────────────────────────────
+
+enum DebtType {
+  PERSONAL_LOAN
+  STUDENT_LOAN
+  MORTGAGE
+  CAR_LOAN
+  CREDIT_CARD_DEBT
+  MEDICAL_DEBT
+  OTHER_DEBT
+}
+
+enum DebtStatus {
+  ACTIVE
+  PAUSED
+  PAID_OFF
+  DEFAULTED
+  SETTLED
+}
+
+type Debt {
+  id: ID!
+  userId: ID!
+  name: String!
+  description: String!
+  debtType: DebtType!
+  totalAmount: Cents!
+  remainingAmount: Cents!
+  interestRate: Cents!
+  startDate: Date!
+  expectedEndDate: Date!
+  status: DebtStatus!
+  creditor: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Payment {
+  id: ID!
+  debtId: ID!
+  userId: ID!
+  amount: Cents!
+  paymentDate: Date!
+  notes: String!
+  createdAt: DateTime!
+}
+
+# ── Investment Types ─────────────────────────────────────────────────────
+
+enum AssetType {
+  STOCK
+  ETF
+  REAL_ESTATE_FUND
+  TREASURY
+  CDB
+  LCI
+  LCA
+  CRYPTO
+  PENSION
+  FUND
+  DOLLAR
+  GOLD
+  OTHER_ASSET
+}
+
+enum InvestmentTransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  JCP
+  AMORTIZATION
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+type Investment {
+  id: ID!
+  userId: ID!
+  name: String!
+  ticker: String!
+  assetType: AssetType!
+  quantity: Cents!
+  averagePrice: Cents!
+  totalInvested: Cents!
+  status: InvestmentStatus!
+  broker: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InvestmentTransaction {
+  id: ID!
+  investmentId: ID!
+  userId: ID!
+  transactionType: InvestmentTransactionType!
+  quantity: Cents!
+  unitPrice: Cents!
+  totalAmount: Cents!
+  transactionDate: Date!
+  notes: String!
+  createdAt: DateTime!
+}
+
+type PortfolioSummary {
+  totalInvested: Cents!
+  currentValue: Cents!
+  totalReturn: Cents!
+  returnPercentage: Float!
+  activeInvestments: Int!
+  allocation: [AssetAllocation!]!
+}
+
+type AssetAllocation {
+  assetType: AssetType!
+  invested: Cents!
+  currentValue: Cents!
+  percentage: Float!
+}
+
+# ── Pagination Types ─────────────────────────────────────────────────────
+
+type BudgetEdge { node: Budget! cursor: String! }
+type BudgetConnection { edges: [BudgetEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type CreditCardEdge { node: CreditCard! cursor: String! }
+type CreditCardConnection { edges: [CreditCardEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type InvoiceEdge { node: Invoice! cursor: String! }
+type InvoiceConnection { edges: [InvoiceEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type InvoiceTransactionEdge { node: InvoiceTransaction! cursor: String! }
+type InvoiceTransactionConnection { edges: [InvoiceTransactionEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type DebtEdge { node: Debt! cursor: String! }
+type DebtConnection { edges: [DebtEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type PaymentEdge { node: Payment! cursor: String! }
+type PaymentConnection { edges: [PaymentEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type InvestmentEdge { node: Investment! cursor: String! }
+type InvestmentConnection { edges: [InvestmentEdge!]! pageInfo: PageInfo! totalCount: Int! }
+
+type InvestmentTransactionEdge { node: InvestmentTransaction! cursor: String! }
+type InvestmentTransactionConnection { edges: [InvestmentTransactionEdge!]! pageInfo: PageInfo! totalCount: Int! }

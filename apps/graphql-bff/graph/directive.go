@@ -8,13 +8,15 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
+
+	"github.com/aureum/graphql-bff/internal/infrastructure/clients"
 )
 
 type ctxKey string
 
 const userIDKey ctxKey = "user_id"
 
-func AuthDirective(idClient identityv1.IdentityServiceClient) func(ctx context.Context, obj any, next graphql.Resolver, role string) (res any, err error) {
+func AuthDirective(idClient *clients.IdentityServiceClient) func(ctx context.Context, obj any, next graphql.Resolver, role string) (res any, err error) {
 	return func(ctx context.Context, obj any, next graphql.Resolver, role string) (res any, err error) {
 		token := extractBearerToken(ctx)
 		if token == "" {

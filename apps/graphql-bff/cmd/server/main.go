@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -18,11 +19,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/redis/go-redis/v9"
 	"github.com/vektah/gqlparser/v2/ast"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/aureum/graphql-bff/graph"
+	"github.com/aureum/graphql-bff/internal/infrastructure/cache"
+	"github.com/aureum/graphql-bff/internal/infrastructure/clients"
+	"github.com/aureum/graphql-bff/internal/infrastructure/featureflag"
+	"github.com/aureum/graphql-bff/internal/infrastructure/idempotency"
 	"github.com/aureum/pkg/telemetry"
 )
 
@@ -30,6 +36,15 @@ type Config struct {
 	Port              string `envconfig:"PORT" default:"8082"`
 	TransactionSvc    string `envconfig:"TRANSACTION_SVC" default:"localhost:50054"`
 	IdentitySvc       string `envconfig:"IDENTITY_SVC" default:"localhost:50053"`
+	BudgetSvc         string `envconfig:"BUDGET_SVC" default:"localhost:50055"`
+	CreditCardSvc     string `envconfig:"CREDIT_CARD_SVC" default:"localhost:50056"`
+	DebtSvc           string `envconfig:"DEBT_SVC" default:"localhost:50057"`
+	InvestmentSvc     string `envconfig:"INVESTMENT_SVC" default:"localhost:50058"`
+	RedisAddr         string `envconfig:"REDIS_ADDR" default:"localhost:6379"`
+	RedisPassword     string `envconfig:"REDIS_PASSWORD" default:""`
+	RedisDB           string `envconfig:"REDIS_DB" default:"0"`
+	UnleashURL        string `envconfig:"UNLEASH_URL" default:""`
+	UnleashAPIToken   string `envconfig:"UNLEASH_API_TOKEN" default:""`
 	PlaygroundEnabled bool   `envconfig:"PLAYGROUND_ENABLED" default:"true"`
 	MetricsPort       string `envconfig:"METRICS_PORT" default:"9095"`
 }
@@ -77,7 +92,80 @@ func run() int {
 	}
 	defer idConn.Close()
 
-	resolver := graph.NewResolver(txConn, idConn)
+	bgtConn, err := grpc.Dial(cfg.BudgetSvc,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("failed to connect to budget-svc", "error", err)
+		return 1
+	}
+	defer bgtConn.Close()
+
+	cccConn, err := grpc.Dial(cfg.CreditCardSvc,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("failed to connect to creditcard-svc", "error", err)
+		return 1
+	}
+	defer cccConn.Close()
+
+	dbtConn, err := grpc.Dial(cfg.DebtSvc,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("failed to connect to debt-svc", "error", err)
+		return 1
+	}
+	defer dbtConn.Close()
+
+	invConn, err := grpc.Dial(cfg.InvestmentSvc,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("failed to connect to investment-svc", "error", err)
+		return 1
+	}
+	defer invConn.Close()
+
+	txClient := clients.NewTransactionServiceClient(txConn)
+	idClient := clients.NewIdentityServiceClient(idConn)
+	bgtClient := clients.NewBudgetServiceClient(bgtConn)
+	cccClient := clients.NewCreditCardServiceClient(cccConn)
+	dbtClient := clients.NewDebtServiceClient(dbtConn)
+	invClient := clients.NewInvestmentServiceClient(invConn)
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisAddr,
+		Password: cfg.RedisPassword,
+		DB:       func() int { n, _ := strconv.Atoi(cfg.RedisDB); return n }(),
+	})
+	defer func() {
+		if err := rdb.Close(); err != nil {
+			log.Error("failed to close redis", "error", err)
+		}
+	}()
+
+	cacheStore, err := cache.NewRedisCache(cfg.RedisAddr, cfg.RedisPassword, func() int { n, _ := strconv.Atoi(cfg.RedisDB); return n }())
+	if err != nil {
+		log.Error("failed to init cache", "error", err)
+		return 1
+	}
+	_ = cacheStore
+
+	idempStore := idempotency.NewStore(rdb)
+	_ = idempStore
+
+	var ffClient *featureflag.Client
+	if cfg.UnleashURL != "" {
+		var ffErr error
+		ffClient, ffErr = featureflag.NewClient(cfg.UnleashURL, "graphql-bff", cfg.UnleashAPIToken)
+		if ffErr != nil {
+			log.Error("failed to init feature flags", "error", ffErr)
+		}
+	}
+
+	resolver := graph.NewResolver(txClient, idClient, bgtClient, cccClient, dbtClient, invClient, cacheStore, ffClient)
 
 	srv := handler.New(
 		graph.NewExecutableSchema(
@@ -102,6 +190,7 @@ func run() int {
 	r.Use(chiMiddleware.Timeout(30 * time.Second))
 	r.Use(corsMiddleware)
 	r.Use(telemetry.HTTPMiddleware("graphql-bff"))
+	r.Use(graph.IdempotencyMiddleware)
 
 	r.Handle("/graphql", srv)
 

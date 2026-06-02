@@ -4,7 +4,7 @@ RUN go install github.com/air-verse/air@latest
 
 WORKDIR /app
 COPY go.work go.work.sum ./
-COPY apps/identity-svc/ apps/identity-svc/
+COPY apps/ apps/
 COPY pkg/ pkg/
 COPY proto/ proto/
 
