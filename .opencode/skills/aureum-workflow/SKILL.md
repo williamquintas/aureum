@@ -399,7 +399,7 @@ For every external call (gRPC client):
 - [ ] Fallback handler
 
 For every new feature:
-- [ ] Guard behind OpenFeature flag
+- [ ] Guard behind Unleash flag
 - [ ] Default to disabled
 - [ ] Metrics for flag evaluation count
 
@@ -496,12 +496,12 @@ func (r *AccountRepo) FindByID(ctx context.Context, id string) (*domain.Account,
 
 #### Feature Flags
 
-All new features behind OpenFeature flags:
+All new features behind Unleash flags:
 
 ```go
 func (s *Service) NewFeatureEnabled(ctx context.Context) bool {
-    client := openfeature.NewClient("accounts-svc")
-    eval, err := client.BooleanValue(ctx, "new-feature-enabled", false, evaluationContext(ctx))
+    client := unleash.NewClient("accounts-svc")
+    eval, err := client.IsEnabled(ctx, "new-feature-enabled", false, evaluationContext(ctx))
     if err != nil {
         return false // safe default: disabled
     }
@@ -689,7 +689,7 @@ After implementation:
 | Auth | Keycloak JWT middleware | apps/*/internal/infrastructure/auth/ |
 | Idempotency | Idempotency-Key header + Redis | apps/*/internal/infrastructure/idempotency/ |
 | Cache | Cache-first (Redis) | apps/*/internal/infrastructure/cache/ |
-| Feature flags | OpenFeature | apps/*/internal/infrastructure/featureflag/ |
+| Feature flags | Unleash | apps/*/internal/infrastructure/featureflag/ |
 | Events | Outbox → Kafka | apps/*/internal/infrastructure/messaging/ |
 | Circuit breaker | gobreaker | pkg/circuitbreaker/ |
 | Observability | OpenTelemetry | pkg/telemetry/ |

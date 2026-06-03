@@ -12,7 +12,7 @@ export const AureumCompactionPlugin = async (ctx) => {
 - Transactional Outbox: all domain events → outbox → Kafka
 - Idempotency: all mutations require Idempotency-Key
 - Cache-first reads (Redis)
-- Feature flags via OpenFeature
+- Feature flags via Unleash
 - Circuit breakers via gobreaker
 - OpenTelemetry observability
 

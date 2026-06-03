@@ -13,9 +13,6 @@
     }
   },
   "lsp": {
-    "gopls": {
-      "languages": ["go"]
-    },
     "typescript": {
       "disabled": true
     },

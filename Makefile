@@ -40,9 +40,9 @@ gen: ## Generate protobuf code using buf
 # ─── Linting ─────────────────────────────────────────────────────────────────
 
 .PHONY: lint
-lint: ## Run golangci-lint on all services
+lint: ## Run golangci-lint on workspace modules
 	@echo "Running linter..."
-	$(GOLANGCI_LINT) run ./... --timeout=5m
+	$(GOLANGCI_LINT) run ./apps/identity-svc/... ./pkg/... ./proto/... --timeout=5m
 	@echo "✓ Lint passed"
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
@@ -50,17 +50,17 @@ lint: ## Run golangci-lint on all services
 .PHONY: test/unit
 test/unit: ## Run unit tests (short mode, no external deps)
 	@echo "Running unit tests..."
-	$(GO) test -short -race -count=1 ./apps/... ./pkg/...
+	$(GO) test -short -race -count=1 ./apps/identity-svc/... ./pkg/... ./proto/...
 
 .PHONY: test/integration
 test/integration: ## Run integration tests (requires testcontainers)
 	@echo "Running integration tests..."
-	$(GO) test -tags=integration -race -count=1 ./apps/... ./pkg/...
+	$(GO) test -tags=integration -race -count=1 ./apps/identity-svc/... ./pkg/... ./proto/...
 
 .PHONY: test/e2e
 test/e2e: ## Run end-to-end tests (requires full infrastructure)
 	@echo "Running end-to-end tests..."
-	$(GO) test -tags=e2e -race -count=1 ./apps/...
+	$(GO) test -tags=e2e -race -count=1 ./apps/identity-svc/...
 
 .PHONY: test
 test: test/unit test/integration test/e2e ## Run all tests sequentially
@@ -78,12 +78,9 @@ coverage: ## Generate coverage report (80%+ threshold)
 # ─── Building ────────────────────────────────────────────────────────────────
 
 .PHONY: build
-build: ## Build all service binaries
-	@echo "Building all services..."
-	@for svc in $(SERVICES); do \
-		echo "  → Building $$svc..."; \
-		CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o apps/$$svc/bin/$$svc apps/$$svc/cmd/server/; \
-	done
+build: ## Build workspace binaries
+	@echo "Building identity-svc..."
+	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o apps/identity-svc/bin/identity-svc apps/identity-svc/cmd/server/
 	@echo "✓ Build complete"
 
 .PHONY: build/% 
@@ -109,7 +106,7 @@ docker: ## Build Docker images for all services
 dev: ## Start local development with Tilt
 	@echo "Starting local development environment..."
 	@if [ -f deploy/tilt/Tiltfile ]; then \
-		tilt up; \
+		tilt up -f deploy/tilt/Tiltfile; \
 	else \
 		echo "No Tiltfile found. Install Tilt: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash"; \
 		exit 1; \

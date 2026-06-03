@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-init-script
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+
+    KEYCLOAK_URL="http://keycloak:8080"
+
+    echo "Waiting for Keycloak to be ready..."
+    until curl -sf "${KEYCLOAK_URL}/health/ready" > /dev/null 2>&1; do
+      sleep 2
+    done
+    echo "Keycloak is ready."
+
+    TOKEN=$(curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli" \
+      -d "username=${KEYCLOAK_ADMIN_USERNAME}" \
+      -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+      -d "grant_type=password" | jq -r '.access_token')
+    echo "Got admin token."
+
+    CLIENT_UUID=$(curl -sf -X GET "${KEYCLOAK_URL}/admin/realms/aureum/clients?clientId=identity-svc-confidential" \
+      -H "Authorization: Bearer ${TOKEN}" | jq -r '.[0].id')
+    echo "  Client UUID: ${CLIENT_UUID}"
+
+    SA_USER_ID=$(curl -sf -X GET "${KEYCLOAK_URL}/admin/realms/aureum/clients/${CLIENT_UUID}/service-account-user" \
+      -H "Authorization: Bearer ${TOKEN}" | jq -r '.id')
+    echo "  SA user ID: ${SA_USER_ID}"
+
+    REALM_MGMT_UUID=$(curl -sf -X GET "${KEYCLOAK_URL}/admin/realms/aureum/clients?clientId=realm-management" \
+      -H "Authorization: Bearer ${TOKEN}" | jq -r '.[0].id')
+    echo "  realm-management client UUID: ${REALM_MGMT_UUID}"
+
+    MANAGE_USERS_ROLE_ID=$(curl -sf -X GET "${KEYCLOAK_URL}/admin/realms/aureum/clients/${REALM_MGMT_UUID}/roles" \
+      -H "Authorization: Bearer ${TOKEN}" | jq -r '.[] | select(.name=="manage-users") | .id')
+    echo "  manage-users role ID: ${MANAGE_USERS_ROLE_ID}"
+
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+      "${KEYCLOAK_URL}/admin/realms/aureum/users/${SA_USER_ID}/role-mappings/clients/${REALM_MGMT_UUID}" \
+      -H "Authorization: Bearer ${TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "[{\"id\":\"${MANAGE_USERS_ROLE_ID}\",\"name\":\"manage-users\"}]")
+    echo "  Role assignment: HTTP ${HTTP_CODE}"
+
+    echo "Configuring identity-svc-confidential client..."
+    CLIENT_JSON=$(curl -sf -X GET "${KEYCLOAK_URL}/admin/realms/aureum/clients/${CLIENT_UUID}" \
+      -H "Authorization: Bearer ${TOKEN}")
+    HTTP_CODE=$(echo "${CLIENT_JSON}" | jq \
+      --arg secret "${KEYCLOAK_CLIENT_SECRET}" \
+      '.secret = $secret | .directAccessGrantsEnabled = true' | \
+      curl -s -o /dev/null -w "%{http_code}" -X PUT \
+        "${KEYCLOAK_URL}/admin/realms/aureum/clients/${CLIENT_UUID}" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d @-)
+    echo "  Client updated: HTTP ${HTTP_CODE}"
+
+    echo "Keycloak init complete."

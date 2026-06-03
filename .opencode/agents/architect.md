@@ -17,7 +17,7 @@ Architecture decisions must adhere to:
 3. **Transactional Outbox**: All domain events → outbox table → Kafka
 4. **Idempotency**: Every mutation through Idempotency-Key
 5. **Cache-First**: All reads check Redis first
-6. **Feature Flags**: New features behind OpenFeature
+6. **Feature Flags**: New features behind Unleash
 7. **Circuit Breaker**: All gRPC client calls via gobreaker
 8. **Event Sourcing**: Append-only event log
 9. **OpenTelemetry**: Traces, metrics, structured logs
