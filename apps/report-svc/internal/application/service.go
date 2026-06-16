@@ -46,10 +46,6 @@ func cacheKey(prefix, id string) string {
 	return "rpt:" + prefix + ":" + id
 }
 
-func defaultMoney() MoneyDTO {
-	return MoneyDTO{Cents: 0, Currency: "USD"}
-}
-
 func moneyFromCents(cents int64) MoneyDTO {
 	return MoneyDTO{Cents: cents, Currency: "USD"}
 }

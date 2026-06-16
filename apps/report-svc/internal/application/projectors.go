@@ -213,13 +213,13 @@ func extractYearMonth(event domain.ReportEvent) (int, int) {
 	month := int(now.Month())
 
 	if dateStr, ok := event.Payload["received_date"].(string); ok && len(dateStr) >= 7 {
-		fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
+		_, _ = fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
 	}
 	if dateStr, ok := event.Payload["payment_date"].(string); ok && len(dateStr) >= 7 {
-		fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
+		_, _ = fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
 	}
 	if dateStr, ok := event.Payload["date"].(string); ok && len(dateStr) >= 7 {
-		fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
+		_, _ = fmt.Sscanf(dateStr[:7], "%04d-%02d", &year, &month)
 	}
 
 	return year, month

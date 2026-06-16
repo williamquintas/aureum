@@ -64,14 +64,14 @@ func run() int {
 		log.Error("failed to connect to redis", "error", err)
 		return 1
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	redisCache, err := cache.NewRedisCache(cfg.RedisURL, "", 0)
 	if err != nil {
 		log.Error("failed to create redis cache", "error", err)
 		return 1
 	}
-	defer redisCache.Close()
+	defer func() { _ = redisCache.Close() }()
 
 	monthlyRepo := persistence.NewMonthlySummaryRepo(dbPool)
 	categoryRepo := persistence.NewCategorySummaryRepo(dbPool)
@@ -124,7 +124,7 @@ func run() int {
 	metricsMux := http.NewServeMux()
 	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "ok")
+		_, _ = fmt.Fprintln(w, "ok")
 	})
 
 	metricsServer := &http.Server{
