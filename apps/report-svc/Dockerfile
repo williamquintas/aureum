@@ -1,0 +1,22 @@
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /build
+
+COPY apps/report-svc/ apps/report-svc/
+COPY pkg/ pkg/
+COPY proto/ proto/
+
+WORKDIR /build/apps/report-svc
+RUN go mod download
+RUN CGO_ENABLED=0 go build -o /app/bin/server ./cmd/server
+
+FROM alpine:3.19
+
+WORKDIR /app
+
+COPY --from=builder /app/bin/server ./server
+COPY --from=builder /build/apps/report-svc/migrations ./migrations
+
+EXPOSE 50057
+
+ENTRYPOINT ["./server"]
