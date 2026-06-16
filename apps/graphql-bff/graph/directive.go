@@ -41,6 +41,9 @@ func AuthDirective(idClient *clients.IdentityServiceClient) func(ctx context.Con
 }
 
 func extractBearerToken(ctx context.Context) string {
+	if !graphql.HasOperationContext(ctx) {
+		return ""
+	}
 	reqCtx := graphql.GetOperationContext(ctx)
 	if reqCtx == nil {
 		return ""

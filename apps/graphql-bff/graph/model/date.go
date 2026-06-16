@@ -40,5 +40,9 @@ func UnmarshalDate(v interface{}) (time.Time, error) {
 	if !ok {
 		return time.Time{}, fmt.Errorf("Date must be a string")
 	}
-	return time.Parse("2006-01-02", s)
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("Date must be in YYYY-MM-DD format")
+	}
+	return t, nil
 }

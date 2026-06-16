@@ -47,8 +47,10 @@ func NewResolver(txClient *clients.TransactionServiceClient, idClient *clients.I
 }
 
 func userIDFromCtx(ctx context.Context) string {
-	uid, _ := ctx.Value("user_id").(string)
-	return uid
+	if uid, ok := ctx.Value(userIDKey).(string); ok {
+		return uid
+	}
+	return ""
 }
 
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
