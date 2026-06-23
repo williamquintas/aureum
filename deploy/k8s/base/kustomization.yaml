@@ -1,0 +1,83 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+<<<<<<< Updated upstream
+  - base/
+=======
+  - infra/
+  - keycloak/
+  - keycloak-init/
+  - db-migrate/
+  - identity-svc/
+  - transaction-svc/
+  - budget-svc/
+  - creditcard-svc/
+  - debt-svc/
+  - investment-svc/
+  - graphql-bff/
+
+secretGenerator:
+  - name: keycloak-db
+    literals:
+      - jdbc-url=jdbc:postgresql://postgres:5432/keycloak
+      - username=aureum
+      - password=aureum_dev
+  - name: postgres
+    literals:
+      - username=aureum
+      - password=aureum_dev
+  - name: keycloak
+    literals:
+      - admin-username=admin
+      - admin-password=admin
+      - client-secret=placeholder-secret
+  - name: unleash-db
+    literals:
+      - dsn=postgres://aureum:aureum_dev@postgres:5432/unleash?sslmode=disable
+  - name: unleash
+    literals:
+      - admin-api-token=*:*.unleash-admin-token
+  - name: identity-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/identity_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/identity_read?sslmode=disable
+  - name: identity-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+  - name: transaction-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/transaction_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/transaction_read?sslmode=disable
+  - name: transaction-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+  - name: budget-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/budget_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/budget_read?sslmode=disable
+  - name: budget-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+  - name: creditcard-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/creditcard_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/creditcard_read?sslmode=disable
+  - name: creditcard-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+  - name: debt-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/debt_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/debt_read?sslmode=disable
+  - name: debt-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+  - name: investment-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/investment_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/investment_read?sslmode=disable
+  - name: investment-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
+>>>>>>> Stashed changes

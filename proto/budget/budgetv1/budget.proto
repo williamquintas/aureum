@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package budget.budgetv1;
+
+option go_package = "github.com/aureum/proto/gen/budget/budgetv1;budgetv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service BudgetService {
+  rpc CreateBudget(CreateBudgetRequest) returns (Budget);
+  rpc GetBudget(GetBudgetRequest) returns (Budget);
+  rpc UpdateBudget(UpdateBudgetRequest) returns (Budget);
+  rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty);
+  rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse);
+  rpc GetBudgetSummary(GetBudgetSummaryRequest) returns (BudgetSummary);
+}
+
+enum BudgetPeriod {
+  BUDGET_PERIOD_UNSPECIFIED = 0;
+  MONTHLY = 1;
+  BIMONTHLY = 2;
+  QUARTERLY = 3;
+  SEMESTRAL = 4;
+  YEARLY = 5;
+  CUSTOM = 6;
+}
+
+enum BudgetStatus {
+  BUDGET_STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+  PAUSED = 2;
+  COMPLETED = 3;
+  CANCELLED = 4;
+}
+
+message Budget {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string description = 4;
+  BudgetPeriod period = 5;
+  int64 total_limit = 6;          // in cents
+  int64 spent_amount = 7;         // in cents, calculated
+  BudgetStatus status = 8;
+  string start_date = 9;          // YYYY-MM-DD
+  string end_date = 10;           // YYYY-MM-DD
+  repeated BudgetCategory categories = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  google.protobuf.Timestamp deleted_at = 14;
+}
+
+message BudgetCategory {
+  string id = 1;
+  string budget_id = 2;
+  string name = 3;
+  int64 limit_amount = 4;         // in cents
+  int64 spent_amount = 5;         // in cents, calculated
+  string category = 6;
+}
+
+message CreateBudgetRequest {
+  string name = 1;
+  string description = 2;
+  BudgetPeriod period = 3;
+  int64 total_limit = 4;
+  string start_date = 5;
+  string end_date = 6;
+  repeated CreateBudgetCategory categories = 7;
+  BudgetStatus status = 8;
+  string idempotency_key = 9;
+}
+
+message CreateBudgetCategory {
+  string name = 1;
+  int64 limit_amount = 2;
+  string category = 3;
+}
+
+message GetBudgetRequest {
+  string id = 1;
+}
+
+message UpdateBudgetRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional BudgetPeriod period = 4;
+  optional int64 total_limit = 5;
+  optional string start_date = 6;
+  optional string end_date = 7;
+  optional BudgetStatus status = 8;
+  string idempotency_key = 9;
+}
+
+message DeleteBudgetRequest {
+  string id = 1;
+}
+
+message ListBudgetsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional BudgetStatus status_filter = 3;
+  optional string date_from = 4;
+  optional string date_to = 5;
+}
+
+message ListBudgetsResponse {
+  repeated Budget budgets = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetBudgetSummaryRequest {
+  string id = 1;
+}
+
+message BudgetSummary {
+  string budget_id = 1;
+  int64 total_limit = 2;
+  int64 total_spent = 3;
+  int64 remaining = 4;
+  double usage_percentage = 5;
+  int32 category_count = 6;
+  repeated CategorySummary categories = 7;
+}
+
+message CategorySummary {
+  string category_id = 1;
+  string name = 2;
+  string category = 3;
+  int64 limit_amount = 4;
+  int64 spent_amount = 5;
+  int64 remaining = 6;
+  double usage_percentage = 7;
+}

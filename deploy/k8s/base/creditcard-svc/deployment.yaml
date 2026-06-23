@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: creditcard-svc
+  namespace: default
+  labels:
+    app: creditcard-svc
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: creditcard-svc
+  template:
+    metadata:
+      labels:
+        app: creditcard-svc
+    spec:
+      containers:
+        - name: creditcard-svc
+          image: aureum/creditcard-svc:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50056
+              name: grpc
+              protocol: TCP
+            - containerPort: 9097
+              name: metrics
+              protocol: TCP
+          env:
+            - name: GRPC_PORT
+              value: "50056"
+            - name: METRICS_PORT
+              value: "9097"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: creditcard-db
+                  key: write-dsn
+            - name: REDIS_URL
+              value: "redis:6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: creditcard-svc
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9097
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9097
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

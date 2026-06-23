@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphql-bff
+  namespace: default
+  labels:
+    app: graphql-bff
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: graphql-bff
+  template:
+    metadata:
+      labels:
+        app: graphql-bff
+    spec:
+      containers:
+        - name: graphql-bff
+          image: aureum/graphql-bff:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+              protocol: TCP
+            - containerPort: 9095
+              name: metrics
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8082"
+            - name: METRICS_PORT
+              value: "9095"
+            - name: TRANSACTION_SVC
+              value: "transaction-svc:50054"
+            - name: IDENTITY_SVC
+              value: "identity-svc:9090"
+            - name: PLAYGROUND_ENABLED
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9095
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9095
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

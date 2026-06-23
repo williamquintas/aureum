@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package debt.debtv1;
+
+option go_package = "github.com/aureum/proto/gen/debt/debtv1;debtv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service DebtService {
+  rpc CreateDebt(CreateDebtRequest) returns (Debt);
+  rpc GetDebt(GetDebtRequest) returns (Debt);
+  rpc UpdateDebt(UpdateDebtRequest) returns (Debt);
+  rpc DeleteDebt(DeleteDebtRequest) returns (google.protobuf.Empty);
+  rpc ListDebts(ListDebtsRequest) returns (ListDebtsResponse);
+
+  rpc RegisterPayment(RegisterPaymentRequest) returns (Payment);
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+}
+
+enum DebtType {
+  DEBT_TYPE_UNSPECIFIED = 0;
+  PERSONAL_LOAN = 1;
+  STUDENT_LOAN = 2;
+  MORTGAGE = 3;
+  CAR_LOAN = 4;
+  CREDIT_CARD_DEBT = 5;
+  MEDICAL_DEBT = 6;
+  OTHER_DEBT = 7;
+}
+
+enum DebtStatus {
+  DEBT_STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+  PAUSED = 2;
+  PAID_OFF = 3;
+  DEFAULTED = 4;
+  SETTLED = 5;
+}
+
+message Debt {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string description = 4;
+  DebtType debt_type = 5;
+  int64 total_amount = 6;         // in cents
+  int64 remaining_amount = 7;     // in cents
+  int64 interest_rate = 8;        // annual % * 100 (e.g. 1250 = 12.50%)
+  string start_date = 9;          // YYYY-MM-DD
+  string expected_end_date = 10;  // YYYY-MM-DD
+  DebtStatus status = 11;
+  string creditor = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  google.protobuf.Timestamp deleted_at = 15;
+}
+
+message CreateDebtRequest {
+  string name = 1;
+  string description = 2;
+  DebtType debt_type = 3;
+  int64 total_amount = 4;
+  int64 interest_rate = 5;
+  string start_date = 6;
+  string expected_end_date = 7;
+  string creditor = 8;
+  DebtStatus status = 9;
+  string idempotency_key = 10;
+}
+
+message GetDebtRequest {
+  string id = 1;
+}
+
+message UpdateDebtRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional DebtType debt_type = 4;
+  optional int64 total_amount = 5;
+  optional int64 interest_rate = 6;
+  optional string expected_end_date = 7;
+  optional DebtStatus status = 8;
+  optional string creditor = 9;
+  string idempotency_key = 10;
+}
+
+message DeleteDebtRequest {
+  string id = 1;
+}
+
+message ListDebtsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional DebtStatus status_filter = 3;
+  optional DebtType type_filter = 4;
+}
+
+message ListDebtsResponse {
+  repeated Debt debts = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message Payment {
+  string id = 1;
+  string debt_id = 2;
+  string user_id = 3;
+  int64 amount = 4;               // in cents
+  string payment_date = 5;        // YYYY-MM-DD
+  string notes = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message RegisterPaymentRequest {
+  string debt_id = 1;
+  int64 amount = 2;
+  string payment_date = 3;
+  string notes = 4;
+  string idempotency_key = 5;
+}
+
+message ListPaymentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string debt_id = 3;
+  optional string date_from = 4;
+  optional string date_to = 5;
+}
+
+message ListPaymentsResponse {
+  repeated Payment payments = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message AmortizationSchedule {
+  string debt_id = 1;
+  int64 total_amount = 2;
+  int64 monthly_payment = 3;
+  int64 interest_rate = 4;
+  int32 remaining_months = 5;
+  int64 total_interest = 6;
+  int64 total_paid = 7;
+  repeated AmortizationEntry entries = 8;
+}
+
+message AmortizationEntry {
+  int32 month = 1;
+  int64 principal = 2;
+  int64 interest = 3;
+  int64 balance = 4;
+  int64 total_payment = 5;
+}

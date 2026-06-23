@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-svc
+  namespace: default
+  labels:
+    app: transaction-svc
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: transaction-svc
+  template:
+    metadata:
+      labels:
+        app: transaction-svc
+    spec:
+      containers:
+        - name: transaction-svc
+          image: aureum/transaction-svc:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50054
+              name: grpc
+              protocol: TCP
+            - containerPort: 9094
+              name: metrics
+              protocol: TCP
+          env:
+            - name: GRPC_PORT
+              value: "50054"
+            - name: METRICS_PORT
+              value: "9094"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-db
+                  key: write-dsn
+            - name: REDIS_URL
+              value: "redis:6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-svc
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9094
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9094
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

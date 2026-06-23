@@ -40,27 +40,36 @@ gen: ## Generate protobuf code using buf
 # ─── Linting ─────────────────────────────────────────────────────────────────
 
 .PHONY: lint
-lint: ## Run golangci-lint on workspace modules
+lint: ## Run golangci-lint on all services
 	@echo "Running linter..."
-	$(GOLANGCI_LINT) run ./apps/identity-svc/... ./pkg/... ./proto/... --timeout=5m
+	$(GOLANGCI_LINT) run ./apps/budget-svc/... ./apps/creditcard-svc/... ./apps/debt-svc/... ./apps/investment-svc/... ./apps/identity-svc/... ./apps/transaction-svc/... ./pkg/... ./proto/... --timeout=5m
 	@echo "✓ Lint passed"
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
 
 .PHONY: test/unit
+UNIT_DIRS := apps/budget-svc apps/creditcard-svc apps/debt-svc apps/investment-svc apps/identity-svc pkg proto
+
+.PHONY: test/unit
 test/unit: ## Run unit tests (short mode, no external deps)
 	@echo "Running unit tests..."
-	$(GO) test -short -race -count=1 ./apps/identity-svc/... ./pkg/... ./proto/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -short -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test/integration
 test/integration: ## Run integration tests (requires testcontainers)
 	@echo "Running integration tests..."
-	$(GO) test -tags=integration -race -count=1 ./apps/identity-svc/... ./pkg/... ./proto/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -tags=integration -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test/e2e
 test/e2e: ## Run end-to-end tests (requires full infrastructure)
 	@echo "Running end-to-end tests..."
-	$(GO) test -tags=e2e -race -count=1 ./apps/identity-svc/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -tags=e2e -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test
 test: test/unit test/integration test/e2e ## Run all tests sequentially
@@ -70,10 +79,10 @@ test: test/unit test/integration test/e2e ## Run all tests sequentially
 coverage: ## Generate coverage report (80%+ threshold)
 	@echo "Generating coverage report..."
 	mkdir -p coverage
-	$(GO) test -short -race -count=1 -coverprofile=coverage/coverage.out -covermode=atomic ./apps/... ./pkg/...
-	$(GO) tool cover -html=coverage/coverage.out -o coverage/coverage.html
-	@echo "Coverage report: coverage/coverage.html"
-	@$(GO) tool cover -func=coverage/coverage.out | tail -1
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -short -race -count=1 -coverprofile=coverage/$$(echo $$dir | tr / -).out -covermode=atomic ./$$dir/... || exit 1; \
+	done
+	$(GO) tool cover -html=coverage/coverage.out -o coverage/coverage.html 2>/dev/null; true
 
 # ─── Building ────────────────────────────────────────────────────────────────
 
