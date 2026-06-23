@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package report.reportv1;
+
+option go_package = "github.com/aureum/proto/gen/report/reportv1;reportv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+service ReportService {
+  rpc GetIncomeStatement(IncomeStatementRequest) returns (IncomeStatementResponse);
+  rpc GetExpenseSummary(ExpenseSummaryRequest) returns (ExpenseSummaryResponse);
+  rpc GetBudgetVsActual(BudgetVsActualRequest) returns (BudgetVsActualResponse);
+  rpc GetSpendingTrends(SpendingTrendsRequest) returns (SpendingTrendsResponse);
+  rpc GetPortfolioPerformance(PortfolioPerformanceRequest) returns (PortfolioPerformanceResponse);
+  rpc GetFinancialOverview(FinancialOverviewRequest) returns (FinancialOverviewResponse);
+}
+
+// ── Money ───────────────────────────────────────────────────────────────────
+
+message Money {
+  int64 cents = 1;
+  string currency = 2;
+}
+
+// ── Income Statement ────────────────────────────────────────────────────────
+
+message IncomeStatementRequest {
+  string user_id = 1;
+  google.protobuf.Timestamp date_from = 2;
+  google.protobuf.Timestamp date_to = 3;
+  string group_by = 4;
+}
+
+message IncomeStatementResponse {
+  repeated IncomePeriod periods = 1;
+  Money total_income = 2;
+}
+
+message IncomePeriod {
+  string period = 1;
+  repeated CategoryAmount categories = 2;
+  Money period_total = 3;
+}
+
+message CategoryAmount {
+  string category = 1;
+  Money amount = 2;
+  int32 transaction_count = 3;
+}
+
+// ── Expense Summary ─────────────────────────────────────────────────────────
+
+message ExpenseSummaryRequest {
+  string user_id = 1;
+  google.protobuf.Timestamp date_from = 2;
+  google.protobuf.Timestamp date_to = 3;
+  string type = 4;
+}
+
+message ExpenseSummaryResponse {
+  Money total_fixed = 1;
+  Money total_variable = 2;
+  Money total_all = 3;
+  repeated CategoryAmount fixed_categories = 4;
+  repeated CategoryAmount variable_categories = 5;
+}
+
+// ── Budget vs Actual ────────────────────────────────────────────────────────
+
+message BudgetVsActualRequest {
+  string user_id = 1;
+  string budget_id = 2;
+  google.protobuf.Timestamp date_from = 3;
+  google.protobuf.Timestamp date_to = 4;
+}
+
+message BudgetVsActualResponse {
+  repeated BudgetCategoryComparison categories = 1;
+  Money total_budgeted = 2;
+  Money total_actual = 3;
+  Money total_variance = 4;
+  double variance_percentage = 5;
+}
+
+message BudgetCategoryComparison {
+  string category = 1;
+  Money budgeted = 2;
+  Money actual = 3;
+  Money variance = 4;
+  double variance_percentage = 5;
+}
+
+// ── Spending Trends ─────────────────────────────────────────────────────────
+
+message SpendingTrendsRequest {
+  string user_id = 1;
+  int32 months = 2;
+  string category = 3;
+}
+
+message SpendingTrendsResponse {
+  repeated MonthlyTrend trends = 1;
+  string trend_direction = 2;
+}
+
+message MonthlyTrend {
+  string month = 1;
+  Money amount = 2;
+  Money average = 3;
+}
+
+// ── Portfolio Performance ───────────────────────────────────────────────────
+
+message PortfolioPerformanceRequest {
+  string user_id = 1;
+  string investment_id = 2;
+  google.protobuf.Timestamp date_from = 3;
+  google.protobuf.Timestamp date_to = 4;
+}
+
+message PortfolioPerformanceResponse {
+  Money total_invested = 1;
+  Money current_value = 2;
+  Money total_return = 3;
+  double return_percentage = 4;
+  repeated AssetPerformance assets = 5;
+}
+
+message AssetPerformance {
+  string asset_type = 1;
+  Money invested = 2;
+  Money current_value = 3;
+  double return_percentage = 4;
+  double allocation_percentage = 5;
+}
+
+// ── Financial Overview ──────────────────────────────────────────────────────
+
+message FinancialOverviewRequest {
+  string user_id = 1;
+}
+
+message FinancialOverviewResponse {
+  Money total_monthly_income = 1;
+  Money total_monthly_expenses = 2;
+  Money net_savings = 3;
+  Money total_debt = 4;
+  Money total_investments = 5;
+  double budget_adherence_percentage = 6;
+  int32 active_budgets = 7;
+}
