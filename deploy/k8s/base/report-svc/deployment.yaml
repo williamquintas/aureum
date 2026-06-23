@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-svc
+  namespace: default
+  labels:
+    app: report-svc
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: report-svc
+  template:
+    metadata:
+      labels:
+        app: report-svc
+    spec:
+      containers:
+        - name: report-svc
+          image: aureum/report-svc:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50059
+              name: grpc
+              protocol: TCP
+            - containerPort: 9099
+              name: metrics
+              protocol: TCP
+          env:
+            - name: GRPC_PORT
+              value: "50059"
+            - name: METRICS_PORT
+              value: "9099"
+            - name: DATABASE_URL
+              value: "postgres://aureum:aureum_dev@postgres:5432/report_write?sslmode=disable"
+            - name: REDIS_URL
+              value: "redis:6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: JWT_SECRET
+              value: "dev-jwt-secret-change-in-production"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9099
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9099
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

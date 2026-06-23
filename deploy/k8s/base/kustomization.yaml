@@ -2,9 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-<<<<<<< Updated upstream
-  - base/
-=======
   - infra/
   - keycloak/
   - keycloak-init/
@@ -16,6 +13,7 @@ resources:
   - debt-svc/
   - investment-svc/
   - graphql-bff/
+  - report-svc/
 
 secretGenerator:
   - name: keycloak-db
@@ -80,4 +78,10 @@ secretGenerator:
   - name: investment-svc
     literals:
       - jwt-secret=dev-jwt-secret-change-in-production
->>>>>>> Stashed changes
+  - name: report-db
+    literals:
+      - write-dsn=postgres://aureum:aureum_dev@postgres:5432/report_write?sslmode=disable
+      - read-dsn=postgres://aureum:aureum_dev@postgres:5432/report_read?sslmode=disable
+  - name: report-svc
+    literals:
+      - jwt-secret=dev-jwt-secret-change-in-production
