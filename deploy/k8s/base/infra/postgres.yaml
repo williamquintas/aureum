@@ -17,6 +17,16 @@ data:
   init.sql: |
     CREATE DATABASE identity_write;
     CREATE DATABASE identity_read;
+    CREATE DATABASE transaction_write;
+    CREATE DATABASE transaction_read;
+    CREATE DATABASE budget_write;
+    CREATE DATABASE budget_read;
+    CREATE DATABASE creditcard_write;
+    CREATE DATABASE creditcard_read;
+    CREATE DATABASE debt_write;
+    CREATE DATABASE debt_read;
+    CREATE DATABASE investment_write;
+    CREATE DATABASE investment_read;
     CREATE DATABASE keycloak;
     CREATE DATABASE unleash;
 ---

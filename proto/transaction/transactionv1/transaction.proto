@@ -1,0 +1,247 @@
+syntax = "proto3";
+
+package transaction.transactionv1;
+
+option go_package = "github.com/aureum/proto/gen/transaction/transactionv1;transactionv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service TransactionService {
+  rpc CreateIncome(CreateIncomeRequest) returns (Income);
+  rpc GetIncome(GetIncomeRequest) returns (Income);
+  rpc UpdateIncome(UpdateIncomeRequest) returns (Income);
+  rpc DeleteIncome(DeleteIncomeRequest) returns (google.protobuf.Empty);
+  rpc ListIncomes(ListIncomesRequest) returns (ListIncomesResponse);
+
+  rpc CreateFixedExpense(CreateFixedExpenseRequest) returns (FixedExpense);
+  rpc GetFixedExpense(GetFixedExpenseRequest) returns (FixedExpense);
+  rpc UpdateFixedExpense(UpdateFixedExpenseRequest) returns (FixedExpense);
+  rpc DeleteFixedExpense(DeleteFixedExpenseRequest) returns (google.protobuf.Empty);
+  rpc ListFixedExpenses(ListFixedExpensesRequest) returns (ListFixedExpensesResponse);
+
+  rpc CreateVariableExpense(CreateVariableExpenseRequest) returns (VariableExpense);
+  rpc GetVariableExpense(GetVariableExpenseRequest) returns (VariableExpense);
+  rpc UpdateVariableExpense(UpdateVariableExpenseRequest) returns (VariableExpense);
+  rpc DeleteVariableExpense(DeleteVariableExpenseRequest) returns (google.protobuf.Empty);
+  rpc ListVariableExpenses(ListVariableExpensesRequest) returns (ListVariableExpensesResponse);
+}
+
+// ── Common ──────────────────────────────────────────────────────────────────
+
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  COMPLETED = 2;
+  CANCELLED = 3;
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  CREDIT_CARD = 1;
+  DEBIT_CARD = 2;
+  CASH = 3;
+  BANK_TRANSFER = 4;
+  PIX = 5;
+  OTHER = 6;
+}
+
+// ── Income ──────────────────────────────────────────────────────────────────
+
+enum IncomeType {
+  INCOME_TYPE_UNSPECIFIED = 0;
+  SALARY = 1;
+  FREELANCE = 2;
+  INVESTMENT = 3;
+  BUSINESS = 4;
+  REFUND = 5;
+  INCOME_OTHER = 6;
+}
+
+message Income {
+  string id = 1;
+  string user_id = 2;
+  string description = 3;
+  string source = 4;
+  IncomeType income_type = 5;
+  string received_date = 6;       // YYYY-MM-DD
+  int64 received_amount = 7;      // in cents
+  TransactionStatus status = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp deleted_at = 11;
+}
+
+message CreateIncomeRequest {
+  string description = 1;
+  string source = 2;
+  IncomeType income_type = 3;
+  string received_date = 4;
+  int64 received_amount = 5;
+  TransactionStatus status = 6;
+  string idempotency_key = 7;
+}
+
+message GetIncomeRequest {
+  string id = 1;
+}
+
+message UpdateIncomeRequest {
+  string id = 1;
+  optional string description = 2;
+  optional string source = 3;
+  optional IncomeType income_type = 4;
+  optional string received_date = 5;
+  optional int64 received_amount = 6;
+  optional TransactionStatus status = 7;
+  string idempotency_key = 8;
+}
+
+message DeleteIncomeRequest {
+  string id = 1;
+}
+
+message ListIncomesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional TransactionStatus status_filter = 3;
+  optional string date_from = 4;
+  optional string date_to = 5;
+}
+
+message ListIncomesResponse {
+  repeated Income incomes = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// ── FixedExpense ────────────────────────────────────────────────────────────
+
+enum ExpenseType {
+  EXPENSE_TYPE_UNSPECIFIED = 0;
+  ESSENTIAL = 1;
+  DISCRETIONARY = 2;
+  OCCASIONAL = 3;
+  EMERGENCY = 4;
+  EXPENSE_OTHER = 5;
+}
+
+message FixedExpense {
+  string id = 1;
+  string user_id = 2;
+  string description = 3;
+  string category = 4;
+  int32 day_of_month = 5;
+  PaymentMethod payment_method = 6;
+  TransactionStatus status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp deleted_at = 10;
+}
+
+message CreateFixedExpenseRequest {
+  string description = 1;
+  string category = 2;
+  int32 day_of_month = 3;
+  PaymentMethod payment_method = 4;
+  TransactionStatus status = 5;
+  string idempotency_key = 6;
+}
+
+message GetFixedExpenseRequest {
+  string id = 1;
+}
+
+message UpdateFixedExpenseRequest {
+  string id = 1;
+  optional string description = 2;
+  optional string category = 3;
+  optional int32 day_of_month = 4;
+  optional PaymentMethod payment_method = 5;
+  optional TransactionStatus status = 6;
+  string idempotency_key = 7;
+}
+
+message DeleteFixedExpenseRequest {
+  string id = 1;
+}
+
+message ListFixedExpensesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional TransactionStatus status_filter = 3;
+  optional int32 day_from = 4;
+  optional int32 day_to = 5;
+}
+
+message ListFixedExpensesResponse {
+  repeated FixedExpense fixed_expenses = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// ── VariableExpense ─────────────────────────────────────────────────────────
+
+message VariableExpense {
+  string id = 1;
+  string user_id = 2;
+  string description = 3;
+  string destination = 4;
+  string category = 5;
+  ExpenseType expense_type = 6;
+  PaymentMethod payment_method = 7;
+  string payment_date = 8;
+  int64 paid_amount = 9;
+  TransactionStatus status = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp deleted_at = 13;
+}
+
+message CreateVariableExpenseRequest {
+  string description = 1;
+  string destination = 2;
+  string category = 3;
+  ExpenseType expense_type = 4;
+  PaymentMethod payment_method = 5;
+  string payment_date = 6;
+  int64 paid_amount = 7;
+  TransactionStatus status = 8;
+  string idempotency_key = 9;
+}
+
+message GetVariableExpenseRequest {
+  string id = 1;
+}
+
+message UpdateVariableExpenseRequest {
+  string id = 1;
+  optional string description = 2;
+  optional string destination = 3;
+  optional string category = 4;
+  optional ExpenseType expense_type = 5;
+  optional PaymentMethod payment_method = 6;
+  optional string payment_date = 7;
+  optional int64 paid_amount = 8;
+  optional TransactionStatus status = 9;
+  string idempotency_key = 10;
+}
+
+message DeleteVariableExpenseRequest {
+  string id = 1;
+}
+
+message ListVariableExpensesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional TransactionStatus status_filter = 3;
+  optional string date_from = 4;
+  optional string date_to = 5;
+  optional string category_filter = 6;
+}
+
+message ListVariableExpensesResponse {
+  repeated VariableExpense variable_expenses = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}

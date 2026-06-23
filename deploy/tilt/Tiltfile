@@ -1,35 +1,44 @@
 # Aureum Tiltfile
 # Development environment with hot-reload
 
-load('ext://k8s_scale', 'k8s_scale')
+k8s_yaml(kustomize('../k8s/overlays/dev'))
 
-k8s_yaml(kustomize('deploy/k8s'))
-
-# Scale down non-dev services
-k8s_scale('identity-svc', 1)
-
-# Dev image with Air hot-reload for identity-svc
-docker_build(
+custom_build(
     'aureum/identity-svc:dev',
-    '.',
-    dockerfile='deploy/tilt/dev.Dockerfile',
-    ignore=['**/.git', '**/tmp', '**/bin', '**/node_modules', '**/vendor'],
+    'docker build -f dev.Dockerfile -t $EXPECTED_REF ../..',
+    ['../apps/identity-svc/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
     live_update=[
-        sync('apps/identity-svc/', '/app/apps/identity-svc/'),
-        sync('pkg/', '/app/pkg/'),
-        sync('proto/', '/app/proto/'),
-        sync('go.work', '/app/go.work'),
-        sync('go.work.sum', '/app/go.work.sum'),
+        sync('../apps/identity-svc/', '/app/apps/identity-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/transaction-svc:dev',
+    'docker build -f dev.Dockerfile.transaction-svc -t $EXPECTED_REF ../..',
+    ['../apps/transaction-svc/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
+    live_update=[
+        sync('../apps/transaction-svc/', '/app/apps/transaction-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/graphql-bff:dev',
+    'docker build -f dev.Dockerfile.graphql-bff -t $EXPECTED_REF ../..',
+    ['../apps/graphql-bff/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
+    live_update=[
+        sync('../apps/graphql-bff/', '/app/apps/graphql-bff/'),
     ],
 )
 
 # Port forwarding for local access
+k8s_resource('transaction-svc', port_forwards=['50054:50054'])
+k8s_resource('graphql-bff', port_forwards=['8082:8082'])
 k8s_resource('identity-svc', port_forwards=['8080:8080'])
 k8s_resource('keycloak', port_forwards=['8081:8080'])
 k8s_resource('postgres', port_forwards=['5432:5432'])
 k8s_resource('redis', port_forwards=['6379:6379'])
 k8s_resource('unleash', port_forwards=['4242:4242'])
-k8s_resource('redpanda', port_forwards=['9092:9092', '8081:8081', '8082:8082'])
+k8s_resource('redpanda', port_forwards=['9092:9092', '18081:8081', '8082:8082'])
 
 # Resource grouping and dependencies
 k8s_resource('keycloak-init', resource_deps=['keycloak'], labels=['keycloak'])

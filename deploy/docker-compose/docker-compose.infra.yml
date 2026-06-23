@@ -165,3 +165,56 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  transaction-svc:
+    image: aureum/transaction-svc:dev
+    container_name: aureum-transaction-svc
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      GRPC_PORT: "50054"
+      METRICS_PORT: "9094"
+      DATABASE_URL: postgres://aureum:aureum_dev@postgres:5432/transaction_write?sslmode=disable
+      REDIS_URL: redis:6379
+      KAFKA_BROKERS: redpanda:9092
+      JWT_SECRET: dev-jwt-secret-change-in-production
+    ports:
+      - "50054:50054"
+      - "9094:9094"
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aureum -d transaction_write"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  graphql-bff:
+    image: aureum/graphql-bff:dev
+    container_name: aureum-graphql-bff
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8082"
+      METRICS_PORT: "9095"
+      TRANSACTION_SVC: transaction-svc:50054
+      IDENTITY_SVC: localhost:9090
+      PLAYGROUND_ENABLED: "true"
+    ports:
+      - "8082:8082"
+      - "9095:9095"
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9095/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
