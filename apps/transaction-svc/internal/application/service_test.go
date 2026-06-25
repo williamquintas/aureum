@@ -577,3 +577,364 @@ func TestGetVariableExpense_Success(t *testing.T) {
 	require.Equal(t, "Uber ride", resp.Description)
 	require.Equal(t, "pix", resp.PaymentMethod)
 }
+
+// ── Outbox Verification Tests (CC-27/CC-28) ──────────────────────────────────
+
+func TestCreateIncome_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{
+			saveFunc: func(ctx context.Context, income *domain.Income) error {
+				return nil
+			},
+		},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	_, err := svc.CreateIncome(context.Background(), CreateIncomeRequest{
+		UserID:         "user-1",
+		Description:    "Freelance project",
+		Source:         "Upwork",
+		IncomeType:     "freelance",
+		ReceivedDate:   "2026-05-01",
+		ReceivedAmount: 500000,
+		Status:         "pending",
+	})
+
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on CreateIncome success")
+	require.NotNil(t, savedEvent)
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok, "saved event should be a TransactionEvent")
+	require.Equal(t, domain.EventIncomeCreated, event.Type)
+	require.NotEmpty(t, event.EntityID)
+	require.Equal(t, "user-1", event.UserID)
+	require.NotZero(t, event.Timestamp)
+
+	// Verify payload fields
+	require.Equal(t, "Freelance project", event.Payload["description"])
+	require.Equal(t, "Upwork", event.Payload["source"])
+}
+
+func TestCreateIncome_OutboxSaveFailure(t *testing.T) {
+	svc := newTestSvc(
+		&mockIncomeRepo{
+			saveFunc: func(ctx context.Context, income *domain.Income) error {
+				return nil
+			},
+		},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				return errors.New("outbox write failed")
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	_, err := svc.CreateIncome(context.Background(), CreateIncomeRequest{
+		UserID:         "user-1",
+		Description:    "Test",
+		Source:         "Test",
+		IncomeType:     "salary",
+		ReceivedDate:   "2026-05-01",
+		ReceivedAmount: 1000,
+		Status:         "pending",
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "outbox")
+}
+
+func TestCreateFixedExpense_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{},
+		&mockFixedExpenseRepo{
+			saveFunc: func(ctx context.Context, expense *domain.FixedExpense) error {
+				return nil
+			},
+		},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	_, err := svc.CreateFixedExpense(context.Background(), CreateFixedExpenseRequest{
+		UserID:        "user-1",
+		Description:   "Netflix",
+		Category:      "Entertainment",
+		DayOfMonth:    15,
+		PaymentMethod: "credit_card",
+		Status:        "pending",
+	})
+
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on CreateFixedExpense success")
+	require.NotNil(t, savedEvent)
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok, "saved event should be a TransactionEvent")
+	require.Equal(t, domain.EventFixedExpenseCreated, event.Type)
+	require.NotEmpty(t, event.EntityID)
+	require.Equal(t, "user-1", event.UserID)
+	require.Equal(t, "Netflix", event.Payload["description"])
+}
+
+func TestCreateFixedExpense_OutboxSaveFailure(t *testing.T) {
+	svc := newTestSvc(
+		&mockIncomeRepo{},
+		&mockFixedExpenseRepo{
+			saveFunc: func(ctx context.Context, expense *domain.FixedExpense) error {
+				return nil
+			},
+		},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				return errors.New("outbox write failed")
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	_, err := svc.CreateFixedExpense(context.Background(), CreateFixedExpenseRequest{
+		UserID:        "user-1",
+		Description:   "Test",
+		Category:      "Test",
+		DayOfMonth:    15,
+		PaymentMethod: "credit_card",
+		Status:        "pending",
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "outbox")
+}
+
+func TestDeleteIncome_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{
+			deleteFunc: func(ctx context.Context, id, userID string) error {
+				return nil
+			},
+		},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	err := svc.DeleteIncome(context.Background(), "income-1", "user-1")
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on DeleteIncome success")
+	require.NotNil(t, savedEvent)
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok, "saved event should be a TransactionEvent")
+	require.Equal(t, domain.EventIncomeDeleted, event.Type)
+	require.Equal(t, "income-1", event.EntityID)
+	require.Equal(t, "user-1", event.UserID)
+}
+
+func TestDeleteIncome_OutboxSaveFailure(t *testing.T) {
+	svc := newTestSvc(
+		&mockIncomeRepo{
+			deleteFunc: func(ctx context.Context, id, userID string) error {
+				return nil
+			},
+		},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				return errors.New("outbox write failed")
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	err := svc.DeleteIncome(context.Background(), "income-1", "user-1")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "outbox")
+}
+
+func TestUpdateIncome_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	income := defaultIncome()
+
+	svc := newTestSvc(
+		&mockIncomeRepo{
+			findByIDFunc: func(ctx context.Context, id, userID string) (*domain.Income, error) {
+				return income, nil
+			},
+			updateFunc: func(ctx context.Context, inc *domain.Income) error {
+				return nil
+			},
+		},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	newDesc := "Updated project"
+	_, err := svc.UpdateIncome(context.Background(), UpdateIncomeRequest{
+		ID:          "income-1",
+		UserID:      "user-1",
+		Description: &newDesc,
+	})
+
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on UpdateIncome success")
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok)
+	require.Equal(t, domain.EventIncomeUpdated, event.Type)
+	require.Equal(t, "income-1", event.EntityID)
+}
+
+func TestDeleteFixedExpense_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{},
+		&mockFixedExpenseRepo{
+			deleteFunc: func(ctx context.Context, id, userID string) error {
+				return nil
+			},
+		},
+		&mockVariableExpenseRepo{},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	err := svc.DeleteFixedExpense(context.Background(), "fe-1", "user-1")
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on DeleteFixedExpense")
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok)
+	require.Equal(t, domain.EventFixedExpenseDeleted, event.Type)
+	require.Equal(t, "fe-1", event.EntityID)
+}
+
+func TestDeleteVariableExpense_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{
+			deleteFunc: func(ctx context.Context, id, userID string) error {
+				return nil
+			},
+		},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	err := svc.DeleteVariableExpense(context.Background(), "ve-1", "user-1")
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on DeleteVariableExpense")
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok)
+	require.Equal(t, domain.EventVariableExpenseDeleted, event.Type)
+	require.Equal(t, "ve-1", event.EntityID)
+}
+
+func TestCreateVariableExpense_OutboxSaved(t *testing.T) {
+	var savedEvent interface{}
+	var outboxCalled bool
+
+	svc := newTestSvc(
+		&mockIncomeRepo{},
+		&mockFixedExpenseRepo{},
+		&mockVariableExpenseRepo{
+			saveFunc: func(ctx context.Context, expense *domain.VariableExpense) error {
+				return nil
+			},
+		},
+		&mockOutbox{
+			saveFunc: func(ctx context.Context, event interface{}) error {
+				outboxCalled = true
+				savedEvent = event
+				return nil
+			},
+		},
+		&mockIdempotency{},
+	)
+
+	_, err := svc.CreateVariableExpense(context.Background(), CreateVariableExpenseRequest{
+		UserID:        "user-1",
+		Description:   "Dinner",
+		Destination:   "Restaurant",
+		Category:      "Food",
+		ExpenseType:   "discretionary",
+		PaymentMethod: "debit_card",
+		PaymentDate:   "2026-05-15",
+		PaidAmount:    15000,
+		Status:        "pending",
+	})
+
+	require.NoError(t, err)
+	require.True(t, outboxCalled, "outbox.Save should have been called on CreateVariableExpense success")
+
+	event, ok := savedEvent.(domain.TransactionEvent)
+	require.True(t, ok)
+	require.Equal(t, domain.EventVariableExpenseCreated, event.Type)
+	require.NotEmpty(t, event.EntityID)
+	require.Equal(t, "user-1", event.UserID)
+}

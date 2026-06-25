@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/aureum/identity-svc/internal/domain"
 	"github.com/aureum/identity-svc/internal/infrastructure/middleware"
 	"github.com/aureum/pkg/auth"
+	"github.com/aureum/pkg/telemetry"
 )
 
 type Handler struct {
@@ -54,6 +56,7 @@ func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 }
 
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -75,10 +78,12 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "signup", "201", time.Since(start))
 	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -100,10 +105,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "login", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.VerifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -122,10 +129,12 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "verify_email", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -142,10 +151,12 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "get_profile", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, profile)
 }
 
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -162,10 +173,12 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "refresh_token", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -182,10 +195,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "logout", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -201,10 +216,12 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "forgot_password", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -223,10 +240,12 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "reset_password", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.AdminCreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -246,10 +265,12 @@ func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "admin_create_user", "201", time.Since(start))
 	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	userID := chi.URLParam(r, "id")
 	var req application.AssignRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -272,10 +293,12 @@ func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "assign_role", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	userID := chi.URLParam(r, "id")
 	var req application.RemoveRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -298,10 +321,12 @@ func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "remove_role", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	offset := 0
 	limit := 20
 
@@ -311,20 +336,24 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "list_users", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	roles, err := h.authzService.ListRoles(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "list_roles", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, roles)
 }
 
 func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req application.ABACCheckRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -337,10 +366,12 @@ func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "abac_check", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -364,10 +395,12 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "update_profile", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -385,10 +418,12 @@ func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "setup_mfa", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -413,10 +448,12 @@ func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "verify_mfa", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -441,10 +478,12 @@ func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "disable_mfa", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -457,10 +496,12 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "list_sessions", "200", time.Since(start))
 	writeJSON(w, http.StatusOK, sessions)
 }
 
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
@@ -478,6 +519,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordRequest(r.Context(), "revoke_session", "200", time.Since(start))
 	w.WriteHeader(http.StatusOK)
 }
 

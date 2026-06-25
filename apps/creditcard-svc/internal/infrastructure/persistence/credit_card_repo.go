@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/creditcard-svc/internal/domain"
@@ -57,6 +59,9 @@ func (r *CreditCardRepo) FindByID(ctx context.Context, id, userID string) (*doma
 		&card.CreatedAt, &card.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find credit card by id: %w", err)
 	}
 

@@ -118,6 +118,28 @@ var (
 )
 ```
 
+## Branching Strategy
+
+We follow **GitFlow** with branch conventions:
+
+| Branch type | Source | Dest | Prefix |
+|-------------|--------|------|--------|
+| Feature | `develop` | `develop` | `feature/` |
+| Bugfix | `develop` | `develop` | `bugfix/` |
+| Hotfix | `main` | `main` + `develop` | `hotfix/` |
+| Release | `develop` | `main` | `release/` |
+
+### Merge Strategy
+
+| Flow | Strategy | Commit Message |
+|------|----------|----------------|
+| `feature/*` → `develop` | Merge commit (preserve history) | PR title (conventional) |
+| `bugfix/*` → `develop` | Merge commit (preserve history) | PR title (conventional) |
+| `develop` → `main` | Squash merge | Conventional message with all changes |
+| `hotfix/*` → `main` | Merge commit | `fix(scope): description` |
+| `hotfix/*` → `develop` | Merge commit | `fix(scope): description` |
+| `release/*` → `main` | Squash merge | `chore(release): vX.Y.Z` |
+
 ## How to Submit PRs
 
 ### Before Creating a PR
@@ -151,7 +173,10 @@ var (
 
 ### PR Review Process
 
-- **Reviewers**: At least one maintainer must approve
+- **Minimum approvals**: At least 1 approval required
+- **`pkg/` changes**: Require 2 approvals + `@code-reviewer` agent or maintainer review
+- **Mandatory review**: Changes in `proto/`, `deploy/`, `.github/workflows/` require maintainer approval
+- **Code owners**: Automatically assigned based on `.github/CODEOWNERS`
 - **CI Checks**: All CI checks must pass
 - **Address Feedback**: Respond to all review comments
 - **Update PR**: Push additional commits to address feedback
@@ -263,6 +288,29 @@ apps/{service}/
 ├── migrations/
 └── Dockerfile
 ```
+
+## Semantic Versioning
+
+We follow [Semantic Versioning 2.0.0](https://semver.org/).
+
+| Change | Version Bump | Example |
+|--------|-------------|---------|
+| Breaking change (proto, DB migration, API) | MAJOR | `v2.0.0` |
+| New feature (backward compatible) | MINOR | `v1.5.0` |
+| Bug fix (backward compatible) | PATCH | `v1.5.1` |
+
+### Release Flow
+
+```
+develop ──→ release/X.Y.Z ──→ main ──→ tag vX.Y.Z ──→ GitHub Release
+                │                      │
+                └── only bugfixes      └── CD: Docker build + push ghcr.io
+```
+
+- `release/X.Y.Z` is cut from `develop` when ready
+- Only bugfixes allowed on release branch
+- On merge to `main`, CI auto-tags and creates GitHub Release
+- `main` is merged back to `develop` to keep changelog in sync
 
 ## Documentation
 

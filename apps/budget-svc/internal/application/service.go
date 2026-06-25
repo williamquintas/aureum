@@ -50,8 +50,8 @@ func NewService(
 	}
 }
 
-func cacheKey(prefix, id string) string {
-	return "budget:" + prefix + ":" + id
+func cacheKey(prefix, userID, id string) string {
+	return "budget:" + prefix + ":" + userID + ":" + id
 }
 
 // ── Create ───────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ func (s *Service) Create(ctx context.Context, req CreateBudgetRequest) (*CreateB
 // ── Get ──────────────────────────────────────────────────────────────────────
 
 func (s *Service) Get(ctx context.Context, id, userID string) (*GetBudgetResponse, error) {
-	key := cacheKey("budget", id)
+	key := cacheKey("budget", userID, id)
 	if s.cache != nil {
 		var cached GetBudgetResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
@@ -258,7 +258,7 @@ func (s *Service) Update(ctx context.Context, req UpdateBudgetRequest) (*GetBudg
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("budget", req.ID))
+		_ = s.cache.Delete(ctx, cacheKey("budget", req.UserID, req.ID))
 	}
 
 	return resp, nil
@@ -268,7 +268,7 @@ func (s *Service) Update(ctx context.Context, req UpdateBudgetRequest) (*GetBudg
 
 func (s *Service) Delete(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("budget", id))
+		_ = s.cache.Delete(ctx, cacheKey("budget", userID, id))
 	}
 	return s.budgets.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.budgets.Delete(txCtx, id, userID); err != nil {

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base/infra
+  - ../base/keycloak
+  - ../base/keycloak-init
+  - ../base/db-migrate
+
+secretGenerator:
+  - name: keycloak-db
+    literals:
+      - jdbc-url=jdbc:postgresql://postgres:5432/keycloak
+      - username=aureum
+      - password=aureum_dev
+  - name: postgres
+    literals:
+      - username=aureum
+      - password=aureum_dev
+  - name: keycloak
+    literals:
+      - admin-username=admin
+      - admin-password=admin
+      - client-secret=placeholder-secret
+  - name: unleash-db
+    literals:
+      - dsn=postgres://aureum:aureum_dev@postgres:5432/unleash?sslmode=disable
+  - name: unleash
+    literals:
+      - admin-api-token=*:*.unleash-admin-token

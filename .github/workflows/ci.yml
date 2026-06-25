@@ -11,7 +11,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  skip-check:
+    name: Skip Check
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            LABELS=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.number }}/labels" \
+              | jq -r '.[].name')
+            if echo "$LABELS" | grep -q "skip-ci"; then
+              echo "should_skip=true" >> $GITHUB_OUTPUT
+              echo "PR has skip-ci label — skipping CI"
+            else
+              echo "should_skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
   lint:
+    needs: skip-check
+    if: needs.skip-check.outputs.should_skip == 'false'
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -27,6 +51,8 @@ jobs:
 
   test-unit:
     name: Unit Tests
+    needs: skip-check
+    if: needs.skip-check.outputs.should_skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +64,8 @@ jobs:
 
   test-integration:
     name: Integration Tests
+    needs: skip-check
+    if: needs.skip-check.outputs.should_skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +77,8 @@ jobs:
 
   build:
     name: Build
+    needs: skip-check
+    if: needs.skip-check.outputs.should_skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +90,8 @@ jobs:
 
   coverage:
     name: Coverage
+    needs: skip-check
+    if: needs.skip-check.outputs.should_skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

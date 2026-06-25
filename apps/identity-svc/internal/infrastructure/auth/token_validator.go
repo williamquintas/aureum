@@ -8,6 +8,7 @@ import (
 
 	"github.com/aureum/identity-svc/internal/domain"
 	cachepkg "github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/telemetry"
 )
 
 type CachedTokenValidator struct {
@@ -30,9 +31,11 @@ func (v *CachedTokenValidator) ValidateToken(ctx context.Context, token string) 
 	var cached domain.User
 	found, err := v.cache.Get(ctx, cacheKey, &cached)
 	if err == nil && found {
+		telemetry.RecordCacheHit(ctx, "token_validator", true)
 		return &cached, nil
 	}
 
+	telemetry.RecordCacheHit(ctx, "token_validator", false)
 	user, err := v.keycloak.ValidateToken(ctx, token)
 	if err != nil {
 		return nil, err

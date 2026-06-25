@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -12,18 +13,20 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/aureum/pkg/db"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/pkg/cache"
 	ff "github.com/aureum/pkg/featureflag"
+	"github.com/aureum/pkg/kafka"
 	"github.com/aureum/pkg/telemetry"
 
 	reportv1 "github.com/aureum/proto/gen/report/reportv1"
 	"github.com/aureum/report-svc/internal/application"
 	"github.com/aureum/report-svc/internal/infrastructure/api"
+	"github.com/aureum/report-svc/internal/infrastructure/messaging"
 	"github.com/aureum/report-svc/internal/infrastructure/persistence"
 )
 
@@ -50,12 +53,17 @@ func run() int {
 		}
 	}()
 
-	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	dbPool, err := db.NewPostgresPool(cfg.DatabaseURL, 25)
 	if err != nil {
 		log.Error("failed to connect to database", "error", err)
 		return 1
 	}
 	defer dbPool.Close()
+
+	if err := db.RunMigrations(cfg.DatabaseURL, "migrations"); err != nil {
+		log.Error("failed to run migrations", "error", err)
+		return 1
+	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.RedisURL,
@@ -92,6 +100,50 @@ func run() int {
 	} else {
 		flags := strings.Split(cfg.EnabledFlags, ",")
 		flagClient = &envFlag{flags: flags}
+	}
+
+	// ── Create projectors for event consumption ─────────────────────────
+	monthlyProj := application.NewMonthlySummaryProjector(monthlyRepo)
+	categoryProj := application.NewCategorySummaryProjector(categoryRepo)
+	budgetProj := application.NewBudgetVsActualProjector(budgetRepo)
+	portfolioProj := application.NewPortfolioSnapshotProjector(portfolioRepo)
+	debtProj := application.NewDebtSummaryProjector(debtRepo)
+
+	eventHandler := messaging.NewEventHandler(monthlyProj, categoryProj, budgetProj, portfolioProj, debtProj)
+
+	// ── Start Kafka consumers ──────────────────────────────────────────
+	// report-svc consumes domain events from upstream services to project
+	// read models. Each event type is published to a separate topic.
+	type topicGroup struct {
+		topic   string
+		groupID string
+	}
+	consumerTopics := []topicGroup{
+		{"transaction-events", "report-svc-transaction"},
+		{"budget-events", "report-svc-budget"},
+		{"debt-events", "report-svc-debt"},
+		{"investment-events", "report-svc-investment"},
+	}
+
+	for _, ct := range consumerTopics {
+		cg, err := kafka.NewConsumerGroup(cfg.KafkaBrokers, ct.groupID, []string{ct.topic})
+		if err != nil {
+			log.Error("failed to create kafka consumer", "topic", ct.topic, "error", err)
+			return 1
+		}
+		defer func(c *kafka.ConsumerGroup) { _ = c.Close() }(cg)
+
+		adapter := messaging.NewConsumerAdapter(cg, eventHandler)
+
+		go func(topic string, a *messaging.ConsumerAdapter) {
+			log.Info("starting kafka consumer", "topic", topic)
+			if err := a.Start(ctx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					log.Error("kafka consumer error", "topic", topic, "error", err)
+				}
+			}
+			log.Info("kafka consumer stopped", "topic", topic)
+		}(ct.topic, adapter)
 	}
 
 	svc := application.NewService(
@@ -143,6 +195,8 @@ func run() int {
 	sig := <-quit
 
 	log.Info("shutting down", "signal", sig.String())
+
+	cancel() // stop Kafka consumers (breaks Consume loop)
 
 	grpcServer.GracefulStop()
 

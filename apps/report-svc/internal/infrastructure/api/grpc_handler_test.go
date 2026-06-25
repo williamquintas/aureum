@@ -25,7 +25,9 @@ type mockMonthlySummaryRepo struct {
 	findFunc func(ctx context.Context, userID string, year, month int) (*domain.MonthlySummary, error)
 }
 
-func (m *mockMonthlySummaryRepo) Upsert(ctx context.Context, summary *domain.MonthlySummary) error { return nil }
+func (m *mockMonthlySummaryRepo) Upsert(ctx context.Context, summary *domain.MonthlySummary) error {
+	return nil
+}
 func (m *mockMonthlySummaryRepo) FindByUserAndPeriod(ctx context.Context, userID string, year, month int) (*domain.MonthlySummary, error) {
 	if m.findFunc != nil {
 		return m.findFunc(ctx, userID, year, month)
@@ -37,7 +39,9 @@ type mockCategorySummaryRepo struct {
 	findFunc func(ctx context.Context, userID string, year, month int) ([]*domain.CategorySummary, error)
 }
 
-func (m *mockCategorySummaryRepo) Upsert(ctx context.Context, summary *domain.CategorySummary) error { return nil }
+func (m *mockCategorySummaryRepo) Upsert(ctx context.Context, summary *domain.CategorySummary) error {
+	return nil
+}
 func (m *mockCategorySummaryRepo) FindByUserAndPeriod(ctx context.Context, userID string, year, month int) ([]*domain.CategorySummary, error) {
 	if m.findFunc != nil {
 		return m.findFunc(ctx, userID, year, month)
@@ -49,7 +53,9 @@ type mockBudgetVsActualRepo struct {
 	findByBudgetFunc func(ctx context.Context, userID, budgetID string) ([]*domain.BudgetVsActual, error)
 }
 
-func (m *mockBudgetVsActualRepo) Upsert(ctx context.Context, bva *domain.BudgetVsActual) error { return nil }
+func (m *mockBudgetVsActualRepo) Upsert(ctx context.Context, bva *domain.BudgetVsActual) error {
+	return nil
+}
 func (m *mockBudgetVsActualRepo) FindByUserAndBudget(ctx context.Context, userID, budgetID string) ([]*domain.BudgetVsActual, error) {
 	if m.findByBudgetFunc != nil {
 		return m.findByBudgetFunc(ctx, userID, budgetID)
@@ -64,7 +70,9 @@ type mockPortfolioRepo struct {
 	findFunc func(ctx context.Context, userID, date string) (*domain.PortfolioSnapshot, error)
 }
 
-func (m *mockPortfolioRepo) Upsert(ctx context.Context, snapshot *domain.PortfolioSnapshot) error { return nil }
+func (m *mockPortfolioRepo) Upsert(ctx context.Context, snapshot *domain.PortfolioSnapshot) error {
+	return nil
+}
 func (m *mockPortfolioRepo) FindByUserAndPeriod(ctx context.Context, userID, date string) (*domain.PortfolioSnapshot, error) {
 	if m.findFunc != nil {
 		return m.findFunc(ctx, userID, date)
@@ -86,17 +94,25 @@ func (m *mockDebtSummaryRepo) FindByUser(ctx context.Context, userID string) (*d
 
 type mockCreditCardRepo struct{}
 
-func (m *mockCreditCardRepo) Upsert(ctx context.Context, cs *domain.CreditCardSummary) error { return nil }
+func (m *mockCreditCardRepo) Upsert(ctx context.Context, cs *domain.CreditCardSummary) error {
+	return nil
+}
 func (m *mockCreditCardRepo) FindByUser(ctx context.Context, userID string) ([]*domain.CreditCardSummary, error) {
 	return nil, domain.ErrNoData
 }
 
 type mockCache struct{}
-func (m *mockCache) Get(ctx context.Context, key string, dest interface{}) (bool, error) { return false, nil }
-func (m *mockCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error { return nil }
+
+func (m *mockCache) Get(ctx context.Context, key string, dest interface{}) (bool, error) {
+	return false, nil
+}
+func (m *mockCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	return nil
+}
 func (m *mockCache) Delete(ctx context.Context, key string) error { return nil }
 
 type mockFF struct{}
+
 func (m *mockFF) IsEnabled(_ context.Context, _ string) bool { return true }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -326,4 +342,70 @@ func TestMapError(t *testing.T) {
 			require.Equal(t, tt.wantCode, st.Code())
 		})
 	}
+}
+
+// ── gRPC NoData Tests ───────────────────────────────────────────────────────
+
+func TestGRPC_GetExpenseSummary_NoData(t *testing.T) {
+	h := NewGRPCHandler(newSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+	))
+
+	now := timestamppb.Now()
+	_, err := h.GetExpenseSummary(userCtx(), &reportv1.ExpenseSummaryRequest{
+		UserId:   "user-1",
+		DateFrom: now,
+		DateTo:   now,
+	})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	require.Equal(t, codes.NotFound, st.Code())
+}
+
+func TestGRPC_GetBudgetVsActual_NoData(t *testing.T) {
+	h := NewGRPCHandler(newSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+	))
+
+	_, err := h.GetBudgetVsActual(userCtx(), &reportv1.BudgetVsActualRequest{
+		UserId:   "user-1",
+		BudgetId: "budget-1",
+	})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	require.Equal(t, codes.NotFound, st.Code())
+}
+
+func TestGRPC_GetPortfolioPerformance_NoData(t *testing.T) {
+	h := NewGRPCHandler(newSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+	))
+
+	now := timestamppb.Now()
+	_, err := h.GetPortfolioPerformance(userCtx(), &reportv1.PortfolioPerformanceRequest{
+		UserId:   "user-1",
+		DateFrom: now,
+		DateTo:   now,
+	})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	require.Equal(t, codes.NotFound, st.Code())
 }

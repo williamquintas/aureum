@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/aureum/pkg/db"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -55,12 +55,17 @@ func run() int {
 		}
 	}()
 
-	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	dbPool, err := db.NewPostgresPool(cfg.DatabaseURL, 25)
 	if err != nil {
 		log.Error("failed to connect to database", "error", err)
 		return 1
 	}
 	defer dbPool.Close()
+
+	if err := db.RunMigrations(cfg.DatabaseURL, "migrations"); err != nil {
+		log.Error("failed to run migrations", "error", err)
+		return 1
+	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.RedisURL,
@@ -261,7 +266,7 @@ func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServe
 	if userID == "" {
 		userID = "system"
 	}
-	ctx = context.WithValue(ctx, userIDKey, userID)
+	ctx = api.UserContext(ctx, userID)
 	return handler(ctx, req)
 }
 

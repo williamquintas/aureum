@@ -59,8 +59,8 @@ func NewService(
 	}
 }
 
-func cacheKey(prefix, id string) string {
-	return "cc:" + prefix + ":" + id
+func cacheKey(prefix, userID, id string) string {
+	return "cc:" + prefix + ":" + userID + ":" + id
 }
 
 // ── CreditCard ───────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ func (s *Service) CreateCreditCard(ctx context.Context, req CreateCreditCardRequ
 }
 
 func (s *Service) GetCreditCard(ctx context.Context, id, userID string) (*CreditCardResponse, error) {
-	key := cacheKey("card", id)
+	key := cacheKey("card", userID, id)
 	if s.cache != nil {
 		var cached CreditCardResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
@@ -219,7 +219,7 @@ func (s *Service) UpdateCreditCard(ctx context.Context, req UpdateCreditCardRequ
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("card", req.ID))
+		_ = s.cache.Delete(ctx, cacheKey("card", req.UserID, req.ID))
 	}
 
 	return resp, nil
@@ -227,7 +227,7 @@ func (s *Service) UpdateCreditCard(ctx context.Context, req UpdateCreditCardRequ
 
 func (s *Service) DeleteCreditCard(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("card", id))
+		_ = s.cache.Delete(ctx, cacheKey("card", userID, id))
 	}
 	return s.creditCards.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.creditCards.Delete(txCtx, id, userID); err != nil {
@@ -323,14 +323,14 @@ func (s *Service) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("card", req.CreditCardID))
+		_ = s.cache.Delete(ctx, cacheKey("card", req.UserID, req.CreditCardID))
 	}
 
 	return resp, nil
 }
 
 func (s *Service) GetInvoice(ctx context.Context, id, userID string) (*InvoiceResponse, error) {
-	key := cacheKey("invoice", id)
+	key := cacheKey("invoice", userID, id)
 	if s.cache != nil {
 		var cached InvoiceResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
@@ -430,8 +430,8 @@ func (s *Service) PayInvoice(ctx context.Context, req PayInvoiceRequest) (*Invoi
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("invoice", req.ID))
-		_ = s.cache.Delete(ctx, cacheKey("card", invoice.CreditCardID))
+		_ = s.cache.Delete(ctx, cacheKey("invoice", req.UserID, req.ID))
+		_ = s.cache.Delete(ctx, cacheKey("card", req.UserID, invoice.CreditCardID))
 	}
 
 	return resp, nil
@@ -522,7 +522,7 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("invoice", req.InvoiceID))
+		_ = s.cache.Delete(ctx, cacheKey("invoice", req.UserID, req.InvoiceID))
 	}
 
 	return resp, nil

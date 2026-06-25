@@ -6,31 +6,81 @@ k8s_yaml(kustomize('../k8s/overlays/dev'))
 custom_build(
     'aureum/identity-svc:dev',
     'docker build -f dev.Dockerfile -t $EXPECTED_REF ../..',
-    ['../apps/identity-svc/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
+    ['../../apps/identity-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
     live_update=[
-        sync('../apps/identity-svc/', '/app/apps/identity-svc/'),
+        sync('../../apps/identity-svc/', '/app/apps/identity-svc/'),
     ],
 )
 
 custom_build(
     'aureum/transaction-svc:dev',
     'docker build -f dev.Dockerfile.transaction-svc -t $EXPECTED_REF ../..',
-    ['../apps/transaction-svc/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
+    ['../../apps/transaction-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
     live_update=[
-        sync('../apps/transaction-svc/', '/app/apps/transaction-svc/'),
+        sync('../../apps/transaction-svc/', '/app/apps/transaction-svc/'),
     ],
 )
 
 custom_build(
     'aureum/graphql-bff:dev',
     'docker build -f dev.Dockerfile.graphql-bff -t $EXPECTED_REF ../..',
-    ['../apps/graphql-bff/', '../pkg/', '../proto/', '../go.work', '../go.work.sum'],
+    ['../../apps/graphql-bff/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
     live_update=[
-        sync('../apps/graphql-bff/', '/app/apps/graphql-bff/'),
+        sync('../../apps/graphql-bff/', '/app/apps/graphql-bff/'),
+    ],
+)
+
+custom_build(
+    'aureum/budget-svc:dev',
+    'docker build -f dev.Dockerfile.budget-svc -t $EXPECTED_REF ../..',
+    ['../../apps/budget-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
+    live_update=[
+        sync('../../apps/budget-svc/', '/app/apps/budget-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/creditcard-svc:dev',
+    'docker build -f dev.Dockerfile.creditcard-svc -t $EXPECTED_REF ../..',
+    ['../../apps/creditcard-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
+    live_update=[
+        sync('../../apps/creditcard-svc/', '/app/apps/creditcard-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/debt-svc:dev',
+    'docker build -f dev.Dockerfile.debt-svc -t $EXPECTED_REF ../..',
+    ['../../apps/debt-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
+    live_update=[
+        sync('../../apps/debt-svc/', '/app/apps/debt-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/investment-svc:dev',
+    'docker build -f dev.Dockerfile.investment-svc -t $EXPECTED_REF ../..',
+    ['../../apps/investment-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
+    live_update=[
+        sync('../../apps/investment-svc/', '/app/apps/investment-svc/'),
+    ],
+)
+
+custom_build(
+    'aureum/report-svc:dev',
+    'docker build -f dev.Dockerfile.report-svc -t $EXPECTED_REF ../..',
+    ['../../apps/report-svc/', '../../pkg/', '../../proto/', '../../go.work', '../../go.work.sum'],
+    live_update=[
+        sync('../../apps/report-svc/', '/app/apps/report-svc/'),
     ],
 )
 
 # Port forwarding for local access
+k8s_resource('budget-svc', port_forwards=['50055:50055'])
+k8s_resource('creditcard-svc', port_forwards=['50056:50056'])
+k8s_resource('debt-svc', port_forwards=['50057:50057'])
+k8s_resource('investment-svc', port_forwards=['50058:50058'])
+k8s_resource('report-svc', port_forwards=['50059:50059'])
 k8s_resource('transaction-svc', port_forwards=['50054:50054'])
 k8s_resource('graphql-bff', port_forwards=['8082:8082'])
 k8s_resource('identity-svc', port_forwards=['8080:8080'])
@@ -38,7 +88,7 @@ k8s_resource('keycloak', port_forwards=['8081:8080'])
 k8s_resource('postgres', port_forwards=['5432:5432'])
 k8s_resource('redis', port_forwards=['6379:6379'])
 k8s_resource('unleash', port_forwards=['4242:4242'])
-k8s_resource('redpanda', port_forwards=['9092:9092', '18081:8081', '8082:8082'])
+k8s_resource('redpanda', port_forwards=['9092:9092', '18081:8081', '18082:8082'])
 
 # Resource grouping and dependencies
 k8s_resource('keycloak-init', resource_deps=['keycloak'], labels=['keycloak'])

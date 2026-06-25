@@ -37,8 +37,8 @@ func NewService(
 	}
 }
 
-func cacheKey(prefix, id string) string {
-	return "inv:" + prefix + ":" + id
+func cacheKey(prefix, userID, id string) string {
+	return "inv:" + prefix + ":" + userID + ":" + id
 }
 
 // ── Investment ───────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ func (s *Service) CreateInvestment(ctx context.Context, req CreateInvestmentRequ
 }
 
 func (s *Service) GetInvestment(ctx context.Context, id, userID string) (*GetInvestmentResponse, error) {
-	key := cacheKey("investment", id)
+	key := cacheKey("investment", userID, id)
 	if s.cache != nil {
 		var cached GetInvestmentResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
@@ -258,7 +258,7 @@ func (s *Service) UpdateInvestment(ctx context.Context, req UpdateInvestmentRequ
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("investment", req.ID))
+		_ = s.cache.Delete(ctx, cacheKey("investment", req.UserID, req.ID))
 	}
 
 	return resp, nil
@@ -266,7 +266,7 @@ func (s *Service) UpdateInvestment(ctx context.Context, req UpdateInvestmentRequ
 
 func (s *Service) DeleteInvestment(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("investment", id))
+		_ = s.cache.Delete(ctx, cacheKey("investment", userID, id))
 	}
 	return s.investments.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.investments.Delete(txCtx, id, userID); err != nil {
@@ -409,7 +409,7 @@ func (s *Service) RecordTransaction(ctx context.Context, req RecordTransactionRe
 
 	// Invalidate the portfolio cache.
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("portfolio", req.UserID))
+		_ = s.cache.Delete(ctx, cacheKey("portfolio", req.UserID, ""))
 	}
 
 	return resp, nil
@@ -458,7 +458,7 @@ func (s *Service) ListTransactions(ctx context.Context, userID, investmentID str
 // ── Portfolio ────────────────────────────────────────────────────────────────
 
 func (s *Service) GetPortfolioSummary(ctx context.Context, userID string) (*PortfolioSummaryResponse, error) {
-	key := cacheKey("portfolio", userID)
+	key := cacheKey("portfolio", userID, "")
 	if s.cache != nil {
 		var cached PortfolioSummaryResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {

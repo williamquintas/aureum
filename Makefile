@@ -122,16 +122,28 @@ dev: ## Start local development with Tilt
 	fi
 
 .PHONY: dev/infra
-dev/infra: ## Start infrastructure (PostgreSQL, Kafka, Redis)
+dev/infra: ## Start infrastructure (PostgreSQL, Kafka, Redis) via docker-compose
 	@echo "Starting infrastructure..."
-	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra.yml up -d
+	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra-only.yml up -d
 	@echo "✓ Infrastructure started"
 
 .PHONE: dev/infra/stop
-dev/infra/stop: ## Stop infrastructure
+dev/infra/stop: ## Stop infrastructure via docker-compose
 	@echo "Stopping infrastructure..."
-	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra.yml down
+	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra-only.yml down
 	@echo "✓ Infrastructure stopped"
+
+.PHONY: dev/infra/k8s
+dev/infra/k8s: ## Start infrastructure on Kubernetes (no microservices)
+	@echo "Starting infra on K8s..."
+	kubectl apply -k deploy/k8s/infra-only
+	@echo "✓ Infra provisioned on K8s"
+
+.PHONE: dev/infra/k8s/stop
+dev/infra/k8s/stop: ## Remove infrastructure from Kubernetes
+	@echo "Removing infra from K8s..."
+	kubectl delete -k deploy/k8s/infra-only
+	@echo "✓ Infra removed from K8s"
 
 # ─── Go Module Management ────────────────────────────────────────────────────
 

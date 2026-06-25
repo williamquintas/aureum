@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	pkgErr "github.com/aureum/pkg/errors"
 	transactionv1 "github.com/aureum/proto/gen/transaction/transactionv1"
 	"github.com/aureum/transaction-svc/internal/application"
 	"github.com/aureum/transaction-svc/internal/domain"
@@ -511,6 +512,9 @@ func UserContext(ctx context.Context, userID string) context.Context {
 }
 
 func mapError(err error) error {
+	if grpcErr := pkgErr.MapToGRPC(err); status.Code(grpcErr) != codes.Unknown {
+		return grpcErr
+	}
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())

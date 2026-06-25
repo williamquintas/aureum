@@ -45,10 +45,12 @@ func (c *Client) CreateUser(ctx context.Context, email, password, name string) (
 		"email_verified": {"true"},
 	}
 	user := gocloak.User{
-		Email:      &email,
-		Enabled:    boolPtr(true),
-		FirstName:  &name,
-		Attributes: &attrs,
+		Email:           &email,
+		Enabled:         boolPtr(true),
+		EmailVerified:   boolPtr(true),
+		FirstName:       &name,
+		Attributes:      &attrs,
+		RequiredActions: &[]string{},
 	}
 
 	keycloakID, err := c.client.CreateUser(ctx, token.AccessToken, c.realm, user)

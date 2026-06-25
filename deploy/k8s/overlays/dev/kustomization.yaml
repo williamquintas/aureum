@@ -240,6 +240,12 @@ patches:
           - name: JWT_SECRET
             valueFrom:
               secretKeyRef:
+                name: investment-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
       name: investment-svc
   - patch: |-
       - op: replace
@@ -248,12 +254,6 @@ patches:
     target:
       kind: Deployment
       name: report-svc
-                key: jwt-secret
-          - name: LOG_LEVEL
-            value: debug
-    target:
-      kind: Deployment
-      name: investment-svc
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/resources

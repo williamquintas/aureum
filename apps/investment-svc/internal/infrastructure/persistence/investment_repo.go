@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/investment-svc/internal/domain"
@@ -58,6 +60,9 @@ func (r *InvestmentRepo) FindByID(ctx context.Context, id, userID string) (*doma
 		&status, &inv.Broker, &inv.CreatedAt, &inv.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find investment by id: %w", err)
 	}
 

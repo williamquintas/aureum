@@ -13,6 +13,7 @@ import (
 
 	"github.com/aureum/budget-svc/internal/application"
 	"github.com/aureum/budget-svc/internal/domain"
+	pkgErr "github.com/aureum/pkg/errors"
 	"github.com/aureum/pkg/telemetry"
 	budgetv1 "github.com/aureum/proto/gen/budget/budgetv1"
 )
@@ -373,6 +374,9 @@ func UserContext(ctx context.Context, userID string) context.Context {
 // ── Error mapping ─────────────────────────────────────────────────────────
 
 func mapError(err error) error {
+	if grpcErr := pkgErr.MapToGRPC(err); status.Code(grpcErr) != codes.Unknown {
+		return grpcErr
+	}
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())

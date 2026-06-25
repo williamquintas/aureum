@@ -13,6 +13,7 @@ import (
 
 	"github.com/aureum/creditcard-svc/internal/application"
 	"github.com/aureum/creditcard-svc/internal/domain"
+	pkgErr "github.com/aureum/pkg/errors"
 	"github.com/aureum/pkg/telemetry"
 	creditcardv1 "github.com/aureum/proto/gen/creditcard/creditcardv1"
 )
@@ -466,6 +467,9 @@ func UserContext(ctx context.Context, userID string) context.Context {
 }
 
 func mapError(err error) error {
+	if grpcErr := pkgErr.MapToGRPC(err); status.Code(grpcErr) != codes.Unknown {
+		return grpcErr
+	}
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())

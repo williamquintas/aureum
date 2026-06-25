@@ -74,6 +74,14 @@ func TestAuthDirective(t *testing.T) {
 		assert.Contains(t, err.Error(), "token validation failed")
 	})
 
+	t.Run("expired token returns error", func(t *testing.T) {
+		ctx := authContextWithHeader(t, "Bearer expired-token")
+		result, err := authFn(ctx, nil, next, "user")
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "token validation failed")
+	})
+
 	t.Run("malformed authorization header", func(t *testing.T) {
 		ctx := authContextWithHeader(t, "Basic somecreds")
 		result, err := authFn(ctx, nil, next, "user")
@@ -143,7 +151,7 @@ func TestAuthDirective_CircuitBreakerFallback(t *testing.T) {
 // ── Model Query Resolver Tests ───────────────────────────────────────────
 
 func TestQueryResolver_FixedExpensesList(t *testing.T) {
-	resolver, mockTx, _ := setupTestResolver(t)
+	resolver, mockTx, _, _, _, _, _ := setupTestResolver(t)
 
 	mockTx.fixedExpenses["fe-1"] = testFixedExpenseProto("fe-1")
 
@@ -157,7 +165,7 @@ func TestQueryResolver_FixedExpensesList(t *testing.T) {
 }
 
 func TestQueryResolver_VariableExpensesList(t *testing.T) {
-	resolver, mockTx, _ := setupTestResolver(t)
+	resolver, mockTx, _, _, _, _, _ := setupTestResolver(t)
 
 	mockTx.variableExpenses["ve-1"] = testVariableExpenseProto("ve-1")
 	mockTx.variableExpenses["ve-2"] = testVariableExpenseProto("ve-2")
@@ -213,4 +221,39 @@ func TestMockServices(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, resp.Valid)
 	})
+}
+
+// ── Circuit Breaker Transition Tests ──────────────────────────────────────
+
+func TestAuthDirective_CircuitBreakerTransitions(t *testing.T) {
+	// Connect to a non-existent server so every RPC fails
+	conn, err := grpc.Dial("localhost:1",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	idClient := clients.NewIdentityServiceClient(conn)
+	authFn := AuthDirective(idClient)
+
+	next := func(ctx context.Context) (interface{}, error) {
+		return "success", nil
+	}
+	ctx := authContextWithHeader(t, "Bearer valid-token")
+
+	// Exhaust the circuit breaker by calling repeatedly.
+	// Default gobreaker config trips after >5 consecutive failures.
+	for i := 0; i < 10; i++ {
+		result, err := authFn(ctx, nil, next, "user")
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	}
+
+	// After the CB is open, all requests should return the fallback error
+	// wrapped by AuthDirective as "invalid token: <svc-unavailable>"
+	result, err := authFn(ctx, nil, next, "user")
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "invalid token")
+	assert.Contains(t, err.Error(), "identity-svc unavailable")
 }

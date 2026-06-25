@@ -92,4 +92,52 @@ func TestCalculateAmortization(t *testing.T) {
 		}
 		assert.Equal(t, s.TotalAmount, sumPrincipal)
 	})
+
+	t.Run("verify rounding", func(t *testing.T) {
+		s := domain.CalculateAmortization(10000000, 750, 200380, 60)
+
+		for _, e := range s.Entries {
+			assert.Equal(t, e.Principal+e.Interest, e.TotalPayment,
+				"month %d: Principal(%d) + Interest(%d) != TotalPayment(%d)",
+				e.Month, e.Principal, e.Interest, e.TotalPayment)
+		}
+
+		sumPrincipal := int64(0)
+		sumInterest := int64(0)
+		for _, e := range s.Entries {
+			sumPrincipal += e.Principal
+			sumInterest += e.Interest
+		}
+		assert.Equal(t, s.TotalAmount, sumPrincipal,
+			"sum of principal payments (%d) != total amount (%d)", sumPrincipal, s.TotalAmount)
+		assert.Equal(t, s.TotalInterest, sumInterest,
+			"sum of interest payments (%d) != total interest (%d)", sumInterest, s.TotalInterest)
+	})
+
+	t.Run("final payment balance", func(t *testing.T) {
+		testCases := []struct {
+			name         string
+			totalAmount  int64
+			interestRate int64
+			monthlyPay   int64
+			months       int
+		}{
+			{"5yr @ 7.5%", 10000000, 750, 200380, 60},
+			{"zero interest, 12mo", 10000000, 0, 1000000, 12},
+			{"high interest, 12mo", 10000000, 500, 1000000, 12},
+			{"single month", 500000, 1000, 1000000, 1},
+			{"small amount", 100000, 120000, 100, 12},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				s := domain.CalculateAmortization(tc.totalAmount, tc.interestRate, tc.monthlyPay, tc.months)
+
+				require := assert.New(t)
+				last := s.Entries[len(s.Entries)-1]
+				require.Equal(int64(0), last.Balance,
+					"month %d: final balance should be 0, got %d", last.Month, last.Balance)
+			})
+		}
+	})
 }

@@ -8,6 +8,7 @@ COPY proto/ proto/
 
 WORKDIR /build/apps/report-svc
 RUN go mod download
+RUN go mod tidy
 RUN CGO_ENABLED=0 go build -o /app/bin/server ./cmd/server
 
 FROM alpine:3.19

@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/debt-svc/internal/domain"
@@ -52,18 +54,24 @@ func (r *DebtRepo) FindByID(ctx context.Context, id, userID string) (*domain.Deb
 	var debt domain.Debt
 	var debtType, status string
 	var deletedAt *time.Time
+	var startDate, expectedEndDate time.Time
 	err := row.Scan(
 		&debt.ID, &debt.UserID, &debt.Name, &debt.Description,
 		&debtType, &debt.TotalAmount, &debt.RemainingAmount,
-		&debt.InterestRate, &debt.StartDate, &debt.ExpectedEndDate,
+		&debt.InterestRate, &startDate, &expectedEndDate,
 		&status, &debt.Creditor, &debt.CreatedAt, &debt.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find debt by id: %w", err)
 	}
 
 	debt.DebtType = domain.DebtType(debtType)
 	debt.Status = domain.DebtStatus(status)
+	debt.StartDate = startDate.Format("2006-01-02")
+	debt.ExpectedEndDate = expectedEndDate.Format("2006-01-02")
 	debt.DeletedAt = deletedAt
 	return &debt, nil
 }
@@ -143,10 +151,11 @@ func (r *DebtRepo) List(ctx context.Context, userID string, filter domain.DebtFi
 	for rows.Next() {
 		var d domain.Debt
 		var debtType, status string
+		var startDate, expectedEndDate time.Time
 		err := rows.Scan(
 			&d.ID, &d.UserID, &d.Name, &d.Description,
 			&debtType, &d.TotalAmount, &d.RemainingAmount,
-			&d.InterestRate, &d.StartDate, &d.ExpectedEndDate,
+			&d.InterestRate, &startDate, &expectedEndDate,
 			&status, &d.Creditor, &d.CreatedAt, &d.UpdatedAt,
 		)
 		if err != nil {
@@ -154,6 +163,8 @@ func (r *DebtRepo) List(ctx context.Context, userID string, filter domain.DebtFi
 		}
 		d.DebtType = domain.DebtType(debtType)
 		d.Status = domain.DebtStatus(status)
+		d.StartDate = startDate.Format("2006-01-02")
+		d.ExpectedEndDate = expectedEndDate.Format("2006-01-02")
 		debts = append(debts, &d)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/pkg/outbox"
@@ -45,11 +46,10 @@ func (r *OutboxRepository) saveTransactionEvent(ctx context.Context, e *domain.T
 	if err != nil {
 		return err
 	}
-	id := e.EntityID
 	now := time.Now().UTC()
 	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, id, "transaction", e.EntityID, string(e.Type), payload, &now)
+	return r.exec(ctx, query, uuid.New().String(), "transaction", e.EntityID, string(e.Type), payload, &now)
 }
 
 func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) error {

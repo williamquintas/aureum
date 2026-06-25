@@ -668,3 +668,142 @@ func TestService_ErrorPropagation(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "db connection error")
 }
+
+// ── GetExpenseSummary NoData & Validation ───────────────────────────────────
+
+func TestGetExpenseSummary_NoData(t *testing.T) {
+	svc := newTestSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+		&mockCache{},
+		&mockFF{},
+	)
+	_, err := svc.GetExpenseSummary(context.Background(), ExpenseSummaryRequest{
+		UserID:   "user-1",
+		DateFrom: "2026-01-01",
+		DateTo:   "2026-12-31",
+	})
+	require.ErrorIs(t, err, domain.ErrNoData)
+}
+
+func TestGetExpenseSummary_Validation(t *testing.T) {
+	svc := newTestSvc(nil, nil, nil, nil, nil, nil, &mockCache{}, &mockFF{})
+	_, err := svc.GetExpenseSummary(context.Background(), ExpenseSummaryRequest{
+		UserID:   "",
+		DateFrom: "2026-01-01",
+		DateTo:   "2026-12-31",
+	})
+	require.ErrorIs(t, err, domain.ErrMissingField)
+}
+
+// ── GetBudgetVsActual NoData ────────────────────────────────────────────────
+
+func TestGetBudgetVsActual_NoData(t *testing.T) {
+	svc := newTestSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+		&mockCache{},
+		&mockFF{},
+	)
+	_, err := svc.GetBudgetVsActual(context.Background(), BudgetVsActualRequest{
+		UserID:   "user-1",
+		BudgetID: "budget-1",
+	})
+	require.ErrorIs(t, err, domain.ErrNoData)
+}
+
+// ── GetSpendingTrends ───────────────────────────────────────────────────────
+
+func TestGetSpendingTrends_CacheHit(t *testing.T) {
+	var calledRepo bool
+	svc := newTestSvc(
+		&mockMonthlySummaryRepo{
+			findFunc: func(ctx context.Context, userID string, year, month int) (*domain.MonthlySummary, error) {
+				calledRepo = true
+				return defaultMonthlySummary(), nil
+			},
+		},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+		&mockCache{
+			getFunc: func(ctx context.Context, key string, dest interface{}) (bool, error) {
+				if resp, ok := dest.(*SpendingTrendsResponse); ok {
+					resp.TrendDirection = "increasing"
+				}
+				return true, nil
+			},
+		},
+		&mockFF{},
+	)
+	resp, err := svc.GetSpendingTrends(context.Background(), SpendingTrendsRequest{
+		UserID: "user-1",
+		Months: 3,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "increasing", resp.TrendDirection)
+	require.False(t, calledRepo)
+}
+
+func TestGetSpendingTrends_NoData(t *testing.T) {
+	svc := newTestSvc(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+		&mockCache{},
+		&mockFF{},
+	)
+	_, err := svc.GetSpendingTrends(context.Background(), SpendingTrendsRequest{
+		UserID: "user-1",
+		Months: 3,
+	})
+	require.ErrorIs(t, err, domain.ErrNoData)
+}
+
+// ── GetFinancialOverview ────────────────────────────────────────────────────
+
+func TestGetFinancialOverview_Validation(t *testing.T) {
+	svc := newTestSvc(nil, nil, nil, nil, nil, nil, &mockCache{}, &mockFF{})
+	_, err := svc.GetFinancialOverview(context.Background(), FinancialOverviewRequest{UserID: ""})
+	require.ErrorIs(t, err, domain.ErrMissingField)
+}
+
+func TestGetFinancialOverview_PartialData(t *testing.T) {
+	svc := newTestSvc(
+		&mockMonthlySummaryRepo{
+			findFunc: func(ctx context.Context, userID string, year, month int) (*domain.MonthlySummary, error) {
+				return defaultMonthlySummary(), nil
+			},
+		},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{
+			findFunc: func(ctx context.Context, userID, date string) (*domain.PortfolioSnapshot, error) {
+				return defaultPortfolioSnapshot(), nil
+			},
+		},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardRepo{},
+		&mockCache{},
+		&mockFF{},
+	)
+
+	resp, err := svc.GetFinancialOverview(context.Background(), FinancialOverviewRequest{UserID: "user-1"})
+	require.NoError(t, err)
+	require.Equal(t, int64(500000), resp.TotalMonthlyIncome.Cents)
+	require.Equal(t, int64(1200000), resp.TotalInvestments.Cents)
+	require.Equal(t, int64(0), resp.TotalDebt.Cents)
+}

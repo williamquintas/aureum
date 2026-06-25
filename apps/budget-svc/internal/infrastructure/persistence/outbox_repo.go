@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/budget-svc/internal/domain"
@@ -51,7 +52,7 @@ func (r *OutboxRepository) saveBudgetEvent(ctx context.Context, e *domain.Budget
 	now := time.Now().UTC()
 	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, e.EntityID, "budget", e.EntityID, string(e.Type), payload, &now)
+	return r.exec(ctx, query, uuid.New().String(), "budget", e.EntityID, string(e.Type), payload, &now)
 }
 
 func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) error {

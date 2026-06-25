@@ -154,6 +154,7 @@ func (s *Service) GetExpenseSummary(ctx context.Context, req ExpenseSummaryReque
 
 	var totalFixed, totalVariable, totalAll int64
 	var fixedCats, variableCats []CategoryAmountDTO
+	foundData := false
 
 	for m := 1; m <= 12; m++ {
 		summary, err := s.monthlySummaries.FindByUserAndPeriod(ctx, req.UserID, year, m)
@@ -164,6 +165,7 @@ func (s *Service) GetExpenseSummary(ctx context.Context, req ExpenseSummaryReque
 			return nil, err
 		}
 
+		foundData = true
 		totalAll += summary.TotalExpenses
 
 		categories, _ := s.categorySummaries.FindByUserAndPeriod(ctx, req.UserID, year, m)
@@ -178,6 +180,10 @@ func (s *Service) GetExpenseSummary(ctx context.Context, req ExpenseSummaryReque
 				totalVariable += cat.TotalAmount
 			}
 		}
+	}
+
+	if !foundData {
+		return nil, domain.ErrNoData
 	}
 
 	resp := &ExpenseSummaryResponse{
@@ -280,6 +286,7 @@ func (s *Service) GetSpendingTrends(ctx context.Context, req SpendingTrendsReque
 	var trends []MonthlyTrendDTO
 	var prevAmount int64
 	increasingCount, decreasingCount := 0, 0
+	foundData := false
 
 	for i := 0; i < months; i++ {
 		m := i + 1
@@ -298,6 +305,8 @@ func (s *Service) GetSpendingTrends(ctx context.Context, req SpendingTrendsReque
 			return nil, err
 		}
 
+		foundData = true
+
 		if i > 0 && summary.TotalExpenses > prevAmount {
 			increasingCount++
 		} else if i > 0 && summary.TotalExpenses < prevAmount {
@@ -310,6 +319,10 @@ func (s *Service) GetSpendingTrends(ctx context.Context, req SpendingTrendsReque
 			Amount:  moneyFromCents(summary.TotalExpenses),
 			Average: moneyFromCents(summary.TotalExpenses),
 		})
+	}
+
+	if !foundData {
+		return nil, domain.ErrNoData
 	}
 
 	direction := "stable"

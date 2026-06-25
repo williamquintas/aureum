@@ -397,9 +397,9 @@ func TestService_GetCreditCard(t *testing.T) {
 
 		card := makeCard("user-1")
 		card.ID = "card-1"
-		cache.On("Get", mock.Anything, "cc:card:card-1", mock.Anything).Return(false, nil)
+		cache.On("Get", mock.Anything, "cc:card:user-1:card-1", mock.Anything).Return(false, nil)
 		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
-		cache.On("Set", mock.Anything, "cc:card:card-1", mock.AnythingOfType("*application.CreditCardResponse"), 5*time.Minute).Return(nil)
+		cache.On("Set", mock.Anything, "cc:card:user-1:card-1", mock.AnythingOfType("*application.CreditCardResponse"), 5*time.Minute).Return(nil)
 
 		resp, err := svc.GetCreditCard(context.Background(), "card-1", "user-1")
 		require.NoError(t, err)
@@ -417,7 +417,7 @@ func TestService_GetCreditCard(t *testing.T) {
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
 		cached := application.CreditCardResponse{ID: "card-1", Name: "Cached Card"}
-		cache.On("Get", mock.Anything, "cc:card:card-1", mock.AnythingOfType("*application.CreditCardResponse")).
+		cache.On("Get", mock.Anything, "cc:card:user-1:card-1", mock.AnythingOfType("*application.CreditCardResponse")).
 			Return(true, nil).Run(func(args mock.Arguments) {
 			dest := args.Get(2).(*application.CreditCardResponse)
 			*dest = cached
@@ -436,7 +436,7 @@ func TestService_GetCreditCard(t *testing.T) {
 		svc := newService(t, ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
-		cache.On("Get", mock.Anything, "cc:card:unknown", mock.Anything).Return(false, nil)
+		cache.On("Get", mock.Anything, "cc:card:user-1:unknown", mock.Anything).Return(false, nil)
 		ccRepo.On("FindByID", mock.Anything, "unknown", "user-1").Return(nil, domain.ErrNotFound)
 
 		_, err := svc.GetCreditCard(context.Background(), "unknown", "user-1")
@@ -463,7 +463,7 @@ func TestService_UpdateCreditCard(t *testing.T) {
 		})
 		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
-		cache.On("Delete", mock.Anything, "cc:card:card-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:card-1").Return(nil)
 
 		newName := "Updated Name"
 		resp, err := svc.UpdateCreditCard(context.Background(), application.UpdateCreditCardRequest{
@@ -548,7 +548,7 @@ func TestService_DeleteCreditCard(t *testing.T) {
 		svc := newService(t, ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
 			outbox, new(mockIdempotency), cache, new(mockFeatureFlag))
 
-		cache.On("Delete", mock.Anything, "cc:card:card-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:card-1").Return(nil)
 		ccRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 			fn := args.Get(1).(func(context.Context) error)
 			_ = fn(context.Background())
@@ -569,7 +569,7 @@ func TestService_DeleteCreditCard(t *testing.T) {
 		svc := newService(t, ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
-		cache.On("Delete", mock.Anything, "cc:card:unknown").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:unknown").Return(nil)
 		ccRepo.On("WithTx", mock.Anything, mock.Anything).Return(domain.ErrNotFound).Run(func(args mock.Arguments) {
 			fn := args.Get(1).(func(context.Context) error)
 			err := fn(context.Background())
@@ -658,7 +658,7 @@ func TestService_CreateInvoice(t *testing.T) {
 		})
 		invRepo.On("Save", mock.Anything, mock.Anything).Return(nil)
 		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
-		cache.On("Delete", mock.Anything, "cc:card:card-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:card-1").Return(nil)
 
 		resp, err := svc.CreateInvoice(context.Background(), application.CreateInvoiceRequest{
 			CreditCardID:   "card-1",
@@ -770,9 +770,9 @@ func TestService_GetInvoice(t *testing.T) {
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
 		inv := makeInvoice()
-		cache.On("Get", mock.Anything, "cc:invoice:inv-1", mock.Anything).Return(false, nil)
+		cache.On("Get", mock.Anything, "cc:invoice:user-1:inv-1", mock.Anything).Return(false, nil)
 		invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(inv, nil)
-		cache.On("Set", mock.Anything, "cc:invoice:inv-1", mock.AnythingOfType("*application.InvoiceResponse"), 5*time.Minute).Return(nil)
+		cache.On("Set", mock.Anything, "cc:invoice:user-1:inv-1", mock.AnythingOfType("*application.InvoiceResponse"), 5*time.Minute).Return(nil)
 
 		resp, err := svc.GetInvoice(context.Background(), "inv-1", "user-1")
 		require.NoError(t, err)
@@ -787,7 +787,7 @@ func TestService_GetInvoice(t *testing.T) {
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
 		cached := application.InvoiceResponse{ID: "inv-1", Status: "open"}
-		cache.On("Get", mock.Anything, "cc:invoice:inv-1", mock.AnythingOfType("*application.InvoiceResponse")).
+		cache.On("Get", mock.Anything, "cc:invoice:user-1:inv-1", mock.AnythingOfType("*application.InvoiceResponse")).
 			Return(true, nil).Run(func(args mock.Arguments) {
 			dest := args.Get(2).(*application.InvoiceResponse)
 			*dest = cached
@@ -804,7 +804,7 @@ func TestService_GetInvoice(t *testing.T) {
 		svc := newService(t, new(mockCreditCardRepo), invRepo, new(mockTransactionRepo),
 			new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
 
-		cache.On("Get", mock.Anything, "cc:invoice:unknown", mock.Anything).Return(false, nil)
+		cache.On("Get", mock.Anything, "cc:invoice:user-1:unknown", mock.Anything).Return(false, nil)
 		invRepo.On("FindByID", mock.Anything, "unknown", "user-1").Return(nil, domain.ErrNotFound)
 
 		_, err := svc.GetInvoice(context.Background(), "unknown", "user-1")
@@ -838,8 +838,8 @@ func TestService_PayInvoice(t *testing.T) {
 		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
 		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
-		cache.On("Delete", mock.Anything, "cc:invoice:inv-1").Return(nil)
-		cache.On("Delete", mock.Anything, "cc:card:card-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:invoice:user-1:inv-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:card-1").Return(nil)
 
 		resp, err := svc.PayInvoice(context.Background(), application.PayInvoiceRequest{
 			ID:     "inv-1",
@@ -873,8 +873,8 @@ func TestService_PayInvoice(t *testing.T) {
 		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
 		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
-		cache.On("Delete", mock.Anything, "cc:invoice:inv-1").Return(nil)
-		cache.On("Delete", mock.Anything, "cc:card:card-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:invoice:user-1:inv-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:card:user-1:card-1").Return(nil)
 
 		resp, err := svc.PayInvoice(context.Background(), application.PayInvoiceRequest{
 			ID:     "inv-1",
@@ -970,7 +970,7 @@ func TestService_AddTransaction(t *testing.T) {
 		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
 		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
-		cache.On("Delete", mock.Anything, "cc:invoice:inv-1").Return(nil)
+		cache.On("Delete", mock.Anything, "cc:invoice:user-1:inv-1").Return(nil)
 
 		resp, err := svc.AddTransaction(context.Background(), application.AddTransactionRequest{
 			InvoiceID:       "inv-1",
@@ -1153,4 +1153,93 @@ func TestService_ListInvoices(t *testing.T) {
 		assert.Equal(t, 2, total)
 		assert.Len(t, items, 2)
 	})
+}
+
+// ── CC-13/CC-14/CC-17: Cache Edge Cases ──────────────────────────────────────
+
+func TestService_GetCreditCard_CacheErrorFallsThroughToRepo(t *testing.T) {
+	ccRepo := new(mockCreditCardRepo)
+	cache := new(mockCache)
+	svc := newService(t, ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
+		new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
+
+	card := makeCard("user-1")
+	card.ID = "card-1"
+	// Cache returns an error (e.g. Redis down) — should fall through to repo
+	cache.On("Get", mock.Anything, "cc:card:user-1:card-1", mock.Anything).Return(false, errors.New("cache unavailable"))
+	ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
+	cache.On("Set", mock.Anything, "cc:card:user-1:card-1", mock.AnythingOfType("*application.CreditCardResponse"), 5*time.Minute).Return(nil)
+
+	resp, err := svc.GetCreditCard(context.Background(), "card-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "card-1", resp.ID)
+	ccRepo.AssertExpectations(t)
+	cache.AssertExpectations(t)
+}
+
+func TestService_GetCreditCard_CacheSetErrorIsIgnored(t *testing.T) {
+	ccRepo := new(mockCreditCardRepo)
+	cache := new(mockCache)
+	svc := newService(t, ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
+		new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
+
+	card := makeCard("user-1")
+	card.ID = "card-1"
+	cache.On("Get", mock.Anything, "cc:card:user-1:card-1", mock.Anything).Return(false, nil)
+	ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
+	// Cache Set fails — should be ignored
+	cache.On("Set", mock.Anything, "cc:card:user-1:card-1", mock.AnythingOfType("*application.CreditCardResponse"), 5*time.Minute).Return(errors.New("cache write failed"))
+
+	resp, err := svc.GetCreditCard(context.Background(), "card-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "card-1", resp.ID)
+}
+
+func TestService_GetCreditCard_NilCache(t *testing.T) {
+	ccRepo := new(mockCreditCardRepo)
+	// Pass nil for cache — service should work without cache
+	svc := application.NewService(ccRepo, new(mockInvoiceRepo), new(mockTransactionRepo),
+		new(mockOutbox), new(mockIdempotency), nil, new(mockFeatureFlag))
+
+	card := makeCard("user-1")
+	card.ID = "card-1"
+	ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(card, nil)
+
+	resp, err := svc.GetCreditCard(context.Background(), "card-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "card-1", resp.ID)
+}
+
+func TestService_GetInvoice_CacheErrorFallsThrough(t *testing.T) {
+	invRepo := new(mockInvoiceRepo)
+	cache := new(mockCache)
+	svc := newService(t, new(mockCreditCardRepo), invRepo, new(mockTransactionRepo),
+		new(mockOutbox), new(mockIdempotency), cache, new(mockFeatureFlag))
+
+	inv := makeInvoice()
+	cache.On("Get", mock.Anything, "cc:invoice:user-1:inv-1", mock.Anything).Return(false, errors.New("cache down"))
+	invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(inv, nil)
+	cache.On("Set", mock.Anything, "cc:invoice:user-1:inv-1", mock.AnythingOfType("*application.InvoiceResponse"), 5*time.Minute).Return(nil)
+
+	resp, err := svc.GetInvoice(context.Background(), "inv-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "inv-1", resp.ID)
+}
+
+func TestService_GetInvoice_NilCache(t *testing.T) {
+	invRepo := new(mockInvoiceRepo)
+	svc := application.NewService(new(mockCreditCardRepo), invRepo, new(mockTransactionRepo),
+		new(mockOutbox), new(mockIdempotency), nil, new(mockFeatureFlag))
+
+	inv := makeInvoice()
+	invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(inv, nil)
+
+	resp, err := svc.GetInvoice(context.Background(), "inv-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "inv-1", resp.ID)
 }

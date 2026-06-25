@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/transaction-svc/internal/domain"
@@ -50,18 +52,23 @@ func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.I
 
 	var income domain.Income
 	var incomeType, status string
+	var receivedDate time.Time
 	var deletedAt *time.Time
 	err := row.Scan(
 		&income.ID, &income.UserID, &income.Description, &income.Source,
-		&incomeType, &income.ReceivedDate, &income.ReceivedAmount,
+		&incomeType, &receivedDate, &income.ReceivedAmount,
 		&status, &income.CreatedAt, &income.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find income by id: %w", err)
 	}
 
 	income.IncomeType = domain.IncomeType(incomeType)
 	income.Status = domain.TransactionStatus(status)
+	income.ReceivedDate = receivedDate.Format("2006-01-02")
 	income.DeletedAt = deletedAt
 	return &income, nil
 }
@@ -145,9 +152,10 @@ func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.Inco
 	for rows.Next() {
 		var inc domain.Income
 		var incomeType, status string
+		var receivedDate time.Time
 		err := rows.Scan(
 			&inc.ID, &inc.UserID, &inc.Description, &inc.Source,
-			&incomeType, &inc.ReceivedDate, &inc.ReceivedAmount,
+			&incomeType, &receivedDate, &inc.ReceivedAmount,
 			&status, &inc.CreatedAt, &inc.UpdatedAt,
 		)
 		if err != nil {
@@ -155,6 +163,7 @@ func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.Inco
 		}
 		inc.IncomeType = domain.IncomeType(incomeType)
 		inc.Status = domain.TransactionStatus(status)
+		inc.ReceivedDate = receivedDate.Format("2006-01-02")
 		incomes = append(incomes, &inc)
 	}
 

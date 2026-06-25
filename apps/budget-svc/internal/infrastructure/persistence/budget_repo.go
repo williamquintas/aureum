@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/budget-svc/internal/domain"
@@ -55,19 +57,25 @@ func (r *BudgetRepo) FindByID(ctx context.Context, id, userID string) (*domain.B
 
 	var budget domain.Budget
 	var period, status string
+	var startDate, endDate time.Time
 	var deletedAt *time.Time
 	err := row.Scan(
 		&budget.ID, &budget.UserID, &budget.Name, &budget.Description,
 		&period, &budget.TotalLimit, &budget.SpentAmount,
-		&status, &budget.StartDate, &budget.EndDate,
+		&status, &startDate, &endDate,
 		&budget.CreatedAt, &budget.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find budget by id: %w", err)
 	}
 
 	budget.Period = domain.BudgetPeriod(period)
 	budget.Status = domain.BudgetStatus(status)
+	budget.StartDate = startDate.Format("2006-01-02")
+	budget.EndDate = endDate.Format("2006-01-02")
 	budget.DeletedAt = deletedAt
 	return &budget, nil
 }
@@ -154,10 +162,11 @@ func (r *BudgetRepo) List(ctx context.Context, userID string, filter domain.Budg
 	for rows.Next() {
 		var b domain.Budget
 		var period, status string
+		var startDate, endDate time.Time
 		err := rows.Scan(
 			&b.ID, &b.UserID, &b.Name, &b.Description,
 			&period, &b.TotalLimit, &b.SpentAmount,
-			&status, &b.StartDate, &b.EndDate,
+			&status, &startDate, &endDate,
 			&b.CreatedAt, &b.UpdatedAt,
 		)
 		if err != nil {
@@ -165,6 +174,8 @@ func (r *BudgetRepo) List(ctx context.Context, userID string, filter domain.Budg
 		}
 		b.Period = domain.BudgetPeriod(period)
 		b.Status = domain.BudgetStatus(status)
+		b.StartDate = startDate.Format("2006-01-02")
+		b.EndDate = endDate.Format("2006-01-02")
 		budgets = append(budgets, &b)
 	}
 

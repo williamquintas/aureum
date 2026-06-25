@@ -2,10 +2,12 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/transaction-svc/internal/domain"
@@ -56,6 +58,9 @@ func (r *FixedExpenseRepo) FindByID(ctx context.Context, id, userID string) (*do
 		&expense.CreatedAt, &expense.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find fixed_expense by id: %w", err)
 	}
 	expense.PaymentMethod = domain.PaymentMethod(paymentMethod)

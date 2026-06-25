@@ -2,9 +2,11 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/creditcard-svc/internal/domain"
@@ -50,17 +52,23 @@ func (r *InvoiceRepo) FindByID(ctx context.Context, id, userID string) (*domain.
 	var invoice domain.Invoice
 	var status string
 	var deletedAt *time.Time
+	var closingDate, dueDate time.Time
 	err := row.Scan(
 		&invoice.ID, &invoice.CreditCardID, &invoice.UserID, &invoice.ReferenceMonth,
 		&invoice.TotalAmount, &invoice.PaidAmount, &status,
-		&invoice.ClosingDate, &invoice.DueDate, &invoice.CreatedAt, &invoice.UpdatedAt,
+		&closingDate, &dueDate, &invoice.CreatedAt, &invoice.UpdatedAt,
 		&deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find invoice by id: %w", err)
 	}
 
 	invoice.Status = domain.InvoiceStatus(status)
+	invoice.ClosingDate = closingDate.Format("2006-01-02")
+	invoice.DueDate = dueDate.Format("2006-01-02")
 	invoice.DeletedAt = deletedAt
 	return &invoice, nil
 }
@@ -81,15 +89,18 @@ func (r *InvoiceRepo) FindByCreditCard(ctx context.Context, creditCardID, userID
 	for rows.Next() {
 		var inv domain.Invoice
 		var status string
+		var closingDate, dueDate time.Time
 		err := rows.Scan(
 			&inv.ID, &inv.CreditCardID, &inv.UserID, &inv.ReferenceMonth,
 			&inv.TotalAmount, &inv.PaidAmount, &status,
-			&inv.ClosingDate, &inv.DueDate, &inv.CreatedAt, &inv.UpdatedAt,
+			&closingDate, &dueDate, &inv.CreatedAt, &inv.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
 		inv.Status = domain.InvoiceStatus(status)
+		inv.ClosingDate = closingDate.Format("2006-01-02")
+		inv.DueDate = dueDate.Format("2006-01-02")
 		invoices = append(invoices, &inv)
 	}
 	return invoices, nil
@@ -105,17 +116,23 @@ func (r *InvoiceRepo) FindByMonth(ctx context.Context, creditCardID, referenceMo
 	var invoice domain.Invoice
 	var status string
 	var deletedAt *time.Time
+	var closingDate, dueDate time.Time
 	err := row.Scan(
 		&invoice.ID, &invoice.CreditCardID, &invoice.UserID, &invoice.ReferenceMonth,
 		&invoice.TotalAmount, &invoice.PaidAmount, &status,
-		&invoice.ClosingDate, &invoice.DueDate, &invoice.CreatedAt, &invoice.UpdatedAt,
+		&closingDate, &dueDate, &invoice.CreatedAt, &invoice.UpdatedAt,
 		&deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find invoice by month: %w", err)
 	}
 
 	invoice.Status = domain.InvoiceStatus(status)
+	invoice.ClosingDate = closingDate.Format("2006-01-02")
+	invoice.DueDate = dueDate.Format("2006-01-02")
 	invoice.DeletedAt = deletedAt
 	return &invoice, nil
 }
@@ -201,15 +218,18 @@ func (r *InvoiceRepo) List(ctx context.Context, userID string, filter domain.Inv
 	for rows.Next() {
 		var inv domain.Invoice
 		var status string
+		var closingDate, dueDate time.Time
 		err := rows.Scan(
 			&inv.ID, &inv.CreditCardID, &inv.UserID, &inv.ReferenceMonth,
 			&inv.TotalAmount, &inv.PaidAmount, &status,
-			&inv.ClosingDate, &inv.DueDate, &inv.CreatedAt, &inv.UpdatedAt,
+			&closingDate, &dueDate, &inv.CreatedAt, &inv.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
 		inv.Status = domain.InvoiceStatus(status)
+		inv.ClosingDate = closingDate.Format("2006-01-02")
+		inv.DueDate = dueDate.Format("2006-01-02")
 		invoices = append(invoices, &inv)
 	}
 	return invoices, nil

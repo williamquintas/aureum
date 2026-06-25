@@ -84,7 +84,7 @@ This document defines the comprehensive test strategy for the Aureum personal fi
 #### UC-01: User Registration
 | Step | Action | Expected Result |
 |------|--------|----------------|
-| 1 | Submit registration with email, password, name | User created with ACTIVE status |
+| 1 | Submit registration with email, password, name | User created with UNVERIFIED status (email OTP required) |
 | 2 | Submit with existing email | Returns `ErrConflict` / `codes.AlreadyExists` |
 | 3 | Submit with weak password | Returns validation error |
 | 4 | Submit with missing required fields | Returns `ErrMissingField` |
@@ -93,27 +93,29 @@ This document defines the comprehensive test strategy for the Aureum personal fi
 #### UC-02: Authentication & Token Validation
 | Step | Action | Expected Result |
 |------|--------|----------------|
-| 1 | Login with valid credentials | JWT access + refresh token returned |
-| 2 | Call `ValidateToken` with valid JWT | Claims returned (userID, roles, tenantID) |
-| 3 | Call `ValidateToken` with expired JWT | `codes.Unauthenticated` |
-| 4 | Call `ValidateToken` with tampered JWT | `codes.Unauthenticated` |
-| 5 | Call `ValidateToken` without token | `codes.Unauthenticated` |
+| 1 | Login with valid credentials | RS256 JWT access + refresh token returned from Keycloak |
+| 2 | Call `ValidateToken` with valid JWT | `{valid: true}` + claims (userID, roles, tenantID) returned |
+| 3 | Call `ValidateToken` with expired JWT | `{valid: false}` returned |
+| 4 | Call `ValidateToken` with tampered JWT | `{valid: false}` returned |
+| 5 | Call `ValidateToken` without token | `{valid: false}` returned |
 
-#### UC-03: RBAC Authorization
+#### UC-03: ABAC Authorization
 | Step | Action | Expected Result |
 |------|--------|----------------|
-| 1 | `ABACCheck` with user having required role | Access granted |
-| 2 | `ABACCheck` with user missing required role | `codes.PermissionDenied` |
-| 3 | `ABACCheck` for admin-only resource with user role | Denied |
-| 4 | Resource-based permission check | Evaluated correctly |
+| 1 | `ABACCheck` with resource_type, resource_id, action matching user's scope | Access granted |
+| 2 | `ABACCheck` with resource_owner_id != caller userID | `codes.PermissionDenied` |
+| 3 | `ABACCheck` for admin-only resource (user, account, ledger) with user role | Denied for non-identity resources |
+| 4 | Resource-based permission check with resource_type outside identity scope | `codes.PermissionDenied` |
 
 #### UC-04: Session Management
 | Step | Action | Expected Result |
 |------|--------|----------------|
-| 1 | `ListSessions` for user | Returns active sessions |
-| 2 | `RevokeSession` for own session | Session revoked |
-| 3 | `RevokeSession` for another user's session | `codes.PermissionDenied` |
-| 4 | `GetUser` with valid userID | Returns user profile |
+| 1 | `ListSessions` for user | Returns active sessions (REST endpoint; requires local HS256 JWT) |
+| 2 | `RevokeSession` for own session | Session revoked (REST endpoint; requires local HS256 JWT) |
+| 3 | `RevokeSession` for another user's session | Access denied (REST endpoint; requires local HS256 JWT) |
+| 4 | `GetUser` with valid userID via gRPC | Returns user profile |
+
+> **Note**: Sessions REST endpoints use HS256 JWT (signed with `JWT_SECRET`), incompatible with Keycloak RS256 JWT from login. Only `GetUser` (gRPC) is testable via Keycloak JWT.
 
 ---
 
@@ -658,16 +660,19 @@ Each service needs its own database. Run migrations for services you plan to tes
 
 ```bash
 # Create databases (if not auto-created by compose)
-for db in identity budget creditcard debt investment; do
-  docker exec aureum-postgres-1 psql -U aureum -c "CREATE DATABASE ${db}db;"
+for svc in identity transaction budget creditcard debt investment report; do
+  docker exec aureum-postgres-1 psql -U aureum -c "CREATE DATABASE ${svc}_write;"
+  docker exec aureum-postgres-1 psql -U aureum -c "CREATE DATABASE ${svc}_read;"
 done
 
-# Run migrations for each service
-(cd apps/identity-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/identitydb?sslmode=disable" make migrate/up)
-(cd apps/budget-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/budgetdb?sslmode=disable" make migrate/up)
-(cd apps/creditcard-svc && ...)
-(cd apps/debt-svc && ...)
-(cd apps/investment-svc && ...)
+# Run migrations for each service (run against write DB)
+(cd apps/identity-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/identity_write?sslmode=disable" make migrate/up)
+(cd apps/transaction-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/transaction_write?sslmode=disable" make migrate/up)
+(cd apps/budget-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/budget_write?sslmode=disable" make migrate/up)
+(cd apps/creditcard-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/creditcard_write?sslmode=disable" make migrate/up)
+(cd apps/debt-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/debt_write?sslmode=disable" make migrate/up)
+(cd apps/investment-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/investment_write?sslmode=disable" make migrate/up)
+(cd apps/report-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/report_write?sslmode=disable" make migrate/up)
 ```
 
 ### 9.4 Start All Services
@@ -675,19 +680,22 @@ done
 **Option A — Local `go run` (each in its own terminal):**
 
 ```bash
-# Terminal 1: Identity Service (gRPC 9090)
+# Terminal 1: Identity Service (gRPC 9090, HTTP 8081)
 cd apps/identity-svc && go run ./cmd/server
 
-# Terminal 2: Budget Service (gRPC 50055)
+# Terminal 2: Transaction Service (gRPC 50054)
+cd apps/transaction-svc && go run ./cmd/server
+
+# Terminal 3: Budget Service (gRPC 50055)
 cd apps/budget-svc && go run ./cmd/server
 
-# Terminal 3: Credit Card Service (gRPC 50056)
+# Terminal 4: Credit Card Service (gRPC 50056)
 cd apps/creditcard-svc && go run ./cmd/server
 
-# Terminal 4: Debt Service (gRPC 50057)
+# Terminal 5: Debt Service (gRPC 50057)
 cd apps/debt-svc && go run ./cmd/server
 
-# Terminal 5: Investment Service (gRPC 50058)
+# Terminal 6: Investment Service (gRPC 50058)
 cd apps/investment-svc && go run ./cmd/server
 ```
 
@@ -716,8 +724,8 @@ cd apps/graphql-bff && go run ./cmd/server
 # From repo root
 cp apps/report-svc/.env.example apps/report-svc/.env  # customize as needed
 
-# Run migrations
-(cd apps/report-svc && make migrate/up)
+# Run migrations (replace DATABASE_URL with report_write)
+(cd apps/report-svc && DATABASE_URL="postgres://aureum:aureum_dev@localhost:5432/report_write?sslmode=disable" make migrate/up)
 
 # Start the service (gRPC :50059)
 cd apps/report-svc && go run ./cmd/server
@@ -727,10 +735,12 @@ cd apps/report-svc && go run ./cmd/server
 
 ```bash
 # Health endpoints
+curl http://localhost:9094/health  # transaction-svc metrics
 curl http://localhost:9095/health  # budget-svc metrics
 curl http://localhost:9096/health  # creditcard-svc
 curl http://localhost:9097/health  # debt-svc
 curl http://localhost:9098/health  # investment-svc
+curl http://localhost:9099/health  # report-svc
 
 # GraphQL (if BFF running)
 curl -X POST http://localhost:8082/graphql \
@@ -756,15 +766,16 @@ make test/e2e
 
 ### 9.9 Port Reference
 
-| Service | gRPC | Metrics | DB Name |
-|---------|------|---------|---------|
-| identity-svc | 9090 | 8080 (HTTP) | identitydb |
-| budget-svc | 50055 | 9095 | budgetdb |
-| creditcard-svc | 50056 | 9096 | creditcarddb |
-| debt-svc | 50057 | 9097 | debtdb |
-| investment-svc | 50058 | 9098 | investmentdb |
-| report-svc | 50059 | 9099 | reportdb |
-| graphql-bff | — | 9095 | — (gateway) |
+| Service | gRPC | Metrics / HTTP | DB Names |
+|---------|------|----------------|----------|
+| identity-svc | 9090 | 8081 (HTTP+REST) | identity_write / identity_read |
+| transaction-svc | 50054 | 9094 | transaction_write / transaction_read |
+| budget-svc | 50055 | 9095 | budget_write / budget_read |
+| creditcard-svc | 50056 | 9096 | creditcard_write / creditcard_read |
+| debt-svc | 50057 | 9097 | debt_write / debt_read |
+| investment-svc | 50058 | 9098 | investment_write / investment_read |
+| report-svc | 50059 | 9099 | report_write / report_read |
+| graphql-bff | — | 8082 (HTTP) | — (gateway) |
 
 ### 9.10 Using grpcurl for Manual Testing
 

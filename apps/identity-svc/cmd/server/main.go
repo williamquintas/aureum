@@ -12,12 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aureum/pkg/db"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/identity-svc/internal/application"
 	"github.com/aureum/identity-svc/internal/infrastructure/api"
@@ -31,6 +32,8 @@ import (
 	"github.com/aureum/pkg/kafka"
 	"github.com/aureum/pkg/outbox"
 	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
+
+	"github.com/aureum/pkg/telemetry"
 )
 
 type Config struct {
@@ -92,15 +95,32 @@ func run() int {
 		return 1
 	}
 
+	if err := telemetry.InitOTEL("identity-svc", "1.0.0"); err != nil {
+		log.Error("failed to init telemetry", "error", err)
+		return 1
+	}
+	defer func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		if err := telemetry.ShutdownOTEL(shutdownCtx); err != nil {
+			log.Error("failed to shutdown telemetry", "error", err)
+		}
+	}()
+
 	corsMiddleware := middleware.CORS([]string{"http://localhost:3000", "http://localhost:5173"})
-	writePool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	writePool, err := db.NewPostgresPool(cfg.DatabaseURL, 25)
 	if err != nil {
 		log.Error("failed to connect to write database", "error", err)
 		return 1
 	}
 	defer writePool.Close()
 
-	readPool, err := pgxpool.New(ctx, cfg.ReadDatabaseURL)
+	if err := db.RunMigrations(cfg.DatabaseURL, "migrations"); err != nil {
+		log.Error("failed to run migrations", "error", err)
+		return 1
+	}
+
+	readPool, err := db.NewPostgresPool(cfg.ReadDatabaseURL, 10)
 	if err != nil {
 		log.Error("failed to connect to read database", "error", err)
 		return 1
@@ -189,10 +209,17 @@ func run() int {
 	r.Use(chimw.Recoverer)
 	r.Use(rateLimiter.Middleware)
 	r.Use(auditLogger.Middleware)
+	r.Use(telemetry.HTTPMiddleware("identity-svc"))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintln(w, "ok")
+	})
+
+	r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintln(w, "# metrics endpoint ready")
 	})
 
 	handler.RegisterRoutes(r, cfg.JWTSecret)
@@ -218,7 +245,10 @@ func run() int {
 		return 1
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		telemetry.GRPCUnaryInterceptor(),
+	)
+	reflection.Register(grpcServer)
 	identityv1.RegisterIdentityServiceServer(grpcServer, grpcHandler)
 
 	go func() {

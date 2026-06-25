@@ -318,6 +318,20 @@ func TestService_GetDebt(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
+	t.Run("access denied", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, nil, nil, cache, nil)
+
+		cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
+			Return(false, nil)
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "other-user").
+			Return(nil, domain.ErrAccessDenied)
+
+		_, err := svc.GetDebt(context.Background(), "debt-1", "other-user")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, domain.ErrAccessDenied)
+	})
 }
 
 func TestService_UpdateDebt(t *testing.T) {
@@ -423,6 +437,24 @@ func TestService_UpdateDebt(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrAccessDenied)
+	})
+	t.Run("invalid status transition", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		svc := newService(debtRepo, nil, nil, nil, nil, nil)
+
+		existing := &domain.Debt{
+			ID: "debt-1", UserID: "user-1", Status: domain.DebtStatusPaidOff,
+		}
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+
+		newStatus := "active"
+		_, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
+			ID:     "debt-1",
+			UserID: "user-1",
+			Status: &newStatus,
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, domain.ErrStatusTransition)
 	})
 }
 
@@ -614,6 +646,27 @@ func TestService_RegisterPayment(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrPaymentExceedsBalance)
 	})
+	t.Run("debt already paid", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		svc := newService(debtRepo, nil, nil, nil, nil, nil)
+
+		existingDebt := &domain.Debt{
+			ID: "debt-1", UserID: "user-1",
+			RemainingAmount: 0, Status: domain.DebtStatusPaidOff,
+		}
+
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existingDebt, nil)
+
+		_, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
+			DebtID:      "debt-1",
+			UserID:      "user-1",
+			Amount:      1000,
+			PaymentDate: "2024-02-01",
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, domain.ErrDebtAlreadyPaid)
+	})
 }
 
 func TestService_ListPayments(t *testing.T) {
@@ -639,4 +692,71 @@ func TestService_ListPayments(t *testing.T) {
 		assert.Equal(t, "pay-2", items[1].ID)
 		paymentRepo.AssertExpectations(t)
 	})
+}
+
+// ── CC-13/CC-14/CC-17: Cache Edge Cases ──────────────────────────────────────
+
+func TestService_GetDebt_CacheErrorFallsThroughToRepo(t *testing.T) {
+	debtRepo := new(mockDebtRepo)
+	cache := new(mockCache)
+	svc := newService(debtRepo, nil, nil, nil, cache, nil)
+
+	// Cache returns an error — should fall through to repo
+	cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
+		Return(false, errors.New("cache unavailable"))
+	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
+		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
+	}, nil)
+	cache.On("Set", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse"), 5*time.Minute).
+		Return(nil)
+
+	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "debt-1", resp.ID)
+	assert.Equal(t, "Found Debt", resp.Name)
+	debtRepo.AssertExpectations(t)
+	cache.AssertExpectations(t)
+}
+
+func TestService_GetDebt_CacheSetErrorIsIgnored(t *testing.T) {
+	debtRepo := new(mockDebtRepo)
+	cache := new(mockCache)
+	svc := newService(debtRepo, nil, nil, nil, cache, nil)
+
+	cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
+		Return(false, nil)
+	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
+		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
+	}, nil)
+	// Cache Set fails — should be ignored
+	cache.On("Set", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse"), 5*time.Minute).
+		Return(errors.New("cache write failed"))
+
+	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "debt-1", resp.ID)
+}
+
+func TestService_GetDebt_NilCache(t *testing.T) {
+	debtRepo := new(mockDebtRepo)
+	// Pass nil for cache — service should work without cache
+	svc := application.NewService(debtRepo, new(mockPaymentRepo), new(mockOutbox), new(mockIdempotency), nil, new(mockFeatureFlag))
+
+	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
+		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
+	}, nil)
+
+	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "debt-1", resp.ID)
+	assert.Equal(t, "Found Debt", resp.Name)
 }

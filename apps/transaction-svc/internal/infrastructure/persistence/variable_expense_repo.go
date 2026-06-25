@@ -2,10 +2,12 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aureum/transaction-svc/internal/domain"
@@ -50,18 +52,23 @@ func (r *VariableExpenseRepo) FindByID(ctx context.Context, id, userID string) (
 	)
 	var expense domain.VariableExpense
 	var expenseType, paymentMethod, status string
+	var paymentDate time.Time
 	var deletedAt *time.Time
 	err := row.Scan(
 		&expense.ID, &expense.UserID, &expense.Description, &expense.Destination,
-		&expense.Category, &expenseType, &paymentMethod, &expense.PaymentDate,
+		&expense.Category, &expenseType, &paymentMethod, &paymentDate,
 		&expense.PaidAmount, &status, &expense.CreatedAt, &expense.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, fmt.Errorf("find variable_expense by id: %w", err)
 	}
 	expense.ExpenseType = domain.ExpenseType(expenseType)
 	expense.PaymentMethod = domain.PaymentMethod(paymentMethod)
 	expense.Status = domain.TransactionStatus(status)
+	expense.PaymentDate = paymentDate.Format("2006-01-02")
 	expense.DeletedAt = deletedAt
 	return &expense, nil
 }
@@ -149,9 +156,10 @@ func (r *VariableExpenseRepo) List(ctx context.Context, userID string, filter do
 	for rows.Next() {
 		var ve domain.VariableExpense
 		var expenseType, paymentMethod, status string
+		var paymentDate time.Time
 		err := rows.Scan(
 			&ve.ID, &ve.UserID, &ve.Description, &ve.Destination,
-			&ve.Category, &expenseType, &paymentMethod, &ve.PaymentDate,
+			&ve.Category, &expenseType, &paymentMethod, &paymentDate,
 			&ve.PaidAmount, &status, &ve.CreatedAt, &ve.UpdatedAt,
 		)
 		if err != nil {
@@ -160,6 +168,7 @@ func (r *VariableExpenseRepo) List(ctx context.Context, userID string, filter do
 		ve.ExpenseType = domain.ExpenseType(expenseType)
 		ve.PaymentMethod = domain.PaymentMethod(paymentMethod)
 		ve.Status = domain.TransactionStatus(status)
+		ve.PaymentDate = paymentDate.Format("2006-01-02")
 		expenses = append(expenses, &ve)
 	}
 

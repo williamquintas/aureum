@@ -53,6 +53,10 @@ func cacheKey(prefix, id string) string {
 	return "txn:" + prefix + ":" + id
 }
 
+func cacheKeyForUser(prefix, id, userID string) string {
+	return "txn:" + prefix + ":" + userID + ":" + id
+}
+
 // ── Income ──────────────────────────────────────────────────────────────────
 
 func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*CreateIncomeResponse, error) {
@@ -135,7 +139,7 @@ func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*C
 }
 
 func (s *Service) GetIncome(ctx context.Context, id, userID string) (*GetIncomeResponse, error) {
-	key := cacheKey("income", id)
+	key := cacheKeyForUser("income", id, userID)
 	if s.cache != nil {
 		var cached GetIncomeResponse
 		if found, err := s.cache.Get(ctx, key, &cached); err == nil && found {
@@ -250,7 +254,7 @@ func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*G
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("income", req.ID))
+		_ = s.cache.Delete(ctx, cacheKeyForUser("income", req.ID, req.UserID))
 	}
 
 	return resp, nil
@@ -258,7 +262,7 @@ func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*G
 
 func (s *Service) DeleteIncome(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, cacheKey("income", id))
+		_ = s.cache.Delete(ctx, cacheKeyForUser("income", id, userID))
 	}
 	return s.incomes.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.incomes.Delete(txCtx, id, userID); err != nil {
