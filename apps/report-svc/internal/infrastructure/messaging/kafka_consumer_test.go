@@ -118,6 +118,25 @@ func (m *mockDebtSummaryRepo) FindByUser(ctx context.Context, userID string) (*d
 	return nil, domain.ErrNoData
 }
 
+type mockCreditCardSummaryRepo struct {
+	findFunc   func(ctx context.Context, userID string) ([]*domain.CreditCardSummary, error)
+	upsertFunc func(ctx context.Context, cs *domain.CreditCardSummary) error
+}
+
+func (m *mockCreditCardSummaryRepo) Upsert(ctx context.Context, cs *domain.CreditCardSummary) error {
+	if m.upsertFunc != nil {
+		return m.upsertFunc(ctx, cs)
+	}
+	return nil
+}
+
+func (m *mockCreditCardSummaryRepo) FindByUser(ctx context.Context, userID string) ([]*domain.CreditCardSummary, error) {
+	if m.findFunc != nil {
+		return m.findFunc(ctx, userID)
+	}
+	return nil, domain.ErrNoData
+}
+
 // ── Test Helpers ─────────────────────────────────────────────────────────────
 
 func newTestEventHandler(
@@ -126,13 +145,15 @@ func newTestEventHandler(
 	budgetRepo domain.BudgetVsActualRepository,
 	portfolioRepo domain.PortfolioSnapshotRepository,
 	debtRepo domain.DebtSummaryRepository,
+	ccRepo domain.CreditCardSummaryRepository,
 ) *EventHandler {
 	monthly := application.NewMonthlySummaryProjector(monthlyRepo)
 	category := application.NewCategorySummaryProjector(categoryRepo)
 	budget := application.NewBudgetVsActualProjector(budgetRepo)
 	portfolio := application.NewPortfolioSnapshotProjector(portfolioRepo)
 	debt := application.NewDebtSummaryProjector(debtRepo)
-	return NewEventHandler(monthly, category, budget, portfolio, debt)
+	cc := application.NewCreditCardSummaryProjector(ccRepo)
+	return NewEventHandler(monthly, category, budget, portfolio, debt, cc)
 }
 
 func marshalEvent(t *testing.T, evt domain.ReportEvent) []byte {
@@ -169,6 +190,7 @@ func TestHandleMessage_ValidIncomeCreated(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -210,6 +232,7 @@ func TestHandleMessage_ValidFixedExpenseCreated(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -249,6 +272,7 @@ func TestHandleMessage_ValidIncomeUpdated(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -273,6 +297,7 @@ func TestHandleMessage_InvalidJSON(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	// Invalid JSON message
@@ -303,6 +328,7 @@ func TestHandleMessage_UnknownEventType(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -333,6 +359,7 @@ func TestHandleMessage_ValidBudgetEvent(t *testing.T) {
 		},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -369,6 +396,7 @@ func TestHandleMessage_ValidPortfolioEvent(t *testing.T) {
 			},
 		},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -404,6 +432,7 @@ func TestHandleMessage_ValidDebtEvent(t *testing.T) {
 				return nil
 			},
 		},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -418,6 +447,41 @@ func TestHandleMessage_ValidDebtEvent(t *testing.T) {
 	err := handler.HandleMessage(context.Background(), msg)
 	require.NoError(t, err)
 	require.True(t, debtUpserted, "debt projector should have been called for debt event")
+}
+
+func TestHandleMessage_ValidCreditCardEvent(t *testing.T) {
+	var ccUpserted bool
+
+	handler := newTestEventHandler(
+		&mockMonthlySummaryRepo{},
+		&mockCategorySummaryRepo{},
+		&mockBudgetVsActualRepo{},
+		&mockPortfolioRepo{},
+		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{
+			upsertFunc: func(ctx context.Context, cs *domain.CreditCardSummary) error {
+				ccUpserted = true
+				require.Equal(t, "Platinum Visa", cs.CardName)
+				return nil
+			},
+		},
+	)
+
+	msg := marshalEvent(t, domain.ReportEvent{
+		Type:     domain.EventCreditCardCreated,
+		UserID:   "user-1",
+		EntityID: "cc-1",
+		Payload: map[string]interface{}{
+			"card_name":      "Platinum Visa",
+			"statement_date": "2026-06-15",
+			"balance":        int64(250000),
+			"limit":          int64(1000000),
+		},
+	})
+
+	err := handler.HandleMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.True(t, ccUpserted, "credit card projector should have been called for credit card event")
 }
 
 // ── At-Least-Once Delivery Tests (CC-30) ──────────────────────────────────
@@ -446,6 +510,7 @@ func TestKafkaConsumer_AtLeastOnceDelivery(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -498,6 +563,7 @@ func TestKafkaConsumer_RedeliveryCompletesPreviouslyPartialWork(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	msg := marshalEvent(t, domain.ReportEvent{
@@ -543,6 +609,7 @@ func TestKafkaConsumer_CloseDrainsInFlight(t *testing.T) {
 		&mockBudgetVsActualRepo{},
 		&mockPortfolioRepo{},
 		&mockDebtSummaryRepo{},
+		&mockCreditCardSummaryRepo{},
 	)
 
 	// EventIncomeUpdated only triggers the monthly projector (single projector path)

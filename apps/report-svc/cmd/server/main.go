@@ -108,8 +108,9 @@ func run() int {
 	budgetProj := application.NewBudgetVsActualProjector(budgetRepo)
 	portfolioProj := application.NewPortfolioSnapshotProjector(portfolioRepo)
 	debtProj := application.NewDebtSummaryProjector(debtRepo)
+	ccProj := application.NewCreditCardSummaryProjector(ccRepo)
 
-	eventHandler := messaging.NewEventHandler(monthlyProj, categoryProj, budgetProj, portfolioProj, debtProj)
+	eventHandler := messaging.NewEventHandler(monthlyProj, categoryProj, budgetProj, portfolioProj, debtProj, ccProj)
 
 	// ── Start Kafka consumers ──────────────────────────────────────────
 	// report-svc consumes domain events from upstream services to project
@@ -123,6 +124,7 @@ func run() int {
 		{"budget-events", "report-svc-budget"},
 		{"debt-events", "report-svc-debt"},
 		{"investment-events", "report-svc-investment"},
+		{"creditcard-events", "report-svc-creditcard"},
 	}
 
 	for _, ct := range consumerTopics {

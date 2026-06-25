@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	budgetv1 "github.com/aureum/proto/gen/budget/budgetv1"
@@ -95,6 +96,172 @@ func (m *mockTxService) ListVariableExpenses(ctx context.Context, req *transacti
 		VariableExpenses: list,
 		TotalCount:       int32(len(list)),
 	}, nil
+}
+
+func (m *mockTxService) CreateIncome(ctx context.Context, req *transactionv1.CreateIncomeRequest) (*transactionv1.Income, error) {
+	id := fmt.Sprintf("inc-%d", len(m.incomes)+1)
+	now := timestamppb.Now()
+	inc := &transactionv1.Income{
+		Id:             id,
+		UserId:         "user-123",
+		Description:    req.Description,
+		Source:         req.Source,
+		IncomeType:     req.IncomeType,
+		ReceivedDate:   req.ReceivedDate,
+		ReceivedAmount: req.ReceivedAmount,
+		Status:         req.Status,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	m.incomes[id] = inc
+	return inc, nil
+}
+
+func (m *mockTxService) UpdateIncome(ctx context.Context, req *transactionv1.UpdateIncomeRequest) (*transactionv1.Income, error) {
+	inc, ok := m.incomes[req.Id]
+	if !ok {
+		return nil, status.Error(codes.NotFound, "income not found")
+	}
+	if req.Description != nil {
+		inc.Description = *req.Description
+	}
+	if req.Source != nil {
+		inc.Source = *req.Source
+	}
+	if req.IncomeType != nil {
+		inc.IncomeType = *req.IncomeType
+	}
+	if req.ReceivedDate != nil {
+		inc.ReceivedDate = *req.ReceivedDate
+	}
+	if req.ReceivedAmount != nil {
+		inc.ReceivedAmount = *req.ReceivedAmount
+	}
+	if req.Status != nil {
+		inc.Status = *req.Status
+	}
+	inc.UpdatedAt = timestamppb.Now()
+	return inc, nil
+}
+
+func (m *mockTxService) DeleteIncome(ctx context.Context, req *transactionv1.DeleteIncomeRequest) (*emptypb.Empty, error) {
+	if _, ok := m.incomes[req.Id]; !ok {
+		return nil, status.Error(codes.NotFound, "income not found")
+	}
+	delete(m.incomes, req.Id)
+	return &emptypb.Empty{}, nil
+}
+
+func (m *mockTxService) CreateFixedExpense(ctx context.Context, req *transactionv1.CreateFixedExpenseRequest) (*transactionv1.FixedExpense, error) {
+	id := fmt.Sprintf("fe-%d", len(m.fixedExpenses)+1)
+	now := timestamppb.Now()
+	fe := &transactionv1.FixedExpense{
+		Id:            id,
+		UserId:        "user-123",
+		Description:   req.Description,
+		Category:      req.Category,
+		DayOfMonth:    req.DayOfMonth,
+		PaymentMethod: req.PaymentMethod,
+		Status:        req.Status,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	m.fixedExpenses[id] = fe
+	return fe, nil
+}
+
+func (m *mockTxService) UpdateFixedExpense(ctx context.Context, req *transactionv1.UpdateFixedExpenseRequest) (*transactionv1.FixedExpense, error) {
+	fe, ok := m.fixedExpenses[req.Id]
+	if !ok {
+		return nil, status.Error(codes.NotFound, "fixed expense not found")
+	}
+	if req.Description != nil {
+		fe.Description = *req.Description
+	}
+	if req.Category != nil {
+		fe.Category = *req.Category
+	}
+	if req.DayOfMonth != nil {
+		fe.DayOfMonth = *req.DayOfMonth
+	}
+	if req.PaymentMethod != nil {
+		fe.PaymentMethod = *req.PaymentMethod
+	}
+	if req.Status != nil {
+		fe.Status = *req.Status
+	}
+	fe.UpdatedAt = timestamppb.Now()
+	return fe, nil
+}
+
+func (m *mockTxService) DeleteFixedExpense(ctx context.Context, req *transactionv1.DeleteFixedExpenseRequest) (*emptypb.Empty, error) {
+	if _, ok := m.fixedExpenses[req.Id]; !ok {
+		return nil, status.Error(codes.NotFound, "fixed expense not found")
+	}
+	delete(m.fixedExpenses, req.Id)
+	return &emptypb.Empty{}, nil
+}
+
+func (m *mockTxService) CreateVariableExpense(ctx context.Context, req *transactionv1.CreateVariableExpenseRequest) (*transactionv1.VariableExpense, error) {
+	id := fmt.Sprintf("ve-%d", len(m.variableExpenses)+1)
+	now := timestamppb.Now()
+	ve := &transactionv1.VariableExpense{
+		Id:            id,
+		UserId:        "user-123",
+		Description:   req.Description,
+		Destination:   req.Destination,
+		Category:      req.Category,
+		ExpenseType:   req.ExpenseType,
+		PaymentMethod: req.PaymentMethod,
+		PaymentDate:   req.PaymentDate,
+		PaidAmount:    req.PaidAmount,
+		Status:        req.Status,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	m.variableExpenses[id] = ve
+	return ve, nil
+}
+
+func (m *mockTxService) UpdateVariableExpense(ctx context.Context, req *transactionv1.UpdateVariableExpenseRequest) (*transactionv1.VariableExpense, error) {
+	ve, ok := m.variableExpenses[req.Id]
+	if !ok {
+		return nil, status.Error(codes.NotFound, "variable expense not found")
+	}
+	if req.Description != nil {
+		ve.Description = *req.Description
+	}
+	if req.Destination != nil {
+		ve.Destination = *req.Destination
+	}
+	if req.Category != nil {
+		ve.Category = *req.Category
+	}
+	if req.ExpenseType != nil {
+		ve.ExpenseType = *req.ExpenseType
+	}
+	if req.PaymentMethod != nil {
+		ve.PaymentMethod = *req.PaymentMethod
+	}
+	if req.PaymentDate != nil {
+		ve.PaymentDate = *req.PaymentDate
+	}
+	if req.PaidAmount != nil {
+		ve.PaidAmount = *req.PaidAmount
+	}
+	if req.Status != nil {
+		ve.Status = *req.Status
+	}
+	ve.UpdatedAt = timestamppb.Now()
+	return ve, nil
+}
+
+func (m *mockTxService) DeleteVariableExpense(ctx context.Context, req *transactionv1.DeleteVariableExpenseRequest) (*emptypb.Empty, error) {
+	if _, ok := m.variableExpenses[req.Id]; !ok {
+		return nil, status.Error(codes.NotFound, "variable expense not found")
+	}
+	delete(m.variableExpenses, req.Id)
+	return &emptypb.Empty{}, nil
 }
 
 // ── Mock Identity Service ─────────────────────────────────────────────────

@@ -77,6 +77,34 @@ type CategorySummary struct {
 	UsagePercentage float64 `json:"usagePercentage"`
 }
 
+type CreateFixedExpenseInput struct {
+	Description   string             `json:"description"`
+	Category      string             `json:"category"`
+	DayOfMonth    int                `json:"dayOfMonth"`
+	PaymentMethod PaymentMethod      `json:"paymentMethod"`
+	Status        *TransactionStatus `json:"status,omitempty"`
+}
+
+type CreateIncomeInput struct {
+	Description    string             `json:"description"`
+	Source         string             `json:"source"`
+	IncomeType     IncomeType         `json:"incomeType"`
+	ReceivedDate   time.Time          `json:"receivedDate"`
+	ReceivedAmount int64              `json:"receivedAmount"`
+	Status         *TransactionStatus `json:"status,omitempty"`
+}
+
+type CreateVariableExpenseInput struct {
+	Description   string             `json:"description"`
+	Destination   string             `json:"destination"`
+	Category      string             `json:"category"`
+	ExpenseType   ExpenseType        `json:"expenseType"`
+	PaymentMethod PaymentMethod      `json:"paymentMethod"`
+	PaymentDate   time.Time          `json:"paymentDate"`
+	PaidAmount    int64              `json:"paidAmount"`
+	Status        *TransactionStatus `json:"status,omitempty"`
+}
+
 type CreditCard struct {
 	ID              string    `json:"id"`
 	UserID          string    `json:"userId"`
@@ -281,6 +309,9 @@ type InvoiceTransactionEdge struct {
 	Cursor string              `json:"cursor"`
 }
 
+type Mutation struct {
+}
+
 type PageInfo struct {
 	HasNextPage     bool    `json:"hasNextPage"`
 	HasPreviousPage bool    `json:"hasPreviousPage"`
@@ -330,6 +361,34 @@ type TransactionConnection struct {
 type TransactionEdge struct {
 	Node   Transaction `json:"node"`
 	Cursor string      `json:"cursor"`
+}
+
+type UpdateFixedExpenseInput struct {
+	Description   *string            `json:"description,omitempty"`
+	Category      *string            `json:"category,omitempty"`
+	DayOfMonth    *int               `json:"dayOfMonth,omitempty"`
+	PaymentMethod *PaymentMethod     `json:"paymentMethod,omitempty"`
+	Status        *TransactionStatus `json:"status,omitempty"`
+}
+
+type UpdateIncomeInput struct {
+	Description    *string            `json:"description,omitempty"`
+	Source         *string            `json:"source,omitempty"`
+	IncomeType     *IncomeType        `json:"incomeType,omitempty"`
+	ReceivedDate   *time.Time         `json:"receivedDate,omitempty"`
+	ReceivedAmount *int64             `json:"receivedAmount,omitempty"`
+	Status         *TransactionStatus `json:"status,omitempty"`
+}
+
+type UpdateVariableExpenseInput struct {
+	Description   *string            `json:"description,omitempty"`
+	Destination   *string            `json:"destination,omitempty"`
+	Category      *string            `json:"category,omitempty"`
+	ExpenseType   *ExpenseType       `json:"expenseType,omitempty"`
+	PaymentMethod *PaymentMethod     `json:"paymentMethod,omitempty"`
+	PaymentDate   *time.Time         `json:"paymentDate,omitempty"`
+	PaidAmount    *int64             `json:"paidAmount,omitempty"`
+	Status        *TransactionStatus `json:"status,omitempty"`
 }
 
 type UserProfile struct {

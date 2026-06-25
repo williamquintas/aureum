@@ -101,6 +101,7 @@ type UserProfile {
 }
 
 directive @auth(role: String!) on FIELD_DEFINITION
+directive @featureFlag(name: String!) on FIELD_DEFINITION
 
 type Query {
   income(id: ID!): Income! @auth(role: "user")
@@ -454,6 +455,98 @@ type AssetAllocation {
   invested: Cents!
   currentValue: Cents!
   percentage: Float!
+}
+
+# ── Mutation Input Types ──────────────────────────────────────────────────
+
+input CreateIncomeInput {
+  description: String!
+  source: String!
+  incomeType: IncomeType!
+  receivedDate: Date!
+  receivedAmount: Cents!
+  status: TransactionStatus
+}
+
+input UpdateIncomeInput {
+  description: String
+  source: String
+  incomeType: IncomeType
+  receivedDate: Date
+  receivedAmount: Cents
+  status: TransactionStatus
+}
+
+input CreateFixedExpenseInput {
+  description: String!
+  category: String!
+  dayOfMonth: Int!
+  paymentMethod: PaymentMethod!
+  status: TransactionStatus
+}
+
+input UpdateFixedExpenseInput {
+  description: String
+  category: String
+  dayOfMonth: Int
+  paymentMethod: PaymentMethod
+  status: TransactionStatus
+}
+
+input CreateVariableExpenseInput {
+  description: String!
+  destination: String!
+  category: String!
+  expenseType: ExpenseType!
+  paymentMethod: PaymentMethod!
+  paymentDate: Date!
+  paidAmount: Cents!
+  status: TransactionStatus
+}
+
+input UpdateVariableExpenseInput {
+  description: String
+  destination: String
+  category: String
+  expenseType: ExpenseType
+  paymentMethod: PaymentMethod
+  paymentDate: Date
+  paidAmount: Cents
+  status: TransactionStatus
+}
+
+# ── Mutations ──────────────────────────────────────────────────────────────
+
+type Mutation {
+  createIncome(input: CreateIncomeInput!, idempotencyKey: ID!): Income!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  updateIncome(id: ID!, input: UpdateIncomeInput!, idempotencyKey: ID!): Income!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  deleteIncome(id: ID!): Boolean!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+
+  createFixedExpense(input: CreateFixedExpenseInput!, idempotencyKey: ID!): FixedExpense!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  updateFixedExpense(id: ID!, input: UpdateFixedExpenseInput!, idempotencyKey: ID!): FixedExpense!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  deleteFixedExpense(id: ID!): Boolean!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+
+  createVariableExpense(input: CreateVariableExpenseInput!, idempotencyKey: ID!): VariableExpense!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  updateVariableExpense(id: ID!, input: UpdateVariableExpenseInput!, idempotencyKey: ID!): VariableExpense!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
+  deleteVariableExpense(id: ID!): Boolean!
+    @auth(role: "user")
+    @featureFlag(name: "bff-mutations-enabled")
 }
 
 # ── Pagination Types ─────────────────────────────────────────────────────

@@ -53,10 +53,183 @@ func userIDFromCtx(ctx context.Context) string {
 	return ""
 }
 
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+// ── Income Mutations ────────────────────────────────────────────────────────
 
-type queryResolver struct{ *Resolver }
+func (r *mutationResolver) CreateIncome(ctx context.Context, input model.CreateIncomeInput, idempotencyKey string) (*model.Income, error) {
+	pb, err := r.TxClient.CreateIncome(ctx, &transactionv1.CreateIncomeRequest{
+		Description:    input.Description,
+		Source:         input.Source,
+		IncomeType:     incomeTypeToProto(input.IncomeType),
+		ReceivedDate:   input.ReceivedDate.Format("2006-01-02"),
+		ReceivedAmount: input.ReceivedAmount,
+		Status:         statusToProtoVal(input.Status),
+		IdempotencyKey: idempotencyKey,
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return incomeFromProto(pb), nil
+}
 
+func (r *mutationResolver) UpdateIncome(ctx context.Context, id string, input model.UpdateIncomeInput, idempotencyKey string) (*model.Income, error) {
+	req := &transactionv1.UpdateIncomeRequest{
+		Id:             id,
+		IdempotencyKey: idempotencyKey,
+	}
+	if input.Description != nil {
+		req.Description = input.Description
+	}
+	if input.Source != nil {
+		req.Source = input.Source
+	}
+	if input.IncomeType != nil {
+		req.IncomeType = incomeTypeToProtoPtr(input.IncomeType)
+	}
+	if input.ReceivedDate != nil {
+		s := input.ReceivedDate.Format("2006-01-02")
+		req.ReceivedDate = &s
+	}
+	if input.ReceivedAmount != nil {
+		req.ReceivedAmount = input.ReceivedAmount
+	}
+	if input.Status != nil {
+		req.Status = statusToProto(input.Status)
+	}
+
+	pb, err := r.TxClient.UpdateIncome(ctx, req)
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return incomeFromProto(pb), nil
+}
+
+func (r *mutationResolver) DeleteIncome(ctx context.Context, id string) (bool, error) {
+	_, err := r.TxClient.DeleteIncome(ctx, &transactionv1.DeleteIncomeRequest{Id: id})
+	if err != nil {
+		return false, mapGRPCError(err)
+	}
+	return true, nil
+}
+
+// ── FixedExpense Mutations ──────────────────────────────────────────────────
+
+func (r *mutationResolver) CreateFixedExpense(ctx context.Context, input model.CreateFixedExpenseInput, idempotencyKey string) (*model.FixedExpense, error) {
+	pb, err := r.TxClient.CreateFixedExpense(ctx, &transactionv1.CreateFixedExpenseRequest{
+		Description:    input.Description,
+		Category:       input.Category,
+		DayOfMonth:     int32(input.DayOfMonth),
+		PaymentMethod:  paymentMethodToProto(input.PaymentMethod),
+		Status:         statusToProtoVal(input.Status),
+		IdempotencyKey: idempotencyKey,
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return fixedExpenseFromProto(pb), nil
+}
+
+func (r *mutationResolver) UpdateFixedExpense(ctx context.Context, id string, input model.UpdateFixedExpenseInput, idempotencyKey string) (*model.FixedExpense, error) {
+	req := &transactionv1.UpdateFixedExpenseRequest{
+		Id:             id,
+		IdempotencyKey: idempotencyKey,
+	}
+	if input.Description != nil {
+		req.Description = input.Description
+	}
+	if input.Category != nil {
+		req.Category = input.Category
+	}
+	if input.DayOfMonth != nil {
+		d := int32(*input.DayOfMonth)
+		req.DayOfMonth = &d
+	}
+	if input.PaymentMethod != nil {
+		req.PaymentMethod = paymentMethodToProtoPtr(input.PaymentMethod)
+	}
+	if input.Status != nil {
+		req.Status = statusToProto(input.Status)
+	}
+	pb, err := r.TxClient.UpdateFixedExpense(ctx, req)
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return fixedExpenseFromProto(pb), nil
+}
+
+func (r *mutationResolver) DeleteFixedExpense(ctx context.Context, id string) (bool, error) {
+	_, err := r.TxClient.DeleteFixedExpense(ctx, &transactionv1.DeleteFixedExpenseRequest{Id: id})
+	if err != nil {
+		return false, mapGRPCError(err)
+	}
+	return true, nil
+}
+
+// ── VariableExpense Mutations ───────────────────────────────────────────────
+
+func (r *mutationResolver) CreateVariableExpense(ctx context.Context, input model.CreateVariableExpenseInput, idempotencyKey string) (*model.VariableExpense, error) {
+	pb, err := r.TxClient.CreateVariableExpense(ctx, &transactionv1.CreateVariableExpenseRequest{
+		Description:    input.Description,
+		Destination:    input.Destination,
+		Category:       input.Category,
+		ExpenseType:    expenseTypeToProto(input.ExpenseType),
+		PaymentMethod:  paymentMethodToProto(input.PaymentMethod),
+		PaymentDate:    input.PaymentDate.Format("2006-01-02"),
+		PaidAmount:     input.PaidAmount,
+		Status:         statusToProtoVal(input.Status),
+		IdempotencyKey: idempotencyKey,
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return variableExpenseFromProto(pb), nil
+}
+
+func (r *mutationResolver) UpdateVariableExpense(ctx context.Context, id string, input model.UpdateVariableExpenseInput, idempotencyKey string) (*model.VariableExpense, error) {
+	req := &transactionv1.UpdateVariableExpenseRequest{
+		Id:             id,
+		IdempotencyKey: idempotencyKey,
+	}
+	if input.Description != nil {
+		req.Description = input.Description
+	}
+	if input.Destination != nil {
+		req.Destination = input.Destination
+	}
+	if input.Category != nil {
+		req.Category = input.Category
+	}
+	if input.ExpenseType != nil {
+		req.ExpenseType = expenseTypeToProtoPtr(input.ExpenseType)
+	}
+	if input.PaymentMethod != nil {
+		req.PaymentMethod = paymentMethodToProtoPtr(input.PaymentMethod)
+	}
+	if input.PaymentDate != nil {
+		s := input.PaymentDate.Format("2006-01-02")
+		req.PaymentDate = &s
+	}
+	if input.PaidAmount != nil {
+		req.PaidAmount = input.PaidAmount
+	}
+	if input.Status != nil {
+		req.Status = statusToProto(input.Status)
+	}
+	pb, err := r.TxClient.UpdateVariableExpense(ctx, req)
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return variableExpenseFromProto(pb), nil
+}
+
+func (r *mutationResolver) DeleteVariableExpense(ctx context.Context, id string) (bool, error) {
+	_, err := r.TxClient.DeleteVariableExpense(ctx, &transactionv1.DeleteVariableExpenseRequest{Id: id})
+	if err != nil {
+		return false, mapGRPCError(err)
+	}
+	return true, nil
+}
+
+// Income is the resolver for the income field.
 func (r *queryResolver) Income(ctx context.Context, id string) (*model.Income, error) {
 	var out model.Income
 	err := r.cachedSingle(ctx, "income", id, &out, func() (interface{}, error) {
@@ -72,6 +245,39 @@ func (r *queryResolver) Income(ctx context.Context, id string) (*model.Income, e
 	return &out, nil
 }
 
+// FixedExpense is the resolver for the fixedExpense field.
+func (r *queryResolver) FixedExpense(ctx context.Context, id string) (*model.FixedExpense, error) {
+	var out model.FixedExpense
+	err := r.cachedSingle(ctx, "fixed_expense", id, &out, func() (interface{}, error) {
+		pb, err := r.TxClient.GetFixedExpense(ctx, &transactionv1.GetFixedExpenseRequest{Id: id})
+		if err != nil {
+			return nil, err
+		}
+		return fixedExpenseFromProto(pb), nil
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return &out, nil
+}
+
+// VariableExpense is the resolver for the variableExpense field.
+func (r *queryResolver) VariableExpense(ctx context.Context, id string) (*model.VariableExpense, error) {
+	var out model.VariableExpense
+	err := r.cachedSingle(ctx, "variable_expense", id, &out, func() (interface{}, error) {
+		pb, err := r.TxClient.GetVariableExpense(ctx, &transactionv1.GetVariableExpenseRequest{Id: id})
+		if err != nil {
+			return nil, err
+		}
+		return variableExpenseFromProto(pb), nil
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return &out, nil
+}
+
+// Incomes is the resolver for the incomes field.
 func (r *queryResolver) Incomes(ctx context.Context, first *int, after *string, status *model.TransactionStatus, dateFrom *time.Time, dateTo *time.Time) (*model.IncomeConnection, error) {
 	var out model.IncomeConnection
 	err := r.cachedList(ctx, "incomes", struct {
@@ -119,21 +325,7 @@ func (r *queryResolver) Incomes(ctx context.Context, first *int, after *string, 
 	return &out, nil
 }
 
-func (r *queryResolver) FixedExpense(ctx context.Context, id string) (*model.FixedExpense, error) {
-	var out model.FixedExpense
-	err := r.cachedSingle(ctx, "fixed_expense", id, &out, func() (interface{}, error) {
-		pb, err := r.TxClient.GetFixedExpense(ctx, &transactionv1.GetFixedExpenseRequest{Id: id})
-		if err != nil {
-			return nil, err
-		}
-		return fixedExpenseFromProto(pb), nil
-	})
-	if err != nil {
-		return nil, mapGRPCError(err)
-	}
-	return &out, nil
-}
-
+// FixedExpenses is the resolver for the fixedExpenses field.
 func (r *queryResolver) FixedExpenses(ctx context.Context, first *int, after *string, status *model.TransactionStatus) (*model.FixedExpenseConnection, error) {
 	var out model.FixedExpenseConnection
 	err := r.cachedList(ctx, "fixed_expenses", struct {
@@ -177,21 +369,7 @@ func (r *queryResolver) FixedExpenses(ctx context.Context, first *int, after *st
 	return &out, nil
 }
 
-func (r *queryResolver) VariableExpense(ctx context.Context, id string) (*model.VariableExpense, error) {
-	var out model.VariableExpense
-	err := r.cachedSingle(ctx, "variable_expense", id, &out, func() (interface{}, error) {
-		pb, err := r.TxClient.GetVariableExpense(ctx, &transactionv1.GetVariableExpenseRequest{Id: id})
-		if err != nil {
-			return nil, err
-		}
-		return variableExpenseFromProto(pb), nil
-	})
-	if err != nil {
-		return nil, mapGRPCError(err)
-	}
-	return &out, nil
-}
-
+// VariableExpenses is the resolver for the variableExpenses field.
 func (r *queryResolver) VariableExpenses(ctx context.Context, first *int, after *string, status *model.TransactionStatus, dateFrom *time.Time, dateTo *time.Time, category *string) (*model.VariableExpenseConnection, error) {
 	var out model.VariableExpenseConnection
 	err := r.cachedList(ctx, "variable_expenses", struct {
@@ -241,6 +419,7 @@ func (r *queryResolver) VariableExpenses(ctx context.Context, first *int, after 
 	return &out, nil
 }
 
+// Transactions is the resolver for the transactions field.
 func (r *queryResolver) Transactions(ctx context.Context, first *int, after *string, typeArg *model.TransactionTypeFilter, dateFrom *time.Time, dateTo *time.Time) (*model.TransactionConnection, error) {
 	limit, offset := limitAndOffset(first, after)
 
@@ -335,6 +514,7 @@ func (r *queryResolver) Transactions(ctx context.Context, first *int, after *str
 	}, nil
 }
 
+// Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.UserProfile, error) {
 	userID := userIDFromCtx(ctx)
 	if userID == "" {
@@ -355,6 +535,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.UserProfile, error) {
 	return &profile, nil
 }
 
+// Budget is the resolver for the budget field.
 func (r *queryResolver) Budget(ctx context.Context, id string) (*model.Budget, error) {
 	var out model.Budget
 	err := r.cachedSingle(ctx, "budget", id, &out, func() (interface{}, error) {
@@ -370,21 +551,7 @@ func (r *queryResolver) Budget(ctx context.Context, id string) (*model.Budget, e
 	return &out, nil
 }
 
-func (r *queryResolver) BudgetSummary(ctx context.Context, id string) (*model.BudgetSummary, error) {
-	var out model.BudgetSummary
-	err := r.cachedSingle(ctx, "budget_summary", id, &out, func() (interface{}, error) {
-		pb, err := r.BgtClient.GetBudgetSummary(ctx, &budgetv1.GetBudgetSummaryRequest{Id: id})
-		if err != nil {
-			return nil, err
-		}
-		return budgetSummaryFromProto(pb), nil
-	})
-	if err != nil {
-		return nil, mapGRPCError(err)
-	}
-	return &out, nil
-}
-
+// Budgets is the resolver for the budgets field.
 func (r *queryResolver) Budgets(ctx context.Context, first *int, after *string, status *model.BudgetStatus, dateFrom *time.Time, dateTo *time.Time) (*model.BudgetConnection, error) {
 	var out model.BudgetConnection
 	err := r.cachedList(ctx, "budgets", struct {
@@ -440,6 +607,23 @@ func (r *queryResolver) Budgets(ctx context.Context, first *int, after *string, 
 	return &out, nil
 }
 
+// BudgetSummary is the resolver for the budgetSummary field.
+func (r *queryResolver) BudgetSummary(ctx context.Context, id string) (*model.BudgetSummary, error) {
+	var out model.BudgetSummary
+	err := r.cachedSingle(ctx, "budget_summary", id, &out, func() (interface{}, error) {
+		pb, err := r.BgtClient.GetBudgetSummary(ctx, &budgetv1.GetBudgetSummaryRequest{Id: id})
+		if err != nil {
+			return nil, err
+		}
+		return budgetSummaryFromProto(pb), nil
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	return &out, nil
+}
+
+// CreditCard is the resolver for the creditCard field.
 func (r *queryResolver) CreditCard(ctx context.Context, id string) (*model.CreditCard, error) {
 	var out model.CreditCard
 	err := r.cachedSingle(ctx, "credit_card", id, &out, func() (interface{}, error) {
@@ -455,6 +639,7 @@ func (r *queryResolver) CreditCard(ctx context.Context, id string) (*model.Credi
 	return &out, nil
 }
 
+// CreditCards is the resolver for the creditCards field.
 func (r *queryResolver) CreditCards(ctx context.Context, first *int, after *string, active *bool) (*model.CreditCardConnection, error) {
 	var out model.CreditCardConnection
 	err := r.cachedList(ctx, "credit_cards", struct {
@@ -502,6 +687,7 @@ func (r *queryResolver) CreditCards(ctx context.Context, first *int, after *stri
 	return &out, nil
 }
 
+// Invoice is the resolver for the invoice field.
 func (r *queryResolver) Invoice(ctx context.Context, id string) (*model.Invoice, error) {
 	var out model.Invoice
 	err := r.cachedSingle(ctx, "invoice", id, &out, func() (interface{}, error) {
@@ -517,6 +703,7 @@ func (r *queryResolver) Invoice(ctx context.Context, id string) (*model.Invoice,
 	return &out, nil
 }
 
+// Invoices is the resolver for the invoices field.
 func (r *queryResolver) Invoices(ctx context.Context, first *int, after *string, creditCardID string, status *model.InvoiceStatus, monthFrom *string, monthTo *string) (*model.InvoiceConnection, error) {
 	var out model.InvoiceConnection
 	err := r.cachedList(ctx, "invoices", struct {
@@ -570,6 +757,7 @@ func (r *queryResolver) Invoices(ctx context.Context, first *int, after *string,
 	return &out, nil
 }
 
+// InvoiceTransactions is the resolver for the invoiceTransactions field.
 func (r *queryResolver) InvoiceTransactions(ctx context.Context, first *int, after *string, invoiceID string, category *string) (*model.InvoiceTransactionConnection, error) {
 	var out model.InvoiceTransactionConnection
 	err := r.cachedList(ctx, "invoice_transactions", struct {
@@ -617,6 +805,7 @@ func (r *queryResolver) InvoiceTransactions(ctx context.Context, first *int, aft
 	return &out, nil
 }
 
+// Debt is the resolver for the debt field.
 func (r *queryResolver) Debt(ctx context.Context, id string) (*model.Debt, error) {
 	var out model.Debt
 	err := r.cachedSingle(ctx, "debt", id, &out, func() (interface{}, error) {
@@ -632,6 +821,7 @@ func (r *queryResolver) Debt(ctx context.Context, id string) (*model.Debt, error
 	return &out, nil
 }
 
+// Debts is the resolver for the debts field.
 func (r *queryResolver) Debts(ctx context.Context, first *int, after *string, status *model.DebtStatus, typeArg *model.DebtType) (*model.DebtConnection, error) {
 	var out model.DebtConnection
 	err := r.cachedList(ctx, "debts", struct {
@@ -683,6 +873,7 @@ func (r *queryResolver) Debts(ctx context.Context, first *int, after *string, st
 	return &out, nil
 }
 
+// Payments is the resolver for the payments field.
 func (r *queryResolver) Payments(ctx context.Context, first *int, after *string, debtID string, dateFrom *time.Time, dateTo *time.Time) (*model.PaymentConnection, error) {
 	var out model.PaymentConnection
 	err := r.cachedList(ctx, "payments", struct {
@@ -730,6 +921,7 @@ func (r *queryResolver) Payments(ctx context.Context, first *int, after *string,
 	return &out, nil
 }
 
+// Investment is the resolver for the investment field.
 func (r *queryResolver) Investment(ctx context.Context, id string) (*model.Investment, error) {
 	var out model.Investment
 	err := r.cachedSingle(ctx, "investment", id, &out, func() (interface{}, error) {
@@ -745,6 +937,7 @@ func (r *queryResolver) Investment(ctx context.Context, id string) (*model.Inves
 	return &out, nil
 }
 
+// Investments is the resolver for the investments field.
 func (r *queryResolver) Investments(ctx context.Context, first *int, after *string, assetType *model.AssetType, status *model.InvestmentStatus) (*model.InvestmentConnection, error) {
 	var out model.InvestmentConnection
 	err := r.cachedList(ctx, "investments", struct {
@@ -796,6 +989,7 @@ func (r *queryResolver) Investments(ctx context.Context, first *int, after *stri
 	return &out, nil
 }
 
+// InvestmentTransactions is the resolver for the investmentTransactions field.
 func (r *queryResolver) InvestmentTransactions(ctx context.Context, first *int, after *string, investmentID string, typeArg *model.InvestmentTransactionType, dateFrom *time.Time, dateTo *time.Time) (*model.InvestmentTransactionConnection, error) {
 	var out model.InvestmentTransactionConnection
 	err := r.cachedList(ctx, "investment_transactions", struct {
@@ -849,6 +1043,7 @@ func (r *queryResolver) InvestmentTransactions(ctx context.Context, first *int, 
 	return &out, nil
 }
 
+// PortfolioSummary is the resolver for the portfolioSummary field.
 func (r *queryResolver) PortfolioSummary(ctx context.Context) (*model.PortfolioSummary, error) {
 	var out model.PortfolioSummary
 	err := r.cachedSingle(ctx, "portfolio_summary", "default", &out, func() (interface{}, error) {
@@ -864,7 +1059,14 @@ func (r *queryResolver) PortfolioSummary(ctx context.Context) (*model.PortfolioS
 	return &out, nil
 }
 
-// ── Proto → Model Converters ─────────────────────────────────────────────
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
 
 func incomeFromProto(pb *transactionv1.Income) *model.Income {
 	return &model.Income{
@@ -880,7 +1082,6 @@ func incomeFromProto(pb *transactionv1.Income) *model.Income {
 		UpdatedAt:      pb.UpdatedAt.AsTime(),
 	}
 }
-
 func fixedExpenseFromProto(pb *transactionv1.FixedExpense) *model.FixedExpense {
 	return &model.FixedExpense{
 		ID:            pb.Id,
@@ -894,7 +1095,6 @@ func fixedExpenseFromProto(pb *transactionv1.FixedExpense) *model.FixedExpense {
 		UpdatedAt:     pb.UpdatedAt.AsTime(),
 	}
 }
-
 func variableExpenseFromProto(pb *transactionv1.VariableExpense) *model.VariableExpense {
 	return &model.VariableExpense{
 		ID:            pb.Id,
@@ -911,7 +1111,6 @@ func variableExpenseFromProto(pb *transactionv1.VariableExpense) *model.Variable
 		UpdatedAt:     pb.UpdatedAt.AsTime(),
 	}
 }
-
 func budgetFromProto(pb *budgetv1.Budget) *model.Budget {
 	cats := make([]*model.BudgetCategory, len(pb.Categories))
 	for i, c := range pb.Categories {
@@ -933,7 +1132,6 @@ func budgetFromProto(pb *budgetv1.Budget) *model.Budget {
 		UpdatedAt:   pb.UpdatedAt.AsTime(),
 	}
 }
-
 func budgetCategoryFromProto(pb *budgetv1.BudgetCategory) *model.BudgetCategory {
 	return &model.BudgetCategory{
 		ID:          pb.Id,
@@ -944,7 +1142,6 @@ func budgetCategoryFromProto(pb *budgetv1.BudgetCategory) *model.BudgetCategory 
 		Category:    pb.Category,
 	}
 }
-
 func budgetSummaryFromProto(pb *budgetv1.BudgetSummary) *model.BudgetSummary {
 	cats := make([]*model.CategorySummary, len(pb.Categories))
 	for i, c := range pb.Categories {
@@ -960,7 +1157,6 @@ func budgetSummaryFromProto(pb *budgetv1.BudgetSummary) *model.BudgetSummary {
 		Categories:      cats,
 	}
 }
-
 func categorySummaryFromProto(pb *budgetv1.CategorySummary) *model.CategorySummary {
 	return &model.CategorySummary{
 		CategoryID:      pb.CategoryId,
@@ -972,7 +1168,6 @@ func categorySummaryFromProto(pb *budgetv1.CategorySummary) *model.CategorySumma
 		UsagePercentage: pb.UsagePercentage,
 	}
 }
-
 func creditCardFromProto(pb *creditcardv1.CreditCard) *model.CreditCard {
 	return &model.CreditCard{
 		ID:              pb.Id,
@@ -990,7 +1185,6 @@ func creditCardFromProto(pb *creditcardv1.CreditCard) *model.CreditCard {
 		UpdatedAt:       pb.UpdatedAt.AsTime(),
 	}
 }
-
 func invoiceFromProto(pb *creditcardv1.Invoice) *model.Invoice {
 	return &model.Invoice{
 		ID:             pb.Id,
@@ -1006,7 +1200,6 @@ func invoiceFromProto(pb *creditcardv1.Invoice) *model.Invoice {
 		UpdatedAt:      pb.UpdatedAt.AsTime(),
 	}
 }
-
 func invoiceTransactionFromProto(pb *creditcardv1.InvoiceTransaction) *model.InvoiceTransaction {
 	return &model.InvoiceTransaction{
 		ID:              pb.Id,
@@ -1020,7 +1213,6 @@ func invoiceTransactionFromProto(pb *creditcardv1.InvoiceTransaction) *model.Inv
 		CreatedAt:       pb.CreatedAt.AsTime(),
 	}
 }
-
 func debtFromProto(pb *debtv1.Debt) *model.Debt {
 	return &model.Debt{
 		ID:              pb.Id,
@@ -1039,7 +1231,6 @@ func debtFromProto(pb *debtv1.Debt) *model.Debt {
 		UpdatedAt:       pb.UpdatedAt.AsTime(),
 	}
 }
-
 func paymentFromProto(pb *debtv1.Payment) *model.Payment {
 	return &model.Payment{
 		ID:          pb.Id,
@@ -1051,7 +1242,6 @@ func paymentFromProto(pb *debtv1.Payment) *model.Payment {
 		CreatedAt:   pb.CreatedAt.AsTime(),
 	}
 }
-
 func investmentFromProto(pb *investmentv1.Investment) *model.Investment {
 	return &model.Investment{
 		ID:            pb.Id,
@@ -1068,7 +1258,6 @@ func investmentFromProto(pb *investmentv1.Investment) *model.Investment {
 		UpdatedAt:     pb.UpdatedAt.AsTime(),
 	}
 }
-
 func investmentTransactionFromProto(pb *investmentv1.InvestmentTransaction) *model.InvestmentTransaction {
 	return &model.InvestmentTransaction{
 		ID:              pb.Id,
@@ -1083,7 +1272,6 @@ func investmentTransactionFromProto(pb *investmentv1.InvestmentTransaction) *mod
 		CreatedAt:       pb.CreatedAt.AsTime(),
 	}
 }
-
 func portfolioSummaryFromProto(pb *investmentv1.PortfolioSummary) *model.PortfolioSummary {
 	allocs := make([]*model.AssetAllocation, len(pb.Allocation))
 	for i, a := range pb.Allocation {
@@ -1098,7 +1286,6 @@ func portfolioSummaryFromProto(pb *investmentv1.PortfolioSummary) *model.Portfol
 		Allocation:        allocs,
 	}
 }
-
 func assetAllocationFromProto(pb *investmentv1.AssetAllocation) *model.AssetAllocation {
 	return &model.AssetAllocation{
 		AssetType:    assetTypeFromProto(pb.AssetType),
@@ -1107,9 +1294,6 @@ func assetAllocationFromProto(pb *investmentv1.AssetAllocation) *model.AssetAllo
 		Percentage:   pb.Percentage,
 	}
 }
-
-// ── Transaction Enum Converters ──────────────────────────────────────────
-
 func statusFromProto(s transactionv1.TransactionStatus) model.TransactionStatus {
 	switch s {
 	case transactionv1.TransactionStatus_PENDING:
@@ -1122,7 +1306,6 @@ func statusFromProto(s transactionv1.TransactionStatus) model.TransactionStatus 
 		return model.TransactionStatusPending
 	}
 }
-
 func statusToProto(s *model.TransactionStatus) *transactionv1.TransactionStatus {
 	if s == nil {
 		return nil
@@ -1138,7 +1321,6 @@ func statusToProto(s *model.TransactionStatus) *transactionv1.TransactionStatus 
 		return nil
 	}
 }
-
 func incomeTypeFromProto(t transactionv1.IncomeType) model.IncomeType {
 	switch t {
 	case transactionv1.IncomeType_SALARY:
@@ -1157,7 +1339,6 @@ func incomeTypeFromProto(t transactionv1.IncomeType) model.IncomeType {
 		return model.IncomeTypeOther
 	}
 }
-
 func expenseTypeFromProto(t transactionv1.ExpenseType) model.ExpenseType {
 	switch t {
 	case transactionv1.ExpenseType_ESSENTIAL:
@@ -1172,6 +1353,94 @@ func expenseTypeFromProto(t transactionv1.ExpenseType) model.ExpenseType {
 		return model.ExpenseTypeOther
 	default:
 		return model.ExpenseTypeOther
+	}
+}
+func incomeTypeToProto(t model.IncomeType) transactionv1.IncomeType {
+	switch t {
+	case model.IncomeTypeSalary:
+		return transactionv1.IncomeType_SALARY
+	case model.IncomeTypeFreelance:
+		return transactionv1.IncomeType_FREELANCE
+	case model.IncomeTypeInvestment:
+		return transactionv1.IncomeType_INVESTMENT
+	case model.IncomeTypeBusiness:
+		return transactionv1.IncomeType_BUSINESS
+	case model.IncomeTypeRefund:
+		return transactionv1.IncomeType_REFUND
+	default:
+		return transactionv1.IncomeType_INCOME_OTHER
+	}
+}
+
+func incomeTypeToProtoPtr(t *model.IncomeType) *transactionv1.IncomeType {
+	if t == nil {
+		return nil
+	}
+	v := incomeTypeToProto(*t)
+	return &v
+}
+
+func expenseTypeToProto(t model.ExpenseType) transactionv1.ExpenseType {
+	switch t {
+	case model.ExpenseTypeEssential:
+		return transactionv1.ExpenseType_ESSENTIAL
+	case model.ExpenseTypeDiscretionary:
+		return transactionv1.ExpenseType_DISCRETIONARY
+	case model.ExpenseTypeOccasional:
+		return transactionv1.ExpenseType_OCCASIONAL
+	case model.ExpenseTypeEmergency:
+		return transactionv1.ExpenseType_EMERGENCY
+	default:
+		return transactionv1.ExpenseType_EXPENSE_OTHER
+	}
+}
+
+func expenseTypeToProtoPtr(t *model.ExpenseType) *transactionv1.ExpenseType {
+	if t == nil {
+		return nil
+	}
+	v := expenseTypeToProto(*t)
+	return &v
+}
+
+func paymentMethodToProto(pm model.PaymentMethod) transactionv1.PaymentMethod {
+	switch pm {
+	case model.PaymentMethodCreditCard:
+		return transactionv1.PaymentMethod_CREDIT_CARD
+	case model.PaymentMethodDebitCard:
+		return transactionv1.PaymentMethod_DEBIT_CARD
+	case model.PaymentMethodCash:
+		return transactionv1.PaymentMethod_CASH
+	case model.PaymentMethodBankTransfer:
+		return transactionv1.PaymentMethod_BANK_TRANSFER
+	case model.PaymentMethodPix:
+		return transactionv1.PaymentMethod_PIX
+	default:
+		return transactionv1.PaymentMethod_OTHER
+	}
+}
+
+func paymentMethodToProtoPtr(pm *model.PaymentMethod) *transactionv1.PaymentMethod {
+	if pm == nil {
+		return nil
+	}
+	v := paymentMethodToProto(*pm)
+	return &v
+}
+
+func statusToProtoVal(s *model.TransactionStatus) transactionv1.TransactionStatus {
+	if s == nil {
+		return transactionv1.TransactionStatus_PENDING
+	}
+	switch *s {
+	case model.TransactionStatusPending:
+		return transactionv1.TransactionStatus_PENDING
+	case model.TransactionStatusCompleted:
+		return transactionv1.TransactionStatus_COMPLETED
+	case model.TransactionStatusCancelled:
+		return transactionv1.TransactionStatus_CANCELLED
+	default:
+		return transactionv1.TransactionStatus_PENDING
 	}
 }
 
@@ -1193,9 +1462,6 @@ func paymentMethodFromProto(pm transactionv1.PaymentMethod) model.PaymentMethod 
 		return model.PaymentMethodOther
 	}
 }
-
-// ── Budget Enum Converters ───────────────────────────────────────────────
-
 func budgetPeriodFromProto(p budgetv1.BudgetPeriod) model.BudgetPeriod {
 	switch p {
 	case budgetv1.BudgetPeriod_MONTHLY:
@@ -1214,7 +1480,6 @@ func budgetPeriodFromProto(p budgetv1.BudgetPeriod) model.BudgetPeriod {
 		return model.BudgetPeriodMonthly
 	}
 }
-
 func budgetStatusFromProto(s budgetv1.BudgetStatus) model.BudgetStatus {
 	switch s {
 	case budgetv1.BudgetStatus_ACTIVE:
@@ -1229,7 +1494,6 @@ func budgetStatusFromProto(s budgetv1.BudgetStatus) model.BudgetStatus {
 		return model.BudgetStatusActive
 	}
 }
-
 func budgetStatusToProtoPtr(s *model.BudgetStatus) *budgetv1.BudgetStatus {
 	if s == nil {
 		return nil
@@ -1247,9 +1511,6 @@ func budgetStatusToProtoPtr(s *model.BudgetStatus) *budgetv1.BudgetStatus {
 		return nil
 	}
 }
-
-// ── Credit Card Enum Converters ──────────────────────────────────────────
-
 func cardBrandFromProto(b creditcardv1.CardBrand) model.CardBrand {
 	switch b {
 	case creditcardv1.CardBrand_VISA:
@@ -1270,7 +1531,6 @@ func cardBrandFromProto(b creditcardv1.CardBrand) model.CardBrand {
 		return model.CardBrandOtherBrand
 	}
 }
-
 func cardTypeFromProto(t creditcardv1.CardType) model.CardType {
 	switch t {
 	case creditcardv1.CardType_CREDIT:
@@ -1283,7 +1543,6 @@ func cardTypeFromProto(t creditcardv1.CardType) model.CardType {
 		return model.CardTypeCredit
 	}
 }
-
 func invoiceStatusFromProto(s creditcardv1.InvoiceStatus) model.InvoiceStatus {
 	switch s {
 	case creditcardv1.InvoiceStatus_OPEN:
@@ -1298,7 +1557,6 @@ func invoiceStatusFromProto(s creditcardv1.InvoiceStatus) model.InvoiceStatus {
 		return model.InvoiceStatusOpen
 	}
 }
-
 func invoiceStatusToProtoPtr(s *model.InvoiceStatus) *creditcardv1.InvoiceStatus {
 	if s == nil {
 		return nil
@@ -1316,9 +1574,6 @@ func invoiceStatusToProtoPtr(s *model.InvoiceStatus) *creditcardv1.InvoiceStatus
 		return nil
 	}
 }
-
-// ── Debt Enum Converters ─────────────────────────────────────────────────
-
 func debtTypeFromProto(t debtv1.DebtType) model.DebtType {
 	switch t {
 	case debtv1.DebtType_PERSONAL_LOAN:
@@ -1339,7 +1594,6 @@ func debtTypeFromProto(t debtv1.DebtType) model.DebtType {
 		return model.DebtTypeOtherDebt
 	}
 }
-
 func debtStatusFromProto(s debtv1.DebtStatus) model.DebtStatus {
 	switch s {
 	case debtv1.DebtStatus_ACTIVE:
@@ -1356,7 +1610,6 @@ func debtStatusFromProto(s debtv1.DebtStatus) model.DebtStatus {
 		return model.DebtStatusActive
 	}
 }
-
 func debtStatusToProtoPtr(s *model.DebtStatus) *debtv1.DebtStatus {
 	if s == nil {
 		return nil
@@ -1376,7 +1629,6 @@ func debtStatusToProtoPtr(s *model.DebtStatus) *debtv1.DebtStatus {
 		return nil
 	}
 }
-
 func debtTypeToProtoPtr(t *model.DebtType) *debtv1.DebtType {
 	if t == nil {
 		return nil
@@ -1400,9 +1652,6 @@ func debtTypeToProtoPtr(t *model.DebtType) *debtv1.DebtType {
 		return nil
 	}
 }
-
-// ── Investment Enum Converters ───────────────────────────────────────────
-
 func assetTypeFromProto(t investmentv1.AssetType) model.AssetType {
 	switch t {
 	case investmentv1.AssetType_STOCK:
@@ -1435,7 +1684,6 @@ func assetTypeFromProto(t investmentv1.AssetType) model.AssetType {
 		return model.AssetTypeOtherAsset
 	}
 }
-
 func transactionTypeFromProto(t investmentv1.TransactionType) model.InvestmentTransactionType {
 	switch t {
 	case investmentv1.TransactionType_BUY:
@@ -1452,7 +1700,6 @@ func transactionTypeFromProto(t investmentv1.TransactionType) model.InvestmentTr
 		return model.InvestmentTransactionTypeBuy
 	}
 }
-
 func investmentStatusFromProto(s investmentv1.InvestmentStatus) model.InvestmentStatus {
 	switch s {
 	case investmentv1.InvestmentStatus_ACTIVE:
@@ -1465,7 +1712,6 @@ func investmentStatusFromProto(s investmentv1.InvestmentStatus) model.Investment
 		return model.InvestmentStatusActive
 	}
 }
-
 func assetTypeToProtoPtr(t *model.AssetType) *investmentv1.AssetType {
 	if t == nil {
 		return nil
@@ -1501,7 +1747,6 @@ func assetTypeToProtoPtr(t *model.AssetType) *investmentv1.AssetType {
 		return nil
 	}
 }
-
 func investmentStatusToProtoPtr(s *model.InvestmentStatus) *investmentv1.InvestmentStatus {
 	if s == nil {
 		return nil
@@ -1517,7 +1762,6 @@ func investmentStatusToProtoPtr(s *model.InvestmentStatus) *investmentv1.Investm
 		return nil
 	}
 }
-
 func transactionTypeToProtoPtr(t *model.InvestmentTransactionType) *investmentv1.TransactionType {
 	if t == nil {
 		return nil
@@ -1537,14 +1781,12 @@ func transactionTypeToProtoPtr(t *model.InvestmentTransactionType) *investmentv1
 		return nil
 	}
 }
-
 func (r *Resolver) isFeatureEnabled(ctx context.Context, flag string) bool {
 	if r.FFClient == nil {
 		return false
 	}
 	return r.FFClient.IsEnabled(ctx, flag)
 }
-
 func (r *queryResolver) cachedSingle(ctx context.Context, entity, id string, dest interface{}, fetchFn func() (interface{}, error)) error {
 	if r.Resolver.Cache == nil {
 		val, err := fetchFn()
@@ -1559,7 +1801,6 @@ func (r *queryResolver) cachedSingle(ctx context.Context, entity, id string, des
 	}
 	return r.Resolver.Cache.GetOrSet(ctx, cache.CacheKey(entity, id), 5*time.Minute, fetchFn, dest)
 }
-
 func (r *queryResolver) cachedList(ctx context.Context, entity string, args interface{}, dest interface{}, fetchFn func() (interface{}, error)) error {
 	key := cache.CacheKeyList(entity, args)
 	if r.Resolver.Cache == nil {
@@ -1575,9 +1816,6 @@ func (r *queryResolver) cachedList(ctx context.Context, entity string, args inte
 	}
 	return r.Resolver.Cache.GetOrSet(ctx, key, 2*time.Minute, fetchFn, dest)
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────
-
 func limitAndOffset(first *int, after *string) (int, int) {
 	limit := 20
 	if first != nil && *first > 0 {
@@ -1589,12 +1827,10 @@ func limitAndOffset(first *int, after *string) (int, int) {
 	}
 	return limit, offset
 }
-
 func parseDate(s string) time.Time {
 	t, _ := time.Parse("2006-01-02", s)
 	return t
 }
-
 func dateToStrPtr(d *time.Time) *string {
 	if d == nil {
 		return nil
@@ -1602,15 +1838,12 @@ func dateToStrPtr(d *time.Time) *string {
 	v := d.Format("2006-01-02")
 	return &v
 }
-
 func strPtr(s string) *string {
 	return &s
 }
-
 func ptrOf[T any](v T) *T {
 	return &v
 }
-
 func mapGRPCError(err error) error {
 	st, ok := status.FromError(err)
 	if !ok {

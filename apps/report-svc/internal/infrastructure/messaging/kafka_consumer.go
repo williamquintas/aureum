@@ -11,11 +11,12 @@ import (
 )
 
 type EventHandler struct {
-	monthlyProjector   *application.MonthlySummaryProjector
-	categoryProjector  *application.CategorySummaryProjector
-	budgetProjector    *application.BudgetVsActualProjector
-	portfolioProjector *application.PortfolioSnapshotProjector
-	debtProjector      *application.DebtSummaryProjector
+	monthlyProjector    *application.MonthlySummaryProjector
+	categoryProjector   *application.CategorySummaryProjector
+	budgetProjector     *application.BudgetVsActualProjector
+	portfolioProjector  *application.PortfolioSnapshotProjector
+	debtProjector       *application.DebtSummaryProjector
+	creditCardProjector *application.CreditCardSummaryProjector
 }
 
 func NewEventHandler(
@@ -24,13 +25,15 @@ func NewEventHandler(
 	budget *application.BudgetVsActualProjector,
 	portfolio *application.PortfolioSnapshotProjector,
 	debt *application.DebtSummaryProjector,
+	creditCard *application.CreditCardSummaryProjector,
 ) *EventHandler {
 	return &EventHandler{
-		monthlyProjector:   monthly,
-		categoryProjector:  category,
-		budgetProjector:    budget,
-		portfolioProjector: portfolio,
-		debtProjector:      debt,
+		monthlyProjector:    monthly,
+		categoryProjector:   category,
+		budgetProjector:     budget,
+		portfolioProjector:  portfolio,
+		debtProjector:       debt,
+		creditCardProjector: creditCard,
 	}
 }
 
@@ -72,6 +75,11 @@ func (h *EventHandler) HandleMessage(ctx context.Context, msg []byte) error {
 	case domain.EventDebtCreated, domain.EventDebtUpdated, domain.EventDebtDeleted:
 		if err := h.debtProjector.Handle(ctx, event); err != nil {
 			return fmt.Errorf("debt projector: %w", err)
+		}
+
+	case domain.EventCreditCardCreated, domain.EventCreditCardUpdated, domain.EventCreditCardDeleted:
+		if err := h.creditCardProjector.Handle(ctx, event); err != nil {
+			return fmt.Errorf("credit card projector: %w", err)
 		}
 
 	default:

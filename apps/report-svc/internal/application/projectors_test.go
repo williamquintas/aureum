@@ -184,6 +184,25 @@ func TestDebtSummaryProjector_OnDebtCreated(t *testing.T) {
 	require.Equal(t, int64(50000), upserted.TotalDebt)
 }
 
+type mockCreditCardSummaryRepo struct {
+	upsertFunc func(ctx context.Context, cs *domain.CreditCardSummary) error
+	findFunc   func(ctx context.Context, userID string) ([]*domain.CreditCardSummary, error)
+}
+
+func (m *mockCreditCardSummaryRepo) Upsert(ctx context.Context, cs *domain.CreditCardSummary) error {
+	if m.upsertFunc != nil {
+		return m.upsertFunc(ctx, cs)
+	}
+	return nil
+}
+
+func (m *mockCreditCardSummaryRepo) FindByUser(ctx context.Context, userID string) ([]*domain.CreditCardSummary, error) {
+	if m.findFunc != nil {
+		return m.findFunc(ctx, userID)
+	}
+	return nil, domain.ErrNoData
+}
+
 // ── Additional Projector Tests (UC-31) ──────────────────────────────────────
 
 func TestMonthlySummaryProjector_OnIncomeUpdated(t *testing.T) {
@@ -335,6 +354,123 @@ func TestPortfolioSnapshotProjector_OnPortfolioCreated(t *testing.T) {
 	require.Equal(t, int64(1000000), upserted.TotalInvested)
 	require.Equal(t, int64(1200000), upserted.CurrentValue)
 	require.Equal(t, int64(200000), upserted.TotalReturn)
+}
+
+func TestCreditCardSummaryProjector_OnCardCreated(t *testing.T) {
+	var upserted *domain.CreditCardSummary
+	proj := NewCreditCardSummaryProjector(&mockCreditCardSummaryRepo{
+		upsertFunc: func(ctx context.Context, cs *domain.CreditCardSummary) error {
+			upserted = cs
+			return nil
+		},
+	})
+
+	event := domain.ReportEvent{
+		Type:     domain.EventCreditCardCreated,
+		UserID:   "user-1",
+		EntityID: "cc-1",
+		Payload: map[string]interface{}{
+			"card_name":      "Platinum Visa",
+			"statement_date": "2026-06-15",
+			"balance":        int64(250000),
+			"limit":          int64(1000000),
+		},
+	}
+
+	err := proj.Handle(context.Background(), event)
+	require.NoError(t, err)
+	require.NotNil(t, upserted)
+	require.Equal(t, "user-1", upserted.UserID)
+	require.Equal(t, "Platinum Visa", upserted.CardName)
+	require.Equal(t, "2026-06-15", upserted.StatementDate)
+	require.Equal(t, int64(250000), upserted.TotalBalance)
+	require.Equal(t, int64(1000000), upserted.TotalLimit)
+	require.Equal(t, 25.0, upserted.UtilPct)
+}
+
+func TestCreditCardSummaryProjector_OnCardUpdated(t *testing.T) {
+	var upserted *domain.CreditCardSummary
+	proj := NewCreditCardSummaryProjector(&mockCreditCardSummaryRepo{
+		upsertFunc: func(ctx context.Context, cs *domain.CreditCardSummary) error {
+			upserted = cs
+			return nil
+		},
+	})
+
+	event := domain.ReportEvent{
+		Type:     domain.EventCreditCardUpdated,
+		UserID:   "user-1",
+		EntityID: "cc-1",
+		Payload: map[string]interface{}{
+			"card_name":      "Platinum Visa",
+			"statement_date": "2026-07-15",
+			"balance":        int64(50000),
+			"limit":          int64(1000000),
+		},
+	}
+
+	err := proj.Handle(context.Background(), event)
+	require.NoError(t, err)
+	require.NotNil(t, upserted)
+	require.Equal(t, int64(50000), upserted.TotalBalance)
+	require.Equal(t, "2026-07-15", upserted.StatementDate)
+	require.Equal(t, 5.0, upserted.UtilPct)
+}
+
+func TestCreditCardSummaryProjector_OnCardDeleted(t *testing.T) {
+	var upserted *domain.CreditCardSummary
+	proj := NewCreditCardSummaryProjector(&mockCreditCardSummaryRepo{
+		upsertFunc: func(ctx context.Context, cs *domain.CreditCardSummary) error {
+			upserted = cs
+			return nil
+		},
+	})
+
+	event := domain.ReportEvent{
+		Type:     domain.EventCreditCardDeleted,
+		UserID:   "user-1",
+		EntityID: "cc-1",
+		Payload: map[string]interface{}{
+			"card_name": "Platinum Visa",
+		},
+	}
+
+	err := proj.Handle(context.Background(), event)
+	require.NoError(t, err)
+	require.NotNil(t, upserted)
+	require.Equal(t, "Platinum Visa", upserted.CardName)
+	require.Equal(t, int64(0), upserted.TotalBalance)
+	require.Equal(t, int64(0), upserted.TotalLimit)
+	require.Equal(t, 0.0, upserted.UtilPct)
+}
+
+func TestCreditCardSummaryProjector_ZeroLimit(t *testing.T) {
+	var upserted *domain.CreditCardSummary
+	proj := NewCreditCardSummaryProjector(&mockCreditCardSummaryRepo{
+		upsertFunc: func(ctx context.Context, cs *domain.CreditCardSummary) error {
+			upserted = cs
+			return nil
+		},
+	})
+
+	event := domain.ReportEvent{
+		Type:     domain.EventCreditCardCreated,
+		UserID:   "user-1",
+		EntityID: "cc-1",
+		Payload: map[string]interface{}{
+			"card_name":      "Debit Card",
+			"statement_date": "2026-06-01",
+			"balance":        int64(50000),
+			"limit":          int64(0),
+		},
+	}
+
+	err := proj.Handle(context.Background(), event)
+	require.NoError(t, err)
+	require.NotNil(t, upserted)
+	require.Equal(t, int64(50000), upserted.TotalBalance)
+	require.Equal(t, int64(0), upserted.TotalLimit)
+	require.Equal(t, 0.0, upserted.UtilPct, "utilization should be 0 when limit is 0")
 }
 
 func TestDebtSummaryProjector_OnDebtUpdated(t *testing.T) {
