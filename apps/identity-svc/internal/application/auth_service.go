@@ -211,37 +211,39 @@ func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotency
 		return nil, err
 	}
 
-	event, err := outbox.NewEvent("user", user.ID, "UserRegistered", domain.UserRegisteredEvent{
-		UserID:    user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		Timestamp: time.Now().Unix(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	otpEvent, err := outbox.NewEvent("user", user.ID, "EmailOtpGenerated", domain.EmailOtpGeneratedEvent{
-		UserID: user.ID,
-		Email:  user.Email,
-		OTP:    otp,
-		TTL:    600,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	var resp *SignupResponse
 	err = s.users.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.users.Save(txCtx, user); err != nil {
 			return err
 		}
+
+		event, err := outbox.NewEvent("user", user.ID, "UserRegistered", domain.UserRegisteredEvent{
+			UserID:    user.ID,
+			Email:     user.Email,
+			Name:      user.Name,
+			Timestamp: time.Now().Unix(),
+		})
+		if err != nil {
+			return err
+		}
+
+		otpEvent, err := outbox.NewEvent("user", user.ID, "EmailOtpGenerated", domain.EmailOtpGeneratedEvent{
+			UserID: user.ID,
+			Email:  user.Email,
+			OTP:    otp,
+			TTL:    600,
+		})
+		if err != nil {
+			return err
+		}
+
 		if err := s.outbox.Save(txCtx, nil, event); err != nil {
 			return err
 		}
 		if err := s.outbox.Save(txCtx, nil, otpEvent); err != nil {
 			return err
 		}
+
 		resp = &SignupResponse{
 			ID:     user.ID,
 			Email:  user.Email,
@@ -399,8 +401,15 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req ForgotPasswordRequ
 		return err
 	}
 
+	var attempts int
+	rateLimitKey := "forgotpw:" + req.Email
+	if found, _ := s.cache.Get(ctx, rateLimitKey, &attempts); found && attempts >= 3 {
+		return nil
+	}
+
 	user, err := s.users.FindByEmail(ctx, req.Email)
 	if err != nil {
+		_ = s.cache.Set(ctx, rateLimitKey, attempts+1, 15*time.Minute)
 		return nil
 	}
 
@@ -419,6 +428,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req ForgotPasswordRequ
 		_ = s.outbox.Save(ctx, nil, event)
 	}
 
+	_ = s.cache.Set(ctx, rateLimitKey, attempts+1, 15*time.Minute)
 	return nil
 }
 

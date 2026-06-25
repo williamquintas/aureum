@@ -182,6 +182,38 @@ type mockFlag struct{}
 
 func (m *mockFlag) IsEnabled(_ context.Context, _ string) bool { return true }
 
+type mockCache struct {
+	getFunc      func(ctx context.Context, key string, dest interface{}) (bool, error)
+	setFunc      func(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+	getOrSetFunc func(ctx context.Context, key string, ttl time.Duration, fn func() (interface{}, error), dest interface{}) error
+}
+
+func (m *mockCache) Get(ctx context.Context, key string, dest interface{}) (bool, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, key, dest)
+	}
+	return false, nil
+}
+
+func (m *mockCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	if m.setFunc != nil {
+		return m.setFunc(ctx, key, value, ttl)
+	}
+	return nil
+}
+
+func (m *mockCache) GetOrSet(ctx context.Context, key string, ttl time.Duration, fn func() (interface{}, error), dest interface{}) error {
+	if m.getOrSetFunc != nil {
+		return m.getOrSetFunc(ctx, key, ttl, fn, dest)
+	}
+	_, err := fn()
+	return err
+}
+
+func newMockCache() *mockCache {
+	return &mockCache{}
+}
+
 func newTestSvc(
 	users domain.UserRepository,
 	kc KeycloakClient,
@@ -189,6 +221,9 @@ func newTestSvc(
 	idem *idempotency.Store,
 	cache Cache,
 ) *AuthService {
+	if cache == nil {
+		cache = newMockCache()
+	}
 	return NewAuthService(users, kc, ob, idem, cache, newMockBlacklist(),
 		&mockTokenValidator{}, &mockTOTPStore{}, &mockEmailOTPStore{},
 		&mockSessionClient{}, &mockFlag{}, testJWTSecret)
