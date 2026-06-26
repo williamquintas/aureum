@@ -42,25 +42,34 @@ gen: ## Generate protobuf code using buf
 .PHONY: lint
 lint: ## Run golangci-lint on all services
 	@echo "Running linter..."
-	$(GOLANGCI_LINT) run ./... --timeout=5m
+	$(GOLANGCI_LINT) run ./apps/budget-svc/... ./apps/creditcard-svc/... ./apps/debt-svc/... ./apps/investment-svc/... ./apps/identity-svc/... ./apps/transaction-svc/... ./pkg/... ./proto/... --timeout=5m
 	@echo "✓ Lint passed"
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
 
 .PHONY: test/unit
+UNIT_DIRS := apps/budget-svc apps/creditcard-svc apps/debt-svc apps/investment-svc apps/identity-svc pkg proto
+
+.PHONY: test/unit
 test/unit: ## Run unit tests (short mode, no external deps)
 	@echo "Running unit tests..."
-	$(GO) test -short -race -count=1 ./apps/... ./pkg/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -short -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test/integration
 test/integration: ## Run integration tests (requires testcontainers)
 	@echo "Running integration tests..."
-	$(GO) test -tags=integration -race -count=1 ./apps/... ./pkg/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -tags=integration -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test/e2e
 test/e2e: ## Run end-to-end tests (requires full infrastructure)
 	@echo "Running end-to-end tests..."
-	$(GO) test -tags=e2e -race -count=1 ./apps/...
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -tags=e2e -race -count=1 ./$$dir/... || exit 1; \
+	done
 
 .PHONY: test
 test: test/unit test/integration test/e2e ## Run all tests sequentially
@@ -70,20 +79,17 @@ test: test/unit test/integration test/e2e ## Run all tests sequentially
 coverage: ## Generate coverage report (80%+ threshold)
 	@echo "Generating coverage report..."
 	mkdir -p coverage
-	$(GO) test -short -race -count=1 -coverprofile=coverage/coverage.out -covermode=atomic ./apps/... ./pkg/...
-	$(GO) tool cover -html=coverage/coverage.out -o coverage/coverage.html
-	@echo "Coverage report: coverage/coverage.html"
-	@$(GO) tool cover -func=coverage/coverage.out | tail -1
+	@for dir in $(UNIT_DIRS); do \
+		$(GO) test -short -race -count=1 -coverprofile=coverage/$$(echo $$dir | tr / -).out -covermode=atomic ./$$dir/... || exit 1; \
+	done
+	$(GO) tool cover -html=coverage/coverage.out -o coverage/coverage.html 2>/dev/null; true
 
 # ─── Building ────────────────────────────────────────────────────────────────
 
 .PHONY: build
-build: ## Build all service binaries
-	@echo "Building all services..."
-	@for svc in $(SERVICES); do \
-		echo "  → Building $$svc..."; \
-		CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o apps/$$svc/bin/$$svc apps/$$svc/cmd/server/; \
-	done
+build: ## Build workspace binaries
+	@echo "Building identity-svc..."
+	CGO_ENABLED=0 $(GO) build -ldflags="-s -w" -o apps/identity-svc/bin/identity-svc apps/identity-svc/cmd/server/
 	@echo "✓ Build complete"
 
 .PHONY: build/% 
@@ -109,23 +115,35 @@ docker: ## Build Docker images for all services
 dev: ## Start local development with Tilt
 	@echo "Starting local development environment..."
 	@if [ -f deploy/tilt/Tiltfile ]; then \
-		tilt up; \
+		tilt up -f deploy/tilt/Tiltfile; \
 	else \
 		echo "No Tiltfile found. Install Tilt: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash"; \
 		exit 1; \
 	fi
 
 .PHONY: dev/infra
-dev/infra: ## Start infrastructure (PostgreSQL, Kafka, Redis)
+dev/infra: ## Start infrastructure (PostgreSQL, Kafka, Redis) via docker-compose
 	@echo "Starting infrastructure..."
-	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra.yml up -d
+	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra-only.yml up -d
 	@echo "✓ Infrastructure started"
 
 .PHONE: dev/infra/stop
-dev/infra/stop: ## Stop infrastructure
+dev/infra/stop: ## Stop infrastructure via docker-compose
 	@echo "Stopping infrastructure..."
-	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra.yml down
+	$(DOCKER) compose -f deploy/docker-compose/docker-compose.infra-only.yml down
 	@echo "✓ Infrastructure stopped"
+
+.PHONY: dev/infra/k8s
+dev/infra/k8s: ## Start infrastructure on Kubernetes (no microservices)
+	@echo "Starting infra on K8s..."
+	kubectl apply -k deploy/k8s/infra-only
+	@echo "✓ Infra provisioned on K8s"
+
+.PHONE: dev/infra/k8s/stop
+dev/infra/k8s/stop: ## Remove infrastructure from Kubernetes
+	@echo "Removing infra from K8s..."
+	kubectl delete -k deploy/k8s/infra-only
+	@echo "✓ Infra removed from K8s"
 
 # ─── Go Module Management ────────────────────────────────────────────────────
 

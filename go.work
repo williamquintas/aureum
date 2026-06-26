@@ -1,0 +1,14 @@
+go 1.25.0
+
+use (
+	./apps/budget-svc
+	./apps/creditcard-svc
+	./apps/debt-svc
+	./apps/graphql-bff
+	./apps/identity-svc
+	./apps/investment-svc
+	./apps/report-svc
+	./apps/transaction-svc
+	./pkg
+	./proto
+)

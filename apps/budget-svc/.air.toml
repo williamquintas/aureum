@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "tmp/server"
+  cmd = "GOMAXPROCS=2 go build -p 2 -o tmp/server ./cmd/server"
+  delay = 1000
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["tmp", "bin", "vendor", ".git"]
+
+[log]
+  time = true
+
+[color]
+  build = "yellow"
+  running = "green"

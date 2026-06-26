@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: investment-svc
+  namespace: default
+  labels:
+    app: investment-svc
+spec:
+  selector:
+    app: investment-svc
+  ports:
+    - name: grpc
+      port: 50058
+      targetPort: 50058
+      protocol: TCP
+    - name: metrics
+      port: 9099
+      targetPort: 9099
+      protocol: TCP
+  type: ClusterIP

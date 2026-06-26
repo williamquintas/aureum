@@ -1,28 +1,20 @@
-# golangci-lint configuration
-# https://golangci-lint.run/usage/configuration/
-
 version: "2"
 run:
   timeout: 5m
   modules-download-mode: readonly
-  issues-exit-code: 1
-
 output:
   formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-
+    text:
+      path: stdout
+      colors: true
 linters:
+  default: none
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
-    - gofmt
-    - goimports
     - gosec
     - prealloc
     - unconvert
@@ -32,62 +24,65 @@ linters:
     - noctx
     - sqlclosecheck
     - wastedassign
-    - exportloopref
     - goconst
     - gocritic
     - godot
     - lll
-  disable:
-    - depguard
-
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/aureum
-  lll:
-    line-length: 120
-  godot:
-    scope: declarations
-  gosec:
-    excludes:
-      - G107
-      - G404
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-      - name: blank-imports
-      - name: context-as-argument
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unreachable-code
-      - name: redefines-builtin-id
-
+  settings:
+    lll:
+      line-length: 120
+    godot:
+      scope: declarations
+    gosec:
+      excludes:
+        - G107
+        - G404
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: redefines-builtin-id
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: github.com/aureum
 issues:
-  exclude-use-default: false
+  exit-code: 1
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-use-default: false
   exclude-rules:
     - path: _test\.go
       linters:
-        - lll
         - gosec
-        - errcheck
+        - noctx
+        - bodyclose
+        - lll
+        - unused
     - path: cmd/
       linters:
         - lll

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: debt-svc
+  namespace: default
+  labels:
+    app: debt-svc
+spec:
+  selector:
+    app: debt-svc
+  ports:
+    - name: grpc
+      port: 50057
+      targetPort: 50057
+      protocol: TCP
+    - name: metrics
+      port: 9098
+      targetPort: 9098
+      protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,171 @@
+syntax = "proto3";
+
+package investment.investmentv1;
+
+option go_package = "github.com/aureum/proto/gen/investment/investmentv1;investmentv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service InvestmentService {
+  rpc CreateInvestment(CreateInvestmentRequest) returns (Investment);
+  rpc GetInvestment(GetInvestmentRequest) returns (Investment);
+  rpc UpdateInvestment(UpdateInvestmentRequest) returns (Investment);
+  rpc DeleteInvestment(DeleteInvestmentRequest) returns (google.protobuf.Empty);
+  rpc ListInvestments(ListInvestmentsRequest) returns (ListInvestmentsResponse);
+
+  rpc RecordTransaction(RecordTransactionRequest) returns (InvestmentTransaction);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+
+  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (PortfolioSummary);
+}
+
+enum AssetType {
+  ASSET_TYPE_UNSPECIFIED = 0;
+  STOCK = 1;
+  ETF = 2;
+  REAL_ESTATE_FUND = 3;
+  TREASURY = 4;
+  CDB = 5;
+  LCI = 6;
+  LCA = 7;
+  CRYPTO = 8;
+  PENSION = 9;
+  FUND = 10;
+  DOLLAR = 11;
+  GOLD = 12;
+  OTHER_ASSET = 13;
+}
+
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  BUY = 1;
+  SELL = 2;
+  DIVIDEND = 3;
+  JCP = 4;
+  AMORTIZATION = 5;
+}
+
+enum InvestmentStatus {
+  INVESTMENT_STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+  SOLD = 2;
+  CANCELLED = 3;
+}
+
+message Investment {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string ticker = 4;
+  AssetType asset_type = 5;
+  int64 quantity = 6;
+  int64 average_price = 7;        // in cents per unit
+  int64 total_invested = 8;       // in cents
+  InvestmentStatus status = 9;
+  string broker = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp deleted_at = 13;
+}
+
+message CreateInvestmentRequest {
+  string name = 1;
+  string ticker = 2;
+  AssetType asset_type = 3;
+  int64 quantity = 4;
+  int64 average_price = 5;
+  string broker = 6;
+  InvestmentStatus status = 7;
+  string idempotency_key = 8;
+}
+
+message GetInvestmentRequest {
+  string id = 1;
+}
+
+message UpdateInvestmentRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string ticker = 3;
+  optional AssetType asset_type = 4;
+  optional int64 quantity = 5;
+  optional int64 average_price = 6;
+  optional InvestmentStatus status = 7;
+  optional string broker = 8;
+  string idempotency_key = 9;
+}
+
+message DeleteInvestmentRequest {
+  string id = 1;
+}
+
+message ListInvestmentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  optional AssetType type_filter = 3;
+  optional InvestmentStatus status_filter = 4;
+}
+
+message ListInvestmentsResponse {
+  repeated Investment investments = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message InvestmentTransaction {
+  string id = 1;
+  string investment_id = 2;
+  string user_id = 3;
+  TransactionType transaction_type = 4;
+  int64 quantity = 5;
+  int64 unit_price = 6;           // in cents per unit
+  int64 total_amount = 7;         // in cents
+  string transaction_date = 8;    // YYYY-MM-DD
+  string notes = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message RecordTransactionRequest {
+  string investment_id = 1;
+  TransactionType transaction_type = 2;
+  int64 quantity = 3;
+  int64 unit_price = 4;
+  string transaction_date = 5;
+  string notes = 6;
+  string idempotency_key = 7;
+}
+
+message ListTransactionsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string investment_id = 3;
+  optional TransactionType type_filter = 4;
+  optional string date_from = 5;
+  optional string date_to = 6;
+}
+
+message ListTransactionsResponse {
+  repeated InvestmentTransaction transactions = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message PortfolioSummary {
+  int64 total_invested = 1;
+  int64 current_value = 2;
+  int64 total_return = 3;
+  double return_percentage = 4;
+  int32 active_investments = 5;
+  repeated AssetAllocation allocation = 6;
+}
+
+message AssetAllocation {
+  AssetType asset_type = 1;
+  int64 invested = 2;
+  int64 current_value = 3;
+  double percentage = 4;
+}
+
+message GetPortfolioSummaryRequest {
+}

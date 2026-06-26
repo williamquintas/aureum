@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: budget-svc
+  namespace: default
+  labels:
+    app: budget-svc
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: budget-svc
+  template:
+    metadata:
+      labels:
+        app: budget-svc
+    spec:
+      containers:
+        - name: budget-svc
+          image: aureum/budget-svc:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50055
+              name: grpc
+              protocol: TCP
+            - containerPort: 9096
+              name: metrics
+              protocol: TCP
+          env:
+            - name: GRPC_PORT
+              value: "50055"
+            - name: METRICS_PORT
+              value: "9096"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: budget-db
+                  key: write-dsn
+            - name: REDIS_URL
+              value: "redis:6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: budget-svc
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9096
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9096
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

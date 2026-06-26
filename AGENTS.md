@@ -11,7 +11,7 @@
 - Outbox Pattern: all domain events go through transactional outbox → Kafka
 - Idempotency: all mutations require Idempotency-Key header
 - Circuit Breaker: all gRPC client calls wrapped with gobreaker
-- Feature Flags: all new features behind OpenFeature flags
+- Feature Flags: all new features behind Unleash flags
 - Cache: all read queries consider Redis cache first
 
 ## Commands
@@ -104,7 +104,7 @@ apps/{service}/
 | Auth        | Keycloak JWT middleware       |
 | Idempotency | Idempotency-Key header + Redis|
 | Cache       | Cache-first (Redis)           |
-| Feature Flag| OpenFeature                   |
+| Feature Flag| Unleash                   |
 | Events      | Outbox → Kafka                |
 | Circuit Brkr| gobreaker                     |
 | Observability| OpenTelemetry metrics/tracing|
@@ -132,6 +132,7 @@ When modifying services, document the impact:
 - `.github/workflows/` — CI/CD workflows
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+This feature implements a transactions service and GraphQL BFF.
+Read the plan at: specs/001-transactions-service/plan.md
+Key docs: data-model.md, research.md, quickstart.md, contracts/
 <!-- SPECKIT END -->

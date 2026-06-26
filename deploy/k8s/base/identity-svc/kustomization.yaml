@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: identity-svc-config
+    literals:
+      - cache_ttl=5m
+      - idempotency_ttl=24h
+      - rate_limit_per_ip=5
+      - rate_limit_window=15m

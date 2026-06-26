@@ -1,0 +1,220 @@
+version: "3.8"
+
+networks:
+  aureum-net:
+    name: aureum-net
+    driver: bridge
+
+volumes:
+  postgres-data:
+  keycloak-db-data:
+  redis-data:
+  redpanda-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aureum-postgres
+    environment:
+      POSTGRES_DB: aureum
+      POSTGRES_USER: aureum
+      POSTGRES_PASSWORD: aureum_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-unleash-db.sql:/docker-entrypoint-initdb.d/init-unleash-db.sql:ro
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aureum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: aureum-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: aureum-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: aureum-redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --advertise-schema-registry-addr
+      - internal://redpanda:8081,external://localhost:18081
+      - --rpc-addr
+      - redpanda:33145
+      - --advertise-rpc-addr
+      - redpanda:33145
+      - --mode
+      - dev-container
+      - --set
+      - redpanda.auto_create_topics_enabled=true
+    ports:
+      - "9092:9092"
+      - "19092:19092"
+      - "8082:8082"
+      - "18082:18082"
+      - "8081:8081"
+      - "18081:18081"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health", "--exit-when-ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: aureum-keycloak
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-db
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_dev
+      KC_HOSTNAME: localhost
+      KC_HTTP_PORT: 8080
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../keycloak/aureum-realm.json:/opt/keycloak/data/import/aureum-realm.json:ro
+    command: ["start-dev", "--import-realm"]
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  unleash:
+    image: unleashorg/unleash-server:latest
+    container_name: aureum-unleash
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://aureum:aureum_dev@postgres:5432/unleash?sslmode=disable
+      PORT: "4242"
+      UNLEASH_URL: http://localhost:4242
+      INIT_ADMIN_API_TOKENS: "*:*.unleash-admin-token"
+      LOG_LEVEL: info
+    ports:
+      - "4242:4242"
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4242/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  transaction-svc:
+    image: aureum/transaction-svc:dev
+    container_name: aureum-transaction-svc
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      GRPC_PORT: "50054"
+      METRICS_PORT: "9094"
+      DATABASE_URL: postgres://aureum:aureum_dev@postgres:5432/transaction_write?sslmode=disable
+      REDIS_URL: redis:6379
+      KAFKA_BROKERS: redpanda:9092
+      JWT_SECRET: dev-jwt-secret-change-in-production
+    ports:
+      - "50054:50054"
+      - "9094:9094"
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aureum -d transaction_write"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  graphql-bff:
+    image: aureum/graphql-bff:dev
+    container_name: aureum-graphql-bff
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8082"
+      METRICS_PORT: "9095"
+      TRANSACTION_SVC: transaction-svc:50054
+      IDENTITY_SVC: localhost:9090
+      PLAYGROUND_ENABLED: "true"
+    ports:
+      - "8082:8082"
+      - "9095:9095"
+    networks:
+      - aureum-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9095/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

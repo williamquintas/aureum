@@ -1,0 +1,8 @@
+version: v1
+name: github.com/aureum/proto
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT

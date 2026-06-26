@@ -1,0 +1,308 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: transaction-svc
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: graphql-bff
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: GRPC_PORT
+            value: "50054"
+          - name: METRICS_PORT
+            value: "9094"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: transaction-db
+                key: write-dsn
+          - name: REDIS_URL
+            value: "redis:6379"
+          - name: KAFKA_BROKERS
+            value: "redpanda:9092"
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: transaction-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: transaction-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: PORT
+            value: "8082"
+          - name: METRICS_PORT
+            value: "9095"
+          - name: TRANSACTION_SVC
+            value: "transaction-svc:50054"
+          - name: IDENTITY_SVC
+            value: "identity-svc:9090"
+          - name: PLAYGROUND_ENABLED
+            value: "true"
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: graphql-bff
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: identity-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: identity-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: transaction-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: graphql-bff
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: budget-svc
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: creditcard-svc
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: debt-svc
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: investment-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: GRPC_PORT
+            value: "50055"
+          - name: METRICS_PORT
+            value: "9096"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: budget-db
+                key: write-dsn
+          - name: REDIS_URL
+            value: "redis:6379"
+          - name: KAFKA_BROKERS
+            value: "redpanda:9092"
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: budget-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: budget-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: GRPC_PORT
+            value: "50056"
+          - name: METRICS_PORT
+            value: "9097"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: creditcard-db
+                key: write-dsn
+          - name: REDIS_URL
+            value: "redis:6379"
+          - name: KAFKA_BROKERS
+            value: "redpanda:9092"
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: creditcard-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: creditcard-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: GRPC_PORT
+            value: "50057"
+          - name: METRICS_PORT
+            value: "9098"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: debt-db
+                key: write-dsn
+          - name: REDIS_URL
+            value: "redis:6379"
+          - name: KAFKA_BROKERS
+            value: "redpanda:9092"
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: debt-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: debt-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: GRPC_PORT
+            value: "50058"
+          - name: METRICS_PORT
+            value: "9099"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: investment-db
+                key: write-dsn
+          - name: REDIS_URL
+            value: "redis:6379"
+          - name: KAFKA_BROKERS
+            value: "redpanda:9092"
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: investment-svc
+                key: jwt-secret
+          - name: LOG_LEVEL
+            value: debug
+    target:
+      kind: Deployment
+      name: investment-svc
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: report-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: budget-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: creditcard-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: debt-svc
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    target:
+      kind: Deployment
+      name: investment-svc

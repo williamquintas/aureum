@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: creditcard-svc
+  namespace: default
+  labels:
+    app: creditcard-svc
+spec:
+  selector:
+    app: creditcard-svc
+  ports:
+    - name: grpc
+      port: 50056
+      targetPort: 50056
+      protocol: TCP
+    - name: metrics
+      port: 9097
+      targetPort: 9097
+      protocol: TCP
+  type: ClusterIP

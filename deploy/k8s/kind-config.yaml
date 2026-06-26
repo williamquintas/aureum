@@ -1,0 +1,40 @@
+# Kind cluster config for Aureum
+#
+# Docker resource requirements (minimum):
+#   --memory=8GB   (recommended: 12GB for all services + infra)
+#   --cpus=4       (recommended: 6)
+#
+# Usage:
+#   kind create cluster --config deploy/k8s/kind-config.yaml
+#   kind delete cluster --name aureum
+
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+name: aureum
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30000
+        hostPort: 30000
+        listenAddress: 127.0.0.1
+      - containerPort: 30001
+        hostPort: 30001
+        listenAddress: 127.0.0.1
+      - containerPort: 30002
+        hostPort: 30002
+        listenAddress: 127.0.0.1
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            system-reserved: cpu=500m,memory=512Mi
+            kube-reserved: cpu=1,memory=1Gi
+            eviction-hard: memory.available<256Mi
+    extraMounts:
+      # PostgreSQL data persists on host across cluster restarts
+      - hostPath: /mnt/d/dev/repos/aureum/data/postgres
+        containerPath: /var/lib/postgresql/data
+      # Redpanda data persists on host across cluster restarts
+      - hostPath: /mnt/d/dev/repos/aureum/data/redpanda
+        containerPath: /var/lib/redpanda/data
