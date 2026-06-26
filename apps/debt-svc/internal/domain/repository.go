@@ -18,3 +18,8 @@ type PaymentRepository interface {
 	CountByDebt(ctx context.Context, debtID string, filter PaymentFilter) (int, error)
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
+
+type AmortizationRepository interface {
+	Save(ctx context.Context, schedule *AmortizationSchedule) error
+	DeleteByDebt(ctx context.Context, debtID string) error
+}

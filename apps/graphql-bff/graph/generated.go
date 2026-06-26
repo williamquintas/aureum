@@ -30,11 +30,13 @@ func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
 	Query() QueryResolver
 }
 
 type DirectiveRoot struct {
-	Auth func(ctx context.Context, obj any, next graphql.Resolver, role string) (res any, err error)
+	Auth        func(ctx context.Context, obj any, next graphql.Resolver, role string) (res any, err error)
+	FeatureFlag func(ctx context.Context, obj any, next graphql.Resolver, name string) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -301,6 +303,18 @@ type ComplexityRoot struct {
 		Node   func(childComplexity int) int
 	}
 
+	Mutation struct {
+		CreateFixedExpense    func(childComplexity int, input model.CreateFixedExpenseInput, idempotencyKey string) int
+		CreateIncome          func(childComplexity int, input model.CreateIncomeInput, idempotencyKey string) int
+		CreateVariableExpense func(childComplexity int, input model.CreateVariableExpenseInput, idempotencyKey string) int
+		DeleteFixedExpense    func(childComplexity int, id string) int
+		DeleteIncome          func(childComplexity int, id string) int
+		DeleteVariableExpense func(childComplexity int, id string) int
+		UpdateFixedExpense    func(childComplexity int, id string, input model.UpdateFixedExpenseInput, idempotencyKey string) int
+		UpdateIncome          func(childComplexity int, id string, input model.UpdateIncomeInput, idempotencyKey string) int
+		UpdateVariableExpense func(childComplexity int, id string, input model.UpdateVariableExpenseInput, idempotencyKey string) int
+	}
+
 	PageInfo struct {
 		EndCursor       func(childComplexity int) int
 		HasNextPage     func(childComplexity int) int
@@ -408,6 +422,17 @@ type ComplexityRoot struct {
 	}
 }
 
+type MutationResolver interface {
+	CreateIncome(ctx context.Context, input model.CreateIncomeInput, idempotencyKey string) (*model.Income, error)
+	UpdateIncome(ctx context.Context, id string, input model.UpdateIncomeInput, idempotencyKey string) (*model.Income, error)
+	DeleteIncome(ctx context.Context, id string) (bool, error)
+	CreateFixedExpense(ctx context.Context, input model.CreateFixedExpenseInput, idempotencyKey string) (*model.FixedExpense, error)
+	UpdateFixedExpense(ctx context.Context, id string, input model.UpdateFixedExpenseInput, idempotencyKey string) (*model.FixedExpense, error)
+	DeleteFixedExpense(ctx context.Context, id string) (bool, error)
+	CreateVariableExpense(ctx context.Context, input model.CreateVariableExpenseInput, idempotencyKey string) (*model.VariableExpense, error)
+	UpdateVariableExpense(ctx context.Context, id string, input model.UpdateVariableExpenseInput, idempotencyKey string) (*model.VariableExpense, error)
+	DeleteVariableExpense(ctx context.Context, id string) (bool, error)
+}
 type QueryResolver interface {
 	Income(ctx context.Context, id string) (*model.Income, error)
 	FixedExpense(ctx context.Context, id string) (*model.FixedExpense, error)
@@ -1499,6 +1524,106 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.InvoiceTransactionEdge.Node(childComplexity), true
 
+	case "Mutation.createFixedExpense":
+		if e.ComplexityRoot.Mutation.CreateFixedExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createFixedExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateFixedExpense(childComplexity, args["input"].(model.CreateFixedExpenseInput), args["idempotencyKey"].(string)), true
+	case "Mutation.createIncome":
+		if e.ComplexityRoot.Mutation.CreateIncome == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createIncome_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateIncome(childComplexity, args["input"].(model.CreateIncomeInput), args["idempotencyKey"].(string)), true
+	case "Mutation.createVariableExpense":
+		if e.ComplexityRoot.Mutation.CreateVariableExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createVariableExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateVariableExpense(childComplexity, args["input"].(model.CreateVariableExpenseInput), args["idempotencyKey"].(string)), true
+	case "Mutation.deleteFixedExpense":
+		if e.ComplexityRoot.Mutation.DeleteFixedExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteFixedExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteFixedExpense(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteIncome":
+		if e.ComplexityRoot.Mutation.DeleteIncome == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteIncome_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteIncome(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteVariableExpense":
+		if e.ComplexityRoot.Mutation.DeleteVariableExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteVariableExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteVariableExpense(childComplexity, args["id"].(string)), true
+	case "Mutation.updateFixedExpense":
+		if e.ComplexityRoot.Mutation.UpdateFixedExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateFixedExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateFixedExpense(childComplexity, args["id"].(string), args["input"].(model.UpdateFixedExpenseInput), args["idempotencyKey"].(string)), true
+	case "Mutation.updateIncome":
+		if e.ComplexityRoot.Mutation.UpdateIncome == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateIncome_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateIncome(childComplexity, args["id"].(string), args["input"].(model.UpdateIncomeInput), args["idempotencyKey"].(string)), true
+	case "Mutation.updateVariableExpense":
+		if e.ComplexityRoot.Mutation.UpdateVariableExpense == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateVariableExpense_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateVariableExpense(childComplexity, args["id"].(string), args["input"].(model.UpdateVariableExpenseInput), args["idempotencyKey"].(string)), true
+
 	case "PageInfo.endCursor":
 		if e.ComplexityRoot.PageInfo.EndCursor == nil {
 			break
@@ -2044,7 +2169,14 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputCreateFixedExpenseInput,
+		ec.unmarshalInputCreateIncomeInput,
+		ec.unmarshalInputCreateVariableExpenseInput,
+		ec.unmarshalInputUpdateFixedExpenseInput,
+		ec.unmarshalInputUpdateIncomeInput,
+		ec.unmarshalInputUpdateVariableExpenseInput,
+	)
 	first := true
 
 	switch opCtx.Operation.Operation {
@@ -2077,6 +2209,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, opCtx.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -2936,6 +3083,218 @@ func (ec *executionContext) dir_auth_args(ctx context.Context, rawArgs map[strin
 		return nil, err
 	}
 	args["role"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) dir_featureFlag_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createFixedExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateFixedExpenseInput, error) {
+			return ec.unmarshalNCreateFixedExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateFixedExpenseInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createIncome_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateIncomeInput, error) {
+			return ec.unmarshalNCreateIncomeInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateIncomeInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createVariableExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateVariableExpenseInput, error) {
+			return ec.unmarshalNCreateVariableExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateVariableExpenseInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteFixedExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteIncome_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteVariableExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateFixedExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateFixedExpenseInput, error) {
+			return ec.unmarshalNUpdateFixedExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateFixedExpenseInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateIncome_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateIncomeInput, error) {
+			return ec.unmarshalNUpdateIncomeInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateIncomeInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateVariableExpense_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateVariableExpenseInput, error) {
+			return ec.unmarshalNUpdateVariableExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateVariableExpenseInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "idempotencyKey",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["idempotencyKey"] = arg2
 	return args, nil
 }
 
@@ -7834,6 +8193,672 @@ func (ec *executionContext) fieldContext_InvoiceTransactionEdge_cursor(_ context
 	return graphql.NewScalarFieldContext("InvoiceTransactionEdge", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Mutation_createIncome(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createIncome(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateIncome(ctx, fc.Args["input"].(model.CreateIncomeInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.Income
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.Income
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.Income
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.Income
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Income) graphql.Marshaler {
+			return ec.marshalNIncome2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncome(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createIncome(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Income(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createIncome_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateIncome(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateIncome(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateIncome(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateIncomeInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.Income
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.Income
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.Income
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.Income
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Income) graphql.Marshaler {
+			return ec.marshalNIncome2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncome(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateIncome(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Income(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateIncome_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteIncome(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteIncome(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteIncome(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteIncome(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteIncome_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createFixedExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createFixedExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateFixedExpense(ctx, fc.Args["input"].(model.CreateFixedExpenseInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FixedExpense) graphql.Marshaler {
+			return ec.marshalNFixedExpense2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐFixedExpense(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createFixedExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FixedExpense(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createFixedExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateFixedExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateFixedExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateFixedExpense(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateFixedExpenseInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.FixedExpense
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FixedExpense) graphql.Marshaler {
+			return ec.marshalNFixedExpense2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐFixedExpense(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateFixedExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FixedExpense(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateFixedExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteFixedExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteFixedExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteFixedExpense(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteFixedExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteFixedExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createVariableExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createVariableExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateVariableExpense(ctx, fc.Args["input"].(model.CreateVariableExpenseInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.VariableExpense) graphql.Marshaler {
+			return ec.marshalNVariableExpense2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐVariableExpense(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createVariableExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VariableExpense(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createVariableExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateVariableExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateVariableExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateVariableExpense(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateVariableExpenseInput), fc.Args["idempotencyKey"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal *model.VariableExpense
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.VariableExpense) graphql.Marshaler {
+			return ec.marshalNVariableExpense2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐVariableExpense(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateVariableExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VariableExpense(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateVariableExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteVariableExpense(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteVariableExpense(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteVariableExpense(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNString2string(ctx, "user")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0, role)
+			}
+			directive2 := func(ctx context.Context) (any, error) {
+				name, err := ec.unmarshalNString2string(ctx, "bff-mutations-enabled")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.FeatureFlag == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive featureFlag is not implemented")
+				}
+				return ec.Directives.FeatureFlag(ctx, nil, directive1, name)
+			}
+
+			next = directive2
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteVariableExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteVariableExpense_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PageInfo_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -11533,6 +12558,410 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputCreateFixedExpenseInput(ctx context.Context, obj any) (model.CreateFixedExpenseInput, error) {
+	var it model.CreateFixedExpenseInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "category", "dayOfMonth", "paymentMethod", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "dayOfMonth":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dayOfMonth"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DayOfMonth = data
+		case "paymentMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentMethod"))
+			data, err := ec.unmarshalNPaymentMethod2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentMethod = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateIncomeInput(ctx context.Context, obj any) (model.CreateIncomeInput, error) {
+	var it model.CreateIncomeInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "source", "incomeType", "receivedDate", "receivedAmount", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		case "incomeType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("incomeType"))
+			data, err := ec.unmarshalNIncomeType2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncomeType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IncomeType = data
+		case "receivedDate":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("receivedDate"))
+			data, err := ec.unmarshalNDate2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReceivedDate = data
+		case "receivedAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("receivedAmount"))
+			data, err := ec.unmarshalNCents2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReceivedAmount = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateVariableExpenseInput(ctx context.Context, obj any) (model.CreateVariableExpenseInput, error) {
+	var it model.CreateVariableExpenseInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "destination", "category", "expenseType", "paymentMethod", "paymentDate", "paidAmount", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "destination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("destination"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Destination = data
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "expenseType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expenseType"))
+			data, err := ec.unmarshalNExpenseType2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐExpenseType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpenseType = data
+		case "paymentMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentMethod"))
+			data, err := ec.unmarshalNPaymentMethod2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentMethod = data
+		case "paymentDate":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentDate"))
+			data, err := ec.unmarshalNDate2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentDate = data
+		case "paidAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paidAmount"))
+			data, err := ec.unmarshalNCents2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaidAmount = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateFixedExpenseInput(ctx context.Context, obj any) (model.UpdateFixedExpenseInput, error) {
+	var it model.UpdateFixedExpenseInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "category", "dayOfMonth", "paymentMethod", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "dayOfMonth":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dayOfMonth"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DayOfMonth = data
+		case "paymentMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentMethod"))
+			data, err := ec.unmarshalOPaymentMethod2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentMethod = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateIncomeInput(ctx context.Context, obj any) (model.UpdateIncomeInput, error) {
+	var it model.UpdateIncomeInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "source", "incomeType", "receivedDate", "receivedAmount", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		case "incomeType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("incomeType"))
+			data, err := ec.unmarshalOIncomeType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncomeType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IncomeType = data
+		case "receivedDate":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("receivedDate"))
+			data, err := ec.unmarshalODate2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReceivedDate = data
+		case "receivedAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("receivedAmount"))
+			data, err := ec.unmarshalOCents2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReceivedAmount = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateVariableExpenseInput(ctx context.Context, obj any) (model.UpdateVariableExpenseInput, error) {
+	var it model.UpdateVariableExpenseInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"description", "destination", "category", "expenseType", "paymentMethod", "paymentDate", "paidAmount", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "destination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("destination"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Destination = data
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "expenseType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expenseType"))
+			data, err := ec.unmarshalOExpenseType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐExpenseType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpenseType = data
+		case "paymentMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentMethod"))
+			data, err := ec.unmarshalOPaymentMethod2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentMethod = data
+		case "paymentDate":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentDate"))
+			data, err := ec.unmarshalODate2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentDate = data
+		case "paidAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paidAmount"))
+			data, err := ec.unmarshalOCents2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaidAmount = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOTransactionStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐTransactionStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -13479,6 +14908,111 @@ func (ec *executionContext) _InvoiceTransactionEdge(ctx context.Context, sel ast
 	return out
 }
 
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createIncome":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createIncome(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateIncome":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateIncome(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteIncome":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteIncome(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createFixedExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createFixedExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateFixedExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateFixedExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteFixedExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteFixedExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createVariableExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createVariableExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateVariableExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateVariableExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteVariableExpense":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteVariableExpense(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var pageInfoImplementors = []string{"PageInfo"}
 
 func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
@@ -15201,6 +16735,21 @@ func (ec *executionContext) marshalNCents2int64(ctx context.Context, sel ast.Sel
 	return res
 }
 
+func (ec *executionContext) unmarshalNCreateFixedExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateFixedExpenseInput(ctx context.Context, v any) (model.CreateFixedExpenseInput, error) {
+	res, err := ec.unmarshalInputCreateFixedExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNCreateIncomeInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateIncomeInput(ctx context.Context, v any) (model.CreateIncomeInput, error) {
+	res, err := ec.unmarshalInputCreateIncomeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNCreateVariableExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreateVariableExpenseInput(ctx context.Context, v any) (model.CreateVariableExpenseInput, error) {
+	res, err := ec.unmarshalInputCreateVariableExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNCreditCard2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐCreditCard(ctx context.Context, sel ast.SelectionSet, v model.CreditCard) graphql.Marshaler {
 	return ec._CreditCard(ctx, sel, &v)
 }
@@ -15935,6 +17484,21 @@ func (ec *executionContext) marshalNTransactionStatus2githubᚗcomᚋaureumᚋgr
 	return v
 }
 
+func (ec *executionContext) unmarshalNUpdateFixedExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateFixedExpenseInput(ctx context.Context, v any) (model.UpdateFixedExpenseInput, error) {
+	res, err := ec.unmarshalInputUpdateFixedExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateIncomeInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateIncomeInput(ctx context.Context, v any) (model.UpdateIncomeInput, error) {
+	res, err := ec.unmarshalInputUpdateIncomeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateVariableExpenseInput2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUpdateVariableExpenseInput(ctx context.Context, v any) (model.UpdateVariableExpenseInput, error) {
+	res, err := ec.unmarshalInputUpdateVariableExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNUserProfile2githubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐUserProfile(ctx context.Context, sel ast.SelectionSet, v model.UserProfile) graphql.Marshaler {
 	return ec._UserProfile(ctx, sel, &v)
 }
@@ -16206,6 +17770,24 @@ func (ec *executionContext) marshalOBudgetStatus2ᚖgithubᚗcomᚋaureumᚋgrap
 	return v
 }
 
+func (ec *executionContext) unmarshalOCents2ᚖint64(ctx context.Context, v any) (*int64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt64(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCents2ᚖint64(ctx context.Context, sel ast.SelectionSet, v *int64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt64(*v)
+	return res
+}
+
 func (ec *executionContext) unmarshalODate2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
 	if v == nil {
 		return nil, nil
@@ -16250,6 +17832,38 @@ func (ec *executionContext) unmarshalODebtType2ᚖgithubᚗcomᚋaureumᚋgraphq
 }
 
 func (ec *executionContext) marshalODebtType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐDebtType(ctx context.Context, sel ast.SelectionSet, v *model.DebtType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOExpenseType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐExpenseType(ctx context.Context, v any) (*model.ExpenseType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ExpenseType)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOExpenseType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐExpenseType(ctx context.Context, sel ast.SelectionSet, v *model.ExpenseType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOIncomeType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncomeType(ctx context.Context, v any) (*model.IncomeType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.IncomeType)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOIncomeType2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐIncomeType(ctx context.Context, sel ast.SelectionSet, v *model.IncomeType) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -16316,6 +17930,22 @@ func (ec *executionContext) unmarshalOInvoiceStatus2ᚖgithubᚗcomᚋaureumᚋg
 }
 
 func (ec *executionContext) marshalOInvoiceStatus2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐInvoiceStatus(ctx context.Context, sel ast.SelectionSet, v *model.InvoiceStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOPaymentMethod2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx context.Context, v any) (*model.PaymentMethod, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.PaymentMethod)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOPaymentMethod2ᚖgithubᚗcomᚋaureumᚋgraphqlᚑbffᚋgraphᚋmodelᚐPaymentMethod(ctx context.Context, sel ast.SelectionSet, v *model.PaymentMethod) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

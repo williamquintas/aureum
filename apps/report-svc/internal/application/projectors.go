@@ -205,6 +205,44 @@ func (p *DebtSummaryProjector) Handle(ctx context.Context, event domain.ReportEv
 	return p.repo.Upsert(ctx, existing)
 }
 
+type CreditCardSummaryProjector struct {
+	repo domain.CreditCardSummaryRepository
+}
+
+func NewCreditCardSummaryProjector(repo domain.CreditCardSummaryRepository) *CreditCardSummaryProjector {
+	return &CreditCardSummaryProjector{repo: repo}
+}
+
+func (p *CreditCardSummaryProjector) Handle(ctx context.Context, event domain.ReportEvent) error {
+	cardName, _ := event.Payload["card_name"].(string)
+	statementDate, _ := event.Payload["statement_date"].(string)
+	balance := extractInt64(event.Payload, "balance")
+	limit := extractInt64(event.Payload, "limit")
+
+	var utilPct float64
+	if limit > 0 {
+		utilPct = float64(balance) * 100 / float64(limit)
+	}
+
+	switch event.Type {
+	case domain.EventCreditCardDeleted:
+		balance = 0
+		limit = 0
+		utilPct = 0
+	}
+
+	summary := &domain.CreditCardSummary{
+		UserID:        event.UserID,
+		CardName:      cardName,
+		StatementDate: statementDate,
+		TotalBalance:  balance,
+		TotalLimit:    limit,
+		UtilPct:       utilPct,
+	}
+
+	return p.repo.Upsert(ctx, summary)
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 func extractYearMonth(event domain.ReportEvent) (int, int) {

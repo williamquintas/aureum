@@ -20,12 +20,18 @@ type OutboxRepository interface {
 }
 
 type Service struct {
-	debts       domain.DebtRepository
-	payments    domain.PaymentRepository
-	outbox      OutboxRepository
-	idempotency IdempotencyStore
-	cache       Cache
-	featureFlag FeatureFlag
+	debts        domain.DebtRepository
+	payments     domain.PaymentRepository
+	amortization domain.AmortizationRepository
+	outbox       OutboxRepository
+	idempotency  IdempotencyStore
+	cache        Cache
+	featureFlag  FeatureFlag
+}
+
+func (s *Service) WithAmortization(repo domain.AmortizationRepository) *Service {
+	s.amortization = repo
+	return s
 }
 
 func NewService(
@@ -48,6 +54,26 @@ func NewService(
 
 func cacheKey(prefix, id string) string {
 	return "debt:" + prefix + ":" + id
+}
+
+func (s *Service) saveAmortization(ctx context.Context, debt *domain.Debt) error {
+	if s.amortization == nil {
+		return nil
+	}
+	if debt.InterestRate <= 0 || debt.ExpectedEndDate == "" || debt.StartDate == "" {
+		return nil
+	}
+	months, err := domain.MonthsBetween(debt.StartDate, debt.ExpectedEndDate)
+	if err != nil {
+		return err
+	}
+	monthlyPayment := domain.ComputeMonthlyPayment(debt.TotalAmount, debt.InterestRate, months)
+	if monthlyPayment <= 0 {
+		return nil
+	}
+	schedule := domain.CalculateAmortization(debt.TotalAmount, debt.InterestRate, monthlyPayment, months)
+	schedule.DebtID = debt.ID
+	return s.amortization.Save(ctx, &schedule)
 }
 
 // ── Debt CRUD ────────────────────────────────────────────────────────────────
@@ -94,6 +120,9 @@ func (s *Service) CreateDebt(ctx context.Context, req CreateDebtRequest) (*DebtR
 	err = s.debts.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.debts.Save(txCtx, debt); err != nil {
 			return fmt.Errorf("save debt: %w", err)
+		}
+		if err := s.saveAmortization(txCtx, debt); err != nil {
+			return fmt.Errorf("save amortization: %w", err)
 		}
 		event := domain.DebtEvent{
 			Type:     domain.EventDebtCreated,
@@ -208,6 +237,15 @@ func (s *Service) UpdateDebt(ctx context.Context, req UpdateDebtRequest) (*DebtR
 	err = s.debts.WithTx(ctx, func(txCtx context.Context) error {
 		if err := s.debts.Update(txCtx, debt); err != nil {
 			return err
+		}
+		if s.amortization != nil {
+			if debt.InterestRate > 0 && debt.ExpectedEndDate != "" && debt.StartDate != "" {
+				if err := s.saveAmortization(txCtx, debt); err != nil {
+					return fmt.Errorf("save amortization: %w", err)
+				}
+			} else {
+				_ = s.amortization.DeleteByDebt(txCtx, debt.ID)
+			}
 		}
 		event := domain.DebtEvent{
 			Type:     domain.EventDebtUpdated,

@@ -1,6 +1,9 @@
 package domain
 
-import "math"
+import (
+	"math"
+	"time"
+)
 
 type AmortizationEntry struct {
 	Month        int32
@@ -82,4 +85,37 @@ func CalculateAmortization(totalAmount, interestRate, monthlyPayment int64, mont
 		TotalPaid:       totalPaid,
 		Entries:         entries,
 	}
+}
+
+// ComputeMonthlyPayment computes the fixed monthly payment using the amortization formula.
+// totalAmount in cents, annualRate is % * 100 (e.g. 750 = 7.50%), months is loan term.
+func ComputeMonthlyPayment(totalAmount int64, annualRate int64, months int) int64 {
+	if months <= 0 {
+		return 0
+	}
+	if annualRate == 0 {
+		return totalAmount / int64(months)
+	}
+	monthlyRate := float64(annualRate) / 10000.0 / 12.0
+	pow := math.Pow(1+monthlyRate, float64(months))
+	payment := float64(totalAmount) * (monthlyRate * pow) / (pow - 1)
+	return int64(math.Round(payment))
+}
+
+// MonthsBetween computes the number of calendar months between two dates.
+// Returns at least 1 month.
+func MonthsBetween(start, end string) (int, error) {
+	startTime, err := time.Parse("2006-01-02", start)
+	if err != nil {
+		return 0, ErrInvalidDate
+	}
+	endTime, err := time.Parse("2006-01-02", end)
+	if err != nil {
+		return 0, ErrInvalidDate
+	}
+	months := (endTime.Year()-startTime.Year())*12 + int(endTime.Month()-startTime.Month())
+	if months < 1 {
+		months = 1
+	}
+	return months, nil
 }

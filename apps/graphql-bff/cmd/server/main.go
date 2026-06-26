@@ -172,7 +172,8 @@ func run() int {
 			graph.Config{
 				Resolvers: resolver,
 				Directives: graph.DirectiveRoot{
-					Auth: graph.AuthDirective(resolver.IDClient),
+					Auth:        graph.AuthDirective(resolver.IDClient),
+					FeatureFlag: graph.FeatureFlagDirective(resolver.FFClient),
 				},
 			},
 		),

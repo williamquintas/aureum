@@ -124,6 +124,18 @@ func (m *mockCache) Delete(ctx context.Context, key string) error {
 	return args.Error(0)
 }
 
+type mockAmortizationRepo struct{ mock.Mock }
+
+func (m *mockAmortizationRepo) Save(ctx context.Context, schedule *domain.AmortizationSchedule) error {
+	args := m.Called(ctx, schedule)
+	return args.Error(0)
+}
+
+func (m *mockAmortizationRepo) DeleteByDebt(ctx context.Context, debtID string) error {
+	args := m.Called(ctx, debtID)
+	return args.Error(0)
+}
+
 type mockFeatureFlag struct{ mock.Mock }
 
 func (m *mockFeatureFlag) IsEnabled(ctx context.Context, flag string) bool {
@@ -260,6 +272,86 @@ func TestService_CreateDebt(t *testing.T) {
 		})
 		require.Error(t, err)
 		debtRepo.AssertExpectations(t)
+	})
+}
+
+func TestService_CreateDebt_Amortization(t *testing.T) {
+	t.Run("saves amortization when interest rate and dates set", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		amortRepo := new(mockAmortizationRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
+
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		amortRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.AmortizationSchedule")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+
+		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
+			UserID:          "user-1",
+			Name:            "Car Loan",
+			DebtType:        "car_loan",
+			TotalAmount:     12000000,
+			InterestRate:    750,
+			StartDate:       "2024-01-01",
+			ExpectedEndDate: "2027-01-01",
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.NotEmpty(t, resp.ID)
+		amortRepo.AssertExpectations(t)
+		debtRepo.AssertExpectations(t)
+		outbox.AssertExpectations(t)
+	})
+
+	t.Run("skips amortization when interest rate is zero", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		amortRepo := new(mockAmortizationRepo)
+		outbox := new(mockOutbox)
+		svc := newService(debtRepo, nil, outbox, nil, nil, nil).WithAmortization(amortRepo)
+
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+
+		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
+			UserID:          "user-1",
+			Name:            "Car Loan",
+			DebtType:        "car_loan",
+			TotalAmount:     12000000,
+			InterestRate:    0,
+			StartDate:       "2024-01-01",
+			ExpectedEndDate: "2027-01-01",
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		amortRepo.AssertNotCalled(t, "Save")
+	})
+
+	t.Run("skips amortization when amortization repo not set", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		outbox := new(mockOutbox)
+		svc := newService(debtRepo, nil, outbox, nil, nil, nil)
+
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+
+		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
+			UserID:          "user-1",
+			Name:            "Car Loan",
+			DebtType:        "car_loan",
+			TotalAmount:     12000000,
+			InterestRate:    750,
+			StartDate:       "2024-01-01",
+			ExpectedEndDate: "2027-01-01",
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
 	})
 }
 
@@ -455,6 +547,139 @@ func TestService_UpdateDebt(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrStatusTransition)
+	})
+}
+
+func TestService_UpdateDebt_Amortization(t *testing.T) {
+	t.Run("recomputes amortization when total amount changes", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		amortRepo := new(mockAmortizationRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
+
+		existing := &domain.Debt{
+			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+			RemainingAmount: 10000000, InterestRate: 750,
+			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			Status: domain.DebtStatusActive,
+		}
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		amortRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.AmortizationSchedule")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
+
+		newAmount := int64(15000000)
+		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
+			ID:          "debt-1",
+			UserID:      "user-1",
+			TotalAmount: &newAmount,
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.Equal(t, int64(15000000), resp.TotalAmount)
+		amortRepo.AssertExpectations(t)
+	})
+
+	t.Run("recomputes amortization when interest rate changes", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		amortRepo := new(mockAmortizationRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
+
+		existing := &domain.Debt{
+			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+			RemainingAmount: 10000000, InterestRate: 750,
+			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			Status: domain.DebtStatusActive,
+		}
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		amortRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.AmortizationSchedule")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
+
+		newRate := int64(1000)
+		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
+			ID:           "debt-1",
+			UserID:       "user-1",
+			InterestRate: &newRate,
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.Equal(t, int64(1000), resp.InterestRate)
+		amortRepo.AssertExpectations(t)
+	})
+
+	t.Run("deletes amortization when interest set to zero", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		amortRepo := new(mockAmortizationRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
+
+		existing := &domain.Debt{
+			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+			RemainingAmount: 10000000, InterestRate: 750,
+			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			Status: domain.DebtStatusActive,
+		}
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		amortRepo.On("DeleteByDebt", mock.Anything, "debt-1").Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
+
+		newRate := int64(0)
+		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
+			ID:           "debt-1",
+			UserID:       "user-1",
+			InterestRate: &newRate,
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		amortRepo.AssertExpectations(t)
+	})
+
+	t.Run("skips amortization when repo not set", func(t *testing.T) {
+		debtRepo := new(mockDebtRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(debtRepo, nil, outbox, nil, cache, nil)
+
+		existing := &domain.Debt{
+			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
+			RemainingAmount: 10000000, InterestRate: 750,
+			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			Status: domain.DebtStatusActive,
+		}
+		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
+		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
+		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
+		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
+
+		newAmount := int64(15000000)
+		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
+			ID:          "debt-1",
+			UserID:      "user-1",
+			TotalAmount: &newAmount,
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, resp)
 	})
 }
 
