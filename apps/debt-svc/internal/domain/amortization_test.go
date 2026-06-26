@@ -5,6 +5,7 @@ import (
 
 	"github.com/aureum/debt-svc/internal/domain"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCalculateAmortization(t *testing.T) {
@@ -139,5 +140,61 @@ func TestCalculateAmortization(t *testing.T) {
 					"month %d: final balance should be 0, got %d", last.Month, last.Balance)
 			})
 		}
+	})
+}
+
+func TestComputeMonthlyPayment(t *testing.T) {
+	t.Run("zero interest", func(t *testing.T) {
+		payment := domain.ComputeMonthlyPayment(12000000, 0, 12)
+		assert.Equal(t, int64(1000000), payment)
+	})
+
+	t.Run("with interest", func(t *testing.T) {
+		payment := domain.ComputeMonthlyPayment(10000000, 750, 12)
+		assert.Greater(t, payment, int64(833334))
+		assert.Less(t, payment, int64(900000))
+	})
+
+	t.Run("single month", func(t *testing.T) {
+		payment := domain.ComputeMonthlyPayment(500000, 1000, 1)
+		assert.Greater(t, payment, int64(500000))
+		assert.Less(t, payment, int64(510000))
+	})
+
+	t.Run("zero months returns zero", func(t *testing.T) {
+		payment := domain.ComputeMonthlyPayment(100000, 500, 0)
+		assert.Equal(t, int64(0), payment)
+	})
+}
+
+func TestMonthsBetween(t *testing.T) {
+	t.Run("same month", func(t *testing.T) {
+		n, err := domain.MonthsBetween("2024-01-01", "2024-01-31")
+		require.NoError(t, err)
+		assert.Equal(t, 1, n)
+	})
+
+	t.Run("exactly one year", func(t *testing.T) {
+		n, err := domain.MonthsBetween("2024-01-01", "2025-01-01")
+		require.NoError(t, err)
+		assert.Equal(t, 12, n)
+	})
+
+	t.Run("multiple years", func(t *testing.T) {
+		n, err := domain.MonthsBetween("2024-01-01", "2029-01-01")
+		require.NoError(t, err)
+		assert.Equal(t, 60, n)
+	})
+
+	t.Run("invalid start date", func(t *testing.T) {
+		_, err := domain.MonthsBetween("not-a-date", "2024-02-01")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, domain.ErrInvalidDate)
+	})
+
+	t.Run("invalid end date", func(t *testing.T) {
+		_, err := domain.MonthsBetween("2024-01-01", "not-a-date")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, domain.ErrInvalidDate)
 	})
 }

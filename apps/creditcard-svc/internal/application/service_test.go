@@ -1078,6 +1078,148 @@ func TestService_AddTransaction(t *testing.T) {
 		})
 		assert.ErrorIs(t, err, domain.ErrCreditExceeded)
 	})
+
+	t.Run("closed invoice rollover to existing next invoice", func(t *testing.T) {
+		ccRepo := new(mockCreditCardRepo)
+		invRepo := new(mockInvoiceRepo)
+		txRepo := new(mockTransactionRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(t, ccRepo, invRepo, txRepo, outbox,
+			new(mockIdempotency), cache, new(mockFeatureFlag))
+
+		closedInv := makeInvoice()
+		closedInv.Status = domain.InvoiceStatusClosed
+		nextInv := &domain.Invoice{
+			ID:             "inv-2",
+			CreditCardID:   "card-1",
+			UserID:         "user-1",
+			ReferenceMonth: "2026-07",
+			Status:         domain.InvoiceStatusOpen,
+			ClosingDate:    "2026-07-15",
+			DueDate:        "2026-08-10",
+		}
+
+		invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(closedInv, nil)
+		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(makeCard("user-1"), nil)
+		invRepo.On("FindByMonth", mock.Anything, "card-1", "2026-07").Return(nextInv, nil)
+		txRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+			fn := args.Get(1).(func(context.Context) error)
+			_ = fn(context.Background())
+		})
+		txRepo.On("Save", mock.Anything, mock.Anything).Return(nil)
+		invRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
+		cache.On("Delete", mock.Anything, "cc:invoice:user-1:inv-2").Return(nil)
+
+		resp, err := svc.AddTransaction(context.Background(), application.AddTransactionRequest{
+			InvoiceID:       "inv-1",
+			UserID:          "user-1",
+			Description:     "Rollover Purchase",
+			Amount:          3000,
+			Category:        "food",
+			TransactionDate: "2026-06-20",
+			Installments:    1,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.Equal(t, "inv-2", resp.InvoiceID)
+	})
+
+	t.Run("closed invoice rollover creates new invoice", func(t *testing.T) {
+		ccRepo := new(mockCreditCardRepo)
+		invRepo := new(mockInvoiceRepo)
+		txRepo := new(mockTransactionRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(t, ccRepo, invRepo, txRepo, outbox,
+			new(mockIdempotency), cache, new(mockFeatureFlag))
+
+		closedInv := makeInvoice()
+		closedInv.Status = domain.InvoiceStatusClosed
+
+		invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(closedInv, nil)
+		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(makeCard("user-1"), nil)
+		invRepo.On("FindByMonth", mock.Anything, "card-1", "2026-07").Return(nil, domain.ErrNotFound)
+		txRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+			fn := args.Get(1).(func(context.Context) error)
+			_ = fn(context.Background())
+		})
+		txRepo.On("Save", mock.Anything, mock.Anything).Return(nil)
+		invRepo.On("Save", mock.Anything, mock.Anything).Return(nil)
+		invRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
+		cache.On("Delete", mock.Anything, mock.Anything).Return(nil)
+
+		resp, err := svc.AddTransaction(context.Background(), application.AddTransactionRequest{
+			InvoiceID:       "inv-1",
+			UserID:          "user-1",
+			Description:     "New Invoice Purchase",
+			Amount:          5000,
+			Category:        "transport",
+			TransactionDate: "2026-06-20",
+			Installments:    1,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.NotEqual(t, "inv-1", resp.InvoiceID)
+	})
+
+	t.Run("open invoice still works normally", func(t *testing.T) {
+		ccRepo := new(mockCreditCardRepo)
+		invRepo := new(mockInvoiceRepo)
+		txRepo := new(mockTransactionRepo)
+		outbox := new(mockOutbox)
+		cache := new(mockCache)
+		svc := newService(t, ccRepo, invRepo, txRepo,
+			outbox, new(mockIdempotency), cache, new(mockFeatureFlag))
+
+		inv := makeInvoice()
+		invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(inv, nil)
+		txRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+			fn := args.Get(1).(func(context.Context) error)
+			_ = fn(context.Background())
+		})
+		txRepo.On("Save", mock.Anything, mock.Anything).Return(nil)
+		invRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(makeCard("user-1"), nil)
+		ccRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		outbox.On("Save", mock.Anything, mock.Anything).Return(nil)
+		cache.On("Delete", mock.Anything, "cc:invoice:user-1:inv-1").Return(nil)
+
+		_, err := svc.AddTransaction(context.Background(), application.AddTransactionRequest{
+			InvoiceID:       "inv-1",
+			UserID:          "user-1",
+			Description:     "Normal",
+			Amount:          1000,
+			TransactionDate: "2026-06-15",
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("closed invoice with no next card returns error", func(t *testing.T) {
+		ccRepo := new(mockCreditCardRepo)
+		invRepo := new(mockInvoiceRepo)
+		svc := newService(t, ccRepo, invRepo, new(mockTransactionRepo),
+			new(mockOutbox), new(mockIdempotency), new(mockCache), new(mockFeatureFlag))
+
+		closedInv := makeInvoice()
+		closedInv.Status = domain.InvoiceStatusClosed
+
+		invRepo.On("FindByID", mock.Anything, "inv-1", "user-1").Return(closedInv, nil)
+		ccRepo.On("FindByID", mock.Anything, "card-1", "user-1").Return(nil, domain.ErrNotFound)
+
+		_, err := svc.AddTransaction(context.Background(), application.AddTransactionRequest{
+			InvoiceID:       "inv-1",
+			UserID:          "user-1",
+			Description:     "Fail",
+			Amount:          1000,
+			TransactionDate: "2026-06-15",
+		})
+		assert.Error(t, err)
+	})
 }
 
 // ── ListTransactions ───────────────────────────────────────────────────────────

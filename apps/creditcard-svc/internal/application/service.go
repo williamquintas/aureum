@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -453,6 +454,43 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 		return nil, err
 	}
 
+	// ── Closed invoice rollover ──
+	isNewInvoice := false
+	if invoice.Status != domain.InvoiceStatusOpen {
+		card, err := s.creditCards.FindByID(ctx, invoice.CreditCardID, req.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("find card for rollover: %w", err)
+		}
+
+		nextMonth := nextReferenceMonth(invoice.ReferenceMonth)
+		nextInv, err := s.invoices.FindByMonth(ctx, invoice.CreditCardID, nextMonth)
+		if err != nil && !errors.Is(err, domain.ErrNotFound) {
+			return nil, err
+		}
+
+		if nextInv == nil {
+			closingDate := fmt.Sprintf("%s-%02d", nextMonth, card.ClosingDay)
+			dueMonth := nextReferenceMonth(nextMonth)
+			dueDate := fmt.Sprintf("%s-%02d", dueMonth, card.DueDay)
+
+			nextInv, err = domain.NewInvoice(domain.CreateInvoiceInput{
+				CreditCardID:   invoice.CreditCardID,
+				UserID:         req.UserID,
+				ReferenceMonth: nextMonth,
+				ClosingDate:    closingDate,
+				DueDate:        dueDate,
+			})
+			if err != nil {
+				return nil, err
+			}
+			nextInv.ID = uuid.New().String()
+			isNewInvoice = true
+		}
+
+		req.InvoiceID = nextInv.ID
+		invoice = nextInv
+	}
+
 	tx, err := domain.NewInvoiceTransaction(domain.CreateTransactionInput{
 		InvoiceID:       req.InvoiceID,
 		UserID:          req.UserID,
@@ -487,8 +525,14 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 		if err := s.transactions.Save(txCtx, tx); err != nil {
 			return fmt.Errorf("save transaction: %w", err)
 		}
-		if err := s.invoices.Update(txCtx, invoice); err != nil {
-			return fmt.Errorf("update invoice: %w", err)
+		if isNewInvoice {
+			if err := s.invoices.Save(txCtx, invoice); err != nil {
+				return fmt.Errorf("save rollover invoice: %w", err)
+			}
+		} else {
+			if err := s.invoices.Update(txCtx, invoice); err != nil {
+				return fmt.Errorf("update invoice: %w", err)
+			}
 		}
 		if err := s.creditCards.Update(txCtx, card); err != nil {
 			return fmt.Errorf("update card credit: %w", err)
@@ -593,4 +637,13 @@ func toTransactionResponse(t *domain.InvoiceTransaction) *TransactionResponse {
 		Installments:    t.Installments,
 		CreatedAt:       t.CreatedAt.Unix(),
 	}
+}
+
+// nextReferenceMonth returns the next month in YYYY-MM format.
+func nextReferenceMonth(current string) string {
+	t, err := time.Parse("2006-01", current)
+	if err != nil {
+		return current
+	}
+	return t.AddDate(0, 1, 0).Format("2006-01")
 }
