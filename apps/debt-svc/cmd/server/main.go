@@ -74,14 +74,14 @@ func run() int {
 		log.Error("failed to connect to redis", "error", err)
 		return 1
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	redisCache, err := cache.NewRedisCache(cfg.RedisURL, "", 0)
 	if err != nil {
 		log.Error("failed to create redis cache", "error", err)
 		return 1
 	}
-	defer redisCache.Close()
+	defer func() { _ = redisCache.Close() }()
 
 	outboxRepo := persistence.NewOutboxRepository(dbPool)
 	debtRepo := persistence.NewDebtRepo(dbPool)
@@ -143,11 +143,11 @@ func run() int {
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "# metrics endpoint ready")
+		_, _ = fmt.Fprintln(w, "# metrics endpoint ready")
 	}))
 	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "ok")
+		_, _ = fmt.Fprintln(w, "ok")
 	})
 
 	metricsServer := &http.Server{
@@ -253,10 +253,6 @@ type unleashFlag struct {
 func (u *unleashFlag) IsEnabled(ctx context.Context, flag string) bool {
 	return u.client.IsEnabled(ctx, flag)
 }
-
-type ctxKey string
-
-const userIDKey ctxKey = "user_id"
 
 func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	userID := extractUserIDFromToken(ctx)

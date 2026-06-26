@@ -139,7 +139,6 @@ func (r *TransactionRepo) CountByInvestment(ctx context.Context, investmentID, u
 	if filter.DateTo != nil {
 		query += fmt.Sprintf(" AND transaction_date<=$%d", argIdx)
 		args = append(args, *filter.DateTo)
-		argIdx++
 	}
 
 	var count int

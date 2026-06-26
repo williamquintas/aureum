@@ -193,7 +193,6 @@ func (r *CreditCardRepo) Count(ctx context.Context, userID string, filter domain
 	if filter.ActiveFilter != nil {
 		query += fmt.Sprintf(" AND active=$%d", argIdx)
 		args = append(args, *filter.ActiveFilter)
-		argIdx++
 	}
 
 	var count int

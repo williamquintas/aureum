@@ -15,12 +15,6 @@ import (
 	"github.com/aureum/investment-svc/internal/domain"
 )
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-func ptr[T any](v T) *T {
-	return &v
-}
-
 // ── Mock: Investment Repository ──────────────────────────────────────────────
 
 type mockInvestmentRepo struct {

@@ -462,7 +462,7 @@ func TestGRPCHandler_GetBudgetSummary_Success(t *testing.T) {
 	assert.Equal(t, summary.TotalSpent, protoResp.TotalSpent)
 	assert.Equal(t, summary.Remaining, protoResp.Remaining)
 	assert.InDelta(t, summary.UsagePercent, protoResp.UsagePercentage, 0.01)
-	assert.Equal(t, int32(summary.CategoryCount), protoResp.CategoryCount)
+	assert.Equal(t, summary.CategoryCount, protoResp.CategoryCount)
 	assert.Len(t, protoResp.Categories, 1)
 	assert.Equal(t, summary.Categories[0].CategoryID, protoResp.Categories[0].CategoryId)
 

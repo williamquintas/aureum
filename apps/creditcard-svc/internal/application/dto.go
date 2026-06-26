@@ -143,18 +143,3 @@ func toDomainCardType(t string) (domain.CardType, error) {
 		return "", domain.ErrInvalidCardType
 	}
 }
-
-func toDomainInvoiceStatus(s string) (domain.InvoiceStatus, error) {
-	switch s {
-	case "open":
-		return domain.InvoiceStatusOpen, nil
-	case "closed":
-		return domain.InvoiceStatusClosed, nil
-	case "paid":
-		return domain.InvoiceStatusPaid, nil
-	case "overdue":
-		return domain.InvoiceStatusOverdue, nil
-	default:
-		return "", domain.ErrInvalidInvoiceStatus
-	}
-}

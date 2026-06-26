@@ -154,7 +154,7 @@ func TestIncome_TransitionStatus(t *testing.T) {
 			err = income.TransitionStatus(tt.to)
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
-				require.Equal(t, TransactionStatus(tt.from), income.Status)
+				require.Equal(t, tt.from, income.Status)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.to, income.Status)

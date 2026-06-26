@@ -177,7 +177,6 @@ func (r *InvestmentRepo) Count(ctx context.Context, userID string, filter domain
 	if filter.StatusFilter != nil {
 		query += fmt.Sprintf(" AND status=$%d", argIdx)
 		args = append(args, string(*filter.StatusFilter))
-		argIdx++
 	}
 
 	var count int
