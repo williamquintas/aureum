@@ -12,18 +12,22 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// IncomeRepo implements the IncomeRepository interface using PostgreSQL.
 type IncomeRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewIncomeRepo creates a new IncomeRepo.
 func NewIncomeRepo(pool *pgxpool.Pool) *IncomeRepo {
 	return &IncomeRepo{pool: pool}
 }
 
+// WithTx executes the given function within a database transaction.
 func (r *IncomeRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new income record.
 func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -43,6 +47,7 @@ func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	return nil
 }
 
+// FindByID retrieves an income record by its ID and user ID.
 func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.Income, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at, deleted_at
@@ -73,6 +78,7 @@ func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.I
 	return &income, nil
 }
 
+// Update modifies an existing income record.
 func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -92,6 +98,7 @@ func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	return nil
 }
 
+// Delete soft-deletes an income record by ID and user ID.
 func (r *IncomeRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -108,6 +115,7 @@ func (r *IncomeRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
+// List returns a paginated list of income records for a user.
 func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.IncomeFilter) ([]*domain.Income, error) {
 	query := `SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at
 			  FROM incomes WHERE user_id=$1 AND deleted_at IS NULL`
@@ -170,6 +178,7 @@ func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.Inco
 	return incomes, nil
 }
 
+// Count returns the total number of income records matching the filter.
 func (r *IncomeRepo) Count(ctx context.Context, userID string, filter domain.IncomeFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM incomes WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

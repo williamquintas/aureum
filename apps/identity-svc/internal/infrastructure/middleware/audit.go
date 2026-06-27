@@ -9,15 +9,18 @@ import (
 	"github.com/aureum/pkg/auth"
 )
 
-type auditLogger struct {
+// AuditLogger is an HTTP middleware that logs audit events for failed requests.
+type AuditLogger struct {
 	pool *pgxpool.Pool
 }
 
-func NewAuditLogger(pool *pgxpool.Pool) *auditLogger {
-	return &auditLogger{pool: pool}
+// NewAuditLogger creates a new audit logger.
+func NewAuditLogger(pool *pgxpool.Pool) *AuditLogger {
+	return &AuditLogger{pool: pool}
 }
 
-func (l *auditLogger) Middleware(next http.Handler) http.Handler {
+// Middleware returns an HTTP handler that logs audit information for each request.
+func (l *AuditLogger) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := auth.GetClaims(r.Context())
 		userID := ""
@@ -36,7 +39,7 @@ func (l *auditLogger) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (l *auditLogger) log(ctx context.Context, userID, method, path, ip, ua string, status int) {
+func (l *AuditLogger) log(ctx context.Context, userID, method, path, ip, ua string, status int) {
 	if l.pool == nil {
 		return
 	}

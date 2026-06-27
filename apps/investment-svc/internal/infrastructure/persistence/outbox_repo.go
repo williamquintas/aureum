@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL repository implementations.
 package persistence
 
 import (
@@ -12,14 +13,17 @@ import (
 	"github.com/aureum/pkg/outbox"
 )
 
+// OutboxRepository implements the outbox event persistence using PostgreSQL.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewOutboxRepository creates a new OutboxRepository.
 func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
+// Save persists an event to the outbox table, handling domain events and raw events.
 func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 	switch e := event.(type) {
 	case outbox.Event:

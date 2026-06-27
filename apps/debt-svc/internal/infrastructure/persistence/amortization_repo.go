@@ -10,14 +10,17 @@ import (
 	"github.com/aureum/debt-svc/internal/domain"
 )
 
+// AmortizationRepo implements domain.AmortizationRepository using PostgreSQL (pgx).
 type AmortizationRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewAmortizationRepo creates a new AmortizationRepo.
 func NewAmortizationRepo(pool *pgxpool.Pool) *AmortizationRepo {
 	return &AmortizationRepo{pool: pool}
 }
 
+// Save inserts or updates an amortization schedule.
 func (r *AmortizationRepo) Save(ctx context.Context, s *domain.AmortizationSchedule) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -50,6 +53,7 @@ func (r *AmortizationRepo) Save(ctx context.Context, s *domain.AmortizationSched
 	return nil
 }
 
+// DeleteByDebt removes the amortization schedule for a given debt.
 func (r *AmortizationRepo) DeleteByDebt(ctx context.Context, debtID string) error {
 	q := getQuerier(ctx)
 	if q == nil {

@@ -12,14 +12,17 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// OutboxRepository implements the outbox event store.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewOutboxRepository creates a new OutboxRepository.
 func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
+// Save persists an outbox event to the database.
 func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 	switch e := event.(type) {
 	case outbox.Event:

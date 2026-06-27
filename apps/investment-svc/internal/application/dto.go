@@ -1,9 +1,11 @@
+// Package application provides application services, DTOs, and use case orchestration.
 package application
 
 import "github.com/aureum/investment-svc/internal/domain"
 
 // ── Investment DTOs ──────────────────────────────────────────────────────────
 
+// CreateInvestmentRequest is the input for creating an investment.
 type CreateInvestmentRequest struct {
 	UserID         string
 	Name           string
@@ -16,6 +18,7 @@ type CreateInvestmentRequest struct {
 	IdempotencyKey string
 }
 
+// CreateInvestmentResponse is the output after creating an investment.
 type CreateInvestmentResponse struct {
 	ID            string
 	UserID        string
@@ -31,6 +34,7 @@ type CreateInvestmentResponse struct {
 	UpdatedAt     int64
 }
 
+// GetInvestmentResponse is the output for investment queries.
 type GetInvestmentResponse struct {
 	ID            string
 	UserID        string
@@ -46,6 +50,7 @@ type GetInvestmentResponse struct {
 	UpdatedAt     int64
 }
 
+// UpdateInvestmentRequest is the input for updating an investment.
 type UpdateInvestmentRequest struct {
 	ID             string
 	UserID         string
@@ -61,6 +66,7 @@ type UpdateInvestmentRequest struct {
 
 // ── Transaction DTOs ─────────────────────────────────────────────────────────
 
+// RecordTransactionRequest is the input for recording a transaction.
 type RecordTransactionRequest struct {
 	UserID          string
 	InvestmentID    string
@@ -72,6 +78,7 @@ type RecordTransactionRequest struct {
 	IdempotencyKey  string
 }
 
+// RecordTransactionResponse is the output after recording a transaction.
 type RecordTransactionResponse struct {
 	ID              string
 	InvestmentID    string
@@ -85,6 +92,7 @@ type RecordTransactionResponse struct {
 	CreatedAt       int64
 }
 
+// GetTransactionResponse is the output for transaction queries.
 type GetTransactionResponse struct {
 	ID              string
 	InvestmentID    string
@@ -100,6 +108,7 @@ type GetTransactionResponse struct {
 
 // ── Portfolio DTOs ───────────────────────────────────────────────────────────
 
+// PortfolioSummaryResponse is the output for portfolio summary queries.
 type PortfolioSummaryResponse struct {
 	TotalInvested     int64
 	CurrentValue      int64
@@ -109,6 +118,7 @@ type PortfolioSummaryResponse struct {
 	Allocation        []AssetAllocationDTO
 }
 
+// AssetAllocationDTO is a DTO for a single asset allocation entry.
 type AssetAllocationDTO struct {
 	AssetType    string
 	Invested     int64

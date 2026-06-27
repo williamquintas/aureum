@@ -1,3 +1,4 @@
+// Package telemetry provides OpenTelemetry metrics, tracing, and HTTP/gRPC middleware.
 package telemetry
 
 import (
@@ -12,9 +13,12 @@ import (
 var (
 	meter = otel.Meter("github.com/aureum/pkg/telemetry")
 
-	RequestsTotal   metric.Int64Counter
+	// RequestsTotal counts the total number of HTTP/gRPC requests.
+	RequestsTotal metric.Int64Counter
+	// RequestDuration measures request latency in milliseconds.
 	RequestDuration metric.Float64Histogram
-	CacheHits       metric.Int64Counter
+	// CacheHits tracks cache hit/miss counts.
+	CacheHits metric.Int64Counter
 )
 
 func init() {
@@ -45,6 +49,7 @@ func init() {
 	}
 }
 
+// RecordRequest records a request metric with operation, status, and duration.
 func RecordRequest(ctx context.Context, operation string, status string, duration time.Duration) {
 	attrs := []attribute.KeyValue{
 		attribute.String("operation", operation),
@@ -56,6 +61,7 @@ func RecordRequest(ctx context.Context, operation string, status string, duratio
 	))
 }
 
+// RecordCacheHit records a cache hit or miss metric.
 func RecordCacheHit(ctx context.Context, cacheName string, hit bool) {
 	attrs := []attribute.KeyValue{
 		attribute.String("cache_name", cacheName),

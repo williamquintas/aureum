@@ -2,6 +2,7 @@ package domain
 
 import "time"
 
+// Payment represents a debt payment entity.
 type Payment struct {
 	ID          string
 	DebtID      string
@@ -12,6 +13,7 @@ type Payment struct {
 	CreatedAt   time.Time
 }
 
+// RegisterPaymentInput contains validated input for registering a payment.
 type RegisterPaymentInput struct {
 	DebtID         string
 	UserID         string
@@ -21,6 +23,7 @@ type RegisterPaymentInput struct {
 	IdempotencyKey string
 }
 
+// PaymentFilter contains filtering and pagination parameters for listing payments.
 type PaymentFilter struct {
 	DebtID   string
 	DateFrom *string
@@ -29,6 +32,7 @@ type PaymentFilter struct {
 	Offset   int
 }
 
+// NewPayment creates a new Payment with validation.
 func NewPayment(input RegisterPaymentInput) (*Payment, error) {
 	if input.DebtID == "" {
 		return nil, ErrMissingField

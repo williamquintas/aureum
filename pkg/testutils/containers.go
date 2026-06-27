@@ -1,3 +1,5 @@
+// Package testutils provides test infrastructure helpers including test containers for
+// PostgreSQL, Redis, Keycloak, and Redpanda, along with test fixtures.
 package testutils
 
 import (
@@ -11,42 +13,51 @@ import (
 
 const testDBName = "test"
 
+// PostgreSQLContainer holds a running PostgreSQL test container and its connection URI.
 type PostgreSQLContainer struct {
 	container testcontainers.Container
 	URI       string
 }
 
+// RedisContainer holds a running Redis test container and its connection URI.
 type RedisContainer struct {
 	container testcontainers.Container
 	URI       string
 }
 
+// KeycloakContainer holds a running Keycloak test container and its connection URI.
 type KeycloakContainer struct {
 	container testcontainers.Container
 	URI       string
 }
 
+// RedpandaContainer holds a running Redpanda test container and its connection URI.
 type RedpandaContainer struct {
 	container testcontainers.Container
 	URI       string
 }
 
+// Close terminates the PostgreSQL test container.
 func (c *PostgreSQLContainer) Close() error {
 	return c.container.Terminate(context.Background())
 }
 
+// Close terminates the Redis test container.
 func (c *RedisContainer) Close() error {
 	return c.container.Terminate(context.Background())
 }
 
+// Close terminates the Keycloak test container.
 func (c *KeycloakContainer) Close() error {
 	return c.container.Terminate(context.Background())
 }
 
+// Close terminates the Redpanda test container.
 func (c *RedpandaContainer) Close() error {
 	return c.container.Terminate(context.Background())
 }
 
+// NewPostgreSQLContainer starts a new PostgreSQL 16 test container.
 func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image: "postgres:16-alpine",
@@ -84,6 +95,7 @@ func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 	return &PostgreSQLContainer{container: container, URI: uri}, nil
 }
 
+// NewRedisContainer starts a new Redis 7 test container.
 func NewRedisContainer(ctx context.Context) (*RedisContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:7-alpine",
@@ -114,6 +126,7 @@ func NewRedisContainer(ctx context.Context) (*RedisContainer, error) {
 	return &RedisContainer{container: container, URI: uri}, nil
 }
 
+// NewKeycloakContainer starts a new Keycloak 25.0 test container.
 func NewKeycloakContainer(ctx context.Context) (*KeycloakContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image: "quay.io/keycloak/keycloak:25.0",
@@ -148,6 +161,7 @@ func NewKeycloakContainer(ctx context.Context) (*KeycloakContainer, error) {
 	return &KeycloakContainer{container: container, URI: uri}, nil
 }
 
+// NewRedpandaContainer starts a new Redpanda v24.1 test container.
 func NewRedpandaContainer(ctx context.Context) (*RedpandaContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "docker.redpanda.com/redpandadata/redpanda:v24.1",

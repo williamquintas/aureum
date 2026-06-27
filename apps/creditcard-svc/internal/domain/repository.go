@@ -2,6 +2,7 @@ package domain
 
 import "context"
 
+// CreditCardRepository defines the persistence contract for credit cards.
 type CreditCardRepository interface {
 	Save(ctx context.Context, card *CreditCard) error
 	FindByID(ctx context.Context, id, userID string) (*CreditCard, error)
@@ -13,12 +14,14 @@ type CreditCardRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// CreditCardFilter contains filtering and pagination parameters for listing credit cards.
 type CreditCardFilter struct {
 	ActiveFilter *bool
 	Limit        int
 	Offset       int
 }
 
+// InvoiceRepository defines the persistence contract for invoices.
 type InvoiceRepository interface {
 	Save(ctx context.Context, invoice *Invoice) error
 	FindByID(ctx context.Context, id, userID string) (*Invoice, error)
@@ -31,6 +34,7 @@ type InvoiceRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// InvoiceFilter contains filtering and pagination parameters for listing invoices.
 type InvoiceFilter struct {
 	CreditCardID *string
 	StatusFilter *InvoiceStatus
@@ -40,6 +44,7 @@ type InvoiceFilter struct {
 	Offset       int
 }
 
+// InvoiceTransactionRepository defines the persistence contract for invoice transactions.
 type InvoiceTransactionRepository interface {
 	Save(ctx context.Context, tx *InvoiceTransaction) error
 	FindByInvoice(ctx context.Context, invoiceID string) ([]*InvoiceTransaction, error)
@@ -48,6 +53,7 @@ type InvoiceTransactionRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// TransactionFilter contains filtering and pagination parameters for listing transactions.
 type TransactionFilter struct {
 	CategoryFilter *string
 	Limit          int

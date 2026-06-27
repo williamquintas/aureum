@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL-based repository implementations.
 package persistence
 
 import (
@@ -12,18 +13,22 @@ import (
 	"github.com/aureum/creditcard-svc/internal/domain"
 )
 
+// InvoiceRepo implements domain.InvoiceRepository using PostgreSQL (pgx).
 type InvoiceRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewInvoiceRepo creates a new InvoiceRepo.
 func NewInvoiceRepo(pool *pgxpool.Pool) *InvoiceRepo {
 	return &InvoiceRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *InvoiceRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save inserts a new invoice record.
 func (r *InvoiceRepo) Save(ctx context.Context, invoice *domain.Invoice) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -42,6 +47,7 @@ func (r *InvoiceRepo) Save(ctx context.Context, invoice *domain.Invoice) error {
 	return nil
 }
 
+// FindByID retrieves an invoice by ID and user ID, excluding soft-deleted records.
 func (r *InvoiceRepo) FindByID(ctx context.Context, id, userID string) (*domain.Invoice, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at, deleted_at
@@ -73,6 +79,7 @@ func (r *InvoiceRepo) FindByID(ctx context.Context, id, userID string) (*domain.
 	return &invoice, nil
 }
 
+// FindByCreditCard retrieves all invoices for a given credit card.
 func (r *InvoiceRepo) FindByCreditCard(ctx context.Context, creditCardID, userID string) ([]*domain.Invoice, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at
@@ -106,6 +113,7 @@ func (r *InvoiceRepo) FindByCreditCard(ctx context.Context, creditCardID, userID
 	return invoices, nil
 }
 
+// FindByMonth retrieves an invoice by credit card ID and reference month.
 func (r *InvoiceRepo) FindByMonth(ctx context.Context, creditCardID, referenceMonth string) (*domain.Invoice, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at, deleted_at
@@ -137,6 +145,7 @@ func (r *InvoiceRepo) FindByMonth(ctx context.Context, creditCardID, referenceMo
 	return &invoice, nil
 }
 
+// Update applies changes to an existing invoice.
 func (r *InvoiceRepo) Update(ctx context.Context, invoice *domain.Invoice) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -154,6 +163,7 @@ func (r *InvoiceRepo) Update(ctx context.Context, invoice *domain.Invoice) error
 	return nil
 }
 
+// Delete performs a soft-delete on an invoice.
 func (r *InvoiceRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -169,6 +179,7 @@ func (r *InvoiceRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
+// List returns invoices filtered by user ID with optional filters, ordered by reference month DESC.
 func (r *InvoiceRepo) List(ctx context.Context, userID string, filter domain.InvoiceFilter) ([]*domain.Invoice, error) {
 	query := `SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at
 			  FROM invoices WHERE user_id=$1 AND deleted_at IS NULL`
@@ -235,6 +246,7 @@ func (r *InvoiceRepo) List(ctx context.Context, userID string, filter domain.Inv
 	return invoices, nil
 }
 
+// Count returns the total number of invoices matching the filter.
 func (r *InvoiceRepo) Count(ctx context.Context, userID string, filter domain.InvoiceFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM invoices WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

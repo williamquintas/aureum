@@ -1,19 +1,29 @@
+// Package domain contains domain entities, value objects, and repository interfaces for debt management.
 package domain
 
 import "time"
 
+// DebtType represents the type of debt.
 type DebtType string
 
 const (
-	DebtTypePersonalLoan   DebtType = "personal_loan"
-	DebtTypeStudentLoan    DebtType = "student_loan"
-	DebtTypeMortgage       DebtType = "mortgage"
-	DebtTypeCarLoan        DebtType = "car_loan"
+	// DebtTypePersonalLoan is a personal loan.
+	DebtTypePersonalLoan DebtType = "personal_loan"
+	// DebtTypeStudentLoan is a student loan.
+	DebtTypeStudentLoan DebtType = "student_loan"
+	// DebtTypeMortgage is a mortgage.
+	DebtTypeMortgage DebtType = "mortgage"
+	// DebtTypeCarLoan is a car loan.
+	DebtTypeCarLoan DebtType = "car_loan"
+	// DebtTypeCreditCardDebt is credit card debt.
 	DebtTypeCreditCardDebt DebtType = "credit_card_debt"
-	DebtTypeMedicalDebt    DebtType = "medical_debt"
-	DebtTypeOther          DebtType = "other"
+	// DebtTypeMedicalDebt is medical debt.
+	DebtTypeMedicalDebt DebtType = "medical_debt"
+	// DebtTypeOther represents other/unknown debt types.
+	DebtTypeOther DebtType = "other"
 )
 
+// ValidDebtTypes returns all valid debt types.
 func ValidDebtTypes() []DebtType {
 	return []DebtType{
 		DebtTypePersonalLoan, DebtTypeStudentLoan, DebtTypeMortgage,
@@ -21,6 +31,7 @@ func ValidDebtTypes() []DebtType {
 	}
 }
 
+// Valid checks if the debt type is a recognized value.
 func (d DebtType) Valid() bool {
 	for _, v := range ValidDebtTypes() {
 		if d == v {
@@ -30,16 +41,23 @@ func (d DebtType) Valid() bool {
 	return false
 }
 
+// DebtStatus represents the lifecycle status of a debt.
 type DebtStatus string
 
 const (
-	DebtStatusActive    DebtStatus = "active"
-	DebtStatusPaused    DebtStatus = "paused"
-	DebtStatusPaidOff   DebtStatus = "paid_off"
+	// DebtStatusActive is the initial active status.
+	DebtStatusActive DebtStatus = "active"
+	// DebtStatusPaused indicates the debt is paused.
+	DebtStatusPaused DebtStatus = "paused"
+	// DebtStatusPaidOff indicates the debt has been fully paid off.
+	DebtStatusPaidOff DebtStatus = "paid_off"
+	// DebtStatusDefaulted indicates the debt is in default.
 	DebtStatusDefaulted DebtStatus = "defaulted"
-	DebtStatusSettled   DebtStatus = "settled"
+	// DebtStatusSettled indicates the debt has been settled.
+	DebtStatusSettled DebtStatus = "settled"
 )
 
+// ValidDebtStatuses returns all valid debt statuses.
 func ValidDebtStatuses() []DebtStatus {
 	return []DebtStatus{
 		DebtStatusActive, DebtStatusPaused, DebtStatusPaidOff,
@@ -47,6 +65,7 @@ func ValidDebtStatuses() []DebtStatus {
 	}
 }
 
+// Valid checks if the debt status is a recognized value.
 func (s DebtStatus) Valid() bool {
 	for _, v := range ValidDebtStatuses() {
 		if s == v {
@@ -56,6 +75,7 @@ func (s DebtStatus) Valid() bool {
 	return false
 }
 
+// Debt represents a debt entity.
 type Debt struct {
 	ID              string
 	UserID          string
@@ -74,6 +94,7 @@ type Debt struct {
 	DeletedAt       *time.Time
 }
 
+// CreateDebtInput contains validated input for creating a new debt.
 type CreateDebtInput struct {
 	UserID          string
 	Name            string
@@ -88,6 +109,7 @@ type CreateDebtInput struct {
 	IdempotencyKey  string
 }
 
+// UpdateDebtInput contains optional fields for updating a debt.
 type UpdateDebtInput struct {
 	ID              string
 	UserID          string
@@ -102,6 +124,7 @@ type UpdateDebtInput struct {
 	IdempotencyKey  string
 }
 
+// NewDebt creates a new Debt with validation.
 func NewDebt(input CreateDebtInput) (*Debt, error) {
 	if input.UserID == "" {
 		return nil, ErrMissingField
@@ -145,6 +168,7 @@ func NewDebt(input CreateDebtInput) (*Debt, error) {
 	}, nil
 }
 
+// ApplyUpdate applies partial updates to a debt.
 func (d *Debt) ApplyUpdate(input UpdateDebtInput) error {
 	if input.UserID != "" && input.UserID != d.UserID {
 		return ErrAccessDenied
@@ -188,6 +212,7 @@ func (d *Debt) ApplyUpdate(input UpdateDebtInput) error {
 	return nil
 }
 
+// TransitionStatus handles status transitions with allowed mappings.
 func (d *Debt) TransitionStatus(newStatus DebtStatus) error {
 	if !newStatus.Valid() {
 		return ErrInvalidStatus
@@ -212,6 +237,7 @@ func (d *Debt) TransitionStatus(newStatus DebtStatus) error {
 	return ErrStatusTransition
 }
 
+// ApplyPayment processes a payment against the debt balance.
 func (d *Debt) ApplyPayment(amount int64) error {
 	if amount <= 0 {
 		return ErrNegativeAmount
@@ -230,6 +256,7 @@ func (d *Debt) ApplyPayment(amount int64) error {
 	return nil
 }
 
+// DebtFilter contains filtering and pagination parameters for listing debts.
 type DebtFilter struct {
 	Status   *DebtStatus
 	DebtType *DebtType

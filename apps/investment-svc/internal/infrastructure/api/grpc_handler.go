@@ -1,3 +1,4 @@
+// Package api provides the gRPC API handler for the investment service.
 package api
 
 import (
@@ -18,17 +19,20 @@ import (
 	investmentv1 "github.com/aureum/proto/gen/investment/investmentv1"
 )
 
+// GRPCHandler implements the gRPC InvestmentService server.
 type GRPCHandler struct {
 	investmentv1.UnimplementedInvestmentServiceServer
 	svc application.InvestmentService
 }
 
+// NewGRPCHandler creates a new gRPC handler with the given application service.
 func NewGRPCHandler(svc application.InvestmentService) *GRPCHandler {
 	return &GRPCHandler{svc: svc}
 }
 
 // ── Investment ──────────────────────────────────────────────────────────────
 
+// CreateInvestment handles the gRPC CreateInvestment request.
 func (h *GRPCHandler) CreateInvestment(ctx context.Context, req *investmentv1.CreateInvestmentRequest) (*investmentv1.Investment, error) {
 	start := time.Now()
 
@@ -52,6 +56,7 @@ func (h *GRPCHandler) CreateInvestment(ctx context.Context, req *investmentv1.Cr
 	return investmentFromCreate(resp), nil
 }
 
+// GetInvestment handles the gRPC GetInvestment request.
 func (h *GRPCHandler) GetInvestment(ctx context.Context, req *investmentv1.GetInvestmentRequest) (*investmentv1.Investment, error) {
 	start := time.Now()
 
@@ -65,6 +70,7 @@ func (h *GRPCHandler) GetInvestment(ctx context.Context, req *investmentv1.GetIn
 	return investmentFromGet(resp), nil
 }
 
+// UpdateInvestment handles the gRPC UpdateInvestment request.
 func (h *GRPCHandler) UpdateInvestment(ctx context.Context, req *investmentv1.UpdateInvestmentRequest) (*investmentv1.Investment, error) {
 	start := time.Now()
 
@@ -107,6 +113,7 @@ func (h *GRPCHandler) UpdateInvestment(ctx context.Context, req *investmentv1.Up
 	return investmentFromGet(resp), nil
 }
 
+// DeleteInvestment handles the gRPC DeleteInvestment request.
 func (h *GRPCHandler) DeleteInvestment(ctx context.Context, req *investmentv1.DeleteInvestmentRequest) (*emptypb.Empty, error) {
 	start := time.Now()
 
@@ -119,6 +126,7 @@ func (h *GRPCHandler) DeleteInvestment(ctx context.Context, req *investmentv1.De
 	return &emptypb.Empty{}, nil
 }
 
+// ListInvestments handles the gRPC ListInvestments request.
 func (h *GRPCHandler) ListInvestments(ctx context.Context, req *investmentv1.ListInvestmentsRequest) (*investmentv1.ListInvestmentsResponse, error) {
 	start := time.Now()
 
@@ -155,6 +163,7 @@ func (h *GRPCHandler) ListInvestments(ctx context.Context, req *investmentv1.Lis
 
 // ── Transaction ─────────────────────────────────────────────────────────────
 
+// RecordTransaction handles the gRPC RecordTransaction request.
 func (h *GRPCHandler) RecordTransaction(ctx context.Context, req *investmentv1.RecordTransactionRequest) (*investmentv1.InvestmentTransaction, error) {
 	start := time.Now()
 
@@ -177,6 +186,7 @@ func (h *GRPCHandler) RecordTransaction(ctx context.Context, req *investmentv1.R
 	return transactionFromRecord(resp), nil
 }
 
+// ListTransactions handles the gRPC ListTransactions request.
 func (h *GRPCHandler) ListTransactions(ctx context.Context, req *investmentv1.ListTransactionsRequest) (*investmentv1.ListTransactionsResponse, error) {
 	start := time.Now()
 
@@ -215,6 +225,7 @@ func (h *GRPCHandler) ListTransactions(ctx context.Context, req *investmentv1.Li
 
 // ── Portfolio ───────────────────────────────────────────────────────────────
 
+// GetPortfolioSummary handles the gRPC GetPortfolioSummary request.
 func (h *GRPCHandler) GetPortfolioSummary(ctx context.Context, _ *investmentv1.GetPortfolioSummaryRequest) (*investmentv1.PortfolioSummary, error) {
 	start := time.Now()
 
@@ -464,6 +475,7 @@ func mustExtractUserID(ctx context.Context) string {
 	return uid
 }
 
+// UserContext embeds the user ID into the context.
 func UserContext(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }

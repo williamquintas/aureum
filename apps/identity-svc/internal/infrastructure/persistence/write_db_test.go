@@ -1,3 +1,4 @@
+// Package persistence_test contains tests for the persistence package.
 package persistence_test
 
 import (

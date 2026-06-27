@@ -2,21 +2,30 @@ package domain
 
 import "time"
 
+// IncomeType categorises the source of an income record.
 type IncomeType string
 
 const (
-	IncomeTypeSalary     IncomeType = "salary"
-	IncomeTypeFreelance  IncomeType = "freelance"
+	// IncomeTypeSalary represents regular employment income.
+	IncomeTypeSalary IncomeType = "salary"
+	// IncomeTypeFreelance represents freelance or contract income.
+	IncomeTypeFreelance IncomeType = "freelance"
+	// IncomeTypeInvestment represents investment returns.
 	IncomeTypeInvestment IncomeType = "investment"
-	IncomeTypeBusiness   IncomeType = "business"
-	IncomeTypeRefund     IncomeType = "refund"
-	IncomeTypeOther      IncomeType = "other"
+	// IncomeTypeBusiness represents business revenue.
+	IncomeTypeBusiness IncomeType = "business"
+	// IncomeTypeRefund represents refunds or reimbursements.
+	IncomeTypeRefund IncomeType = "refund"
+	// IncomeTypeOther represents any other income category.
+	IncomeTypeOther IncomeType = "other"
 )
 
+// ValidIncomeTypes returns all recognised income type values.
 func ValidIncomeTypes() []IncomeType {
 	return []IncomeType{IncomeTypeSalary, IncomeTypeFreelance, IncomeTypeInvestment, IncomeTypeBusiness, IncomeTypeRefund, IncomeTypeOther}
 }
 
+// Income represents a received income record with type, source, and amount.
 type Income struct {
 	ID             string
 	UserID         string
@@ -31,6 +40,7 @@ type Income struct {
 	DeletedAt      *time.Time
 }
 
+// CreateIncomeInput contains the fields required to create a new Income.
 type CreateIncomeInput struct {
 	UserID         string
 	Description    string
@@ -42,6 +52,7 @@ type CreateIncomeInput struct {
 	IdempotencyKey string
 }
 
+// UpdateIncomeInput contains the fields that can be updated on an Income.
 type UpdateIncomeInput struct {
 	ID             string
 	UserID         string
@@ -54,6 +65,7 @@ type UpdateIncomeInput struct {
 	IdempotencyKey string
 }
 
+// NewIncome creates a new Income after validating the input fields.
 func NewIncome(input CreateIncomeInput) (*Income, error) {
 	if input.UserID == "" {
 		return nil, ErrMissingField
@@ -97,6 +109,7 @@ func NewIncome(input CreateIncomeInput) (*Income, error) {
 	}, nil
 }
 
+// ApplyUpdate applies the provided update input to the Income, validating each field.
 func (i *Income) ApplyUpdate(input UpdateIncomeInput) error {
 	if input.UserID != "" && input.UserID != i.UserID {
 		return ErrAccessDenied
@@ -140,6 +153,7 @@ func (i *Income) ApplyUpdate(input UpdateIncomeInput) error {
 	return nil
 }
 
+// TransitionStatus moves the Income to a new status, enforcing valid state transitions.
 func (i *Income) TransitionStatus(newStatus TransactionStatus) error {
 	if !newStatus.Valid() {
 		return ErrInvalidStatus

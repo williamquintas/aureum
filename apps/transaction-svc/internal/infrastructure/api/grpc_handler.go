@@ -1,3 +1,4 @@
+// Package api implements the gRPC transport layer for the transaction service.
 package api
 
 import (
@@ -15,15 +16,18 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// GRPCHandler implements the gRPC TransactionService server.
 type GRPCHandler struct {
 	transactionv1.UnimplementedTransactionServiceServer
 	svc *application.Service
 }
 
+// NewGRPCHandler creates a new gRPC handler with the given application service.
 func NewGRPCHandler(svc *application.Service) *GRPCHandler {
 	return &GRPCHandler{svc: svc}
 }
 
+// CreateIncome handles the gRPC request for creating a new income record.
 func (h *GRPCHandler) CreateIncome(ctx context.Context, req *transactionv1.CreateIncomeRequest) (*transactionv1.Income, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.CreateIncome(ctx, application.CreateIncomeRequest{
@@ -42,6 +46,7 @@ func (h *GRPCHandler) CreateIncome(ctx context.Context, req *transactionv1.Creat
 	return incomeToProto(resp.ID, resp.UserID, resp.Description, resp.Source, resp.IncomeType, resp.ReceivedDate, resp.ReceivedAmount, resp.Status), nil
 }
 
+// GetIncome handles the gRPC request for retrieving an income record.
 func (h *GRPCHandler) GetIncome(ctx context.Context, req *transactionv1.GetIncomeRequest) (*transactionv1.Income, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.GetIncome(ctx, req.Id, userID)
@@ -51,6 +56,7 @@ func (h *GRPCHandler) GetIncome(ctx context.Context, req *transactionv1.GetIncom
 	return incomeToProto(resp.ID, resp.UserID, resp.Description, resp.Source, resp.IncomeType, resp.ReceivedDate, resp.ReceivedAmount, resp.Status), nil
 }
 
+// UpdateIncome handles the gRPC request for updating an income record.
 func (h *GRPCHandler) UpdateIncome(ctx context.Context, req *transactionv1.UpdateIncomeRequest) (*transactionv1.Income, error) {
 	userID := mustExtractUserID(ctx)
 	appReq := application.UpdateIncomeRequest{
@@ -77,6 +83,7 @@ func (h *GRPCHandler) UpdateIncome(ctx context.Context, req *transactionv1.Updat
 	return incomeToProto(resp.ID, resp.UserID, resp.Description, resp.Source, resp.IncomeType, resp.ReceivedDate, resp.ReceivedAmount, resp.Status), nil
 }
 
+// DeleteIncome handles the gRPC request for deleting an income record.
 func (h *GRPCHandler) DeleteIncome(ctx context.Context, req *transactionv1.DeleteIncomeRequest) (*emptypb.Empty, error) {
 	userID := mustExtractUserID(ctx)
 	if err := h.svc.DeleteIncome(ctx, req.Id, userID); err != nil {
@@ -85,6 +92,7 @@ func (h *GRPCHandler) DeleteIncome(ctx context.Context, req *transactionv1.Delet
 	return &emptypb.Empty{}, nil
 }
 
+// ListIncomes handles the gRPC request for listing income records.
 func (h *GRPCHandler) ListIncomes(ctx context.Context, req *transactionv1.ListIncomesRequest) (*transactionv1.ListIncomesResponse, error) {
 	userID := mustExtractUserID(ctx)
 	filter := domain.IncomeFilter{
@@ -114,6 +122,7 @@ func (h *GRPCHandler) ListIncomes(ctx context.Context, req *transactionv1.ListIn
 	return &transactionv1.ListIncomesResponse{Incomes: protoItems, TotalCount: int32(total)}, nil
 }
 
+// CreateFixedExpense handles the gRPC request for creating a fixed expense.
 func (h *GRPCHandler) CreateFixedExpense(ctx context.Context, req *transactionv1.CreateFixedExpenseRequest) (*transactionv1.FixedExpense, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.CreateFixedExpense(ctx, application.CreateFixedExpenseRequest{
@@ -131,6 +140,7 @@ func (h *GRPCHandler) CreateFixedExpense(ctx context.Context, req *transactionv1
 	return fixedExpenseToProto(resp), nil
 }
 
+// GetFixedExpense handles the gRPC request for retrieving a fixed expense.
 func (h *GRPCHandler) GetFixedExpense(ctx context.Context, req *transactionv1.GetFixedExpenseRequest) (*transactionv1.FixedExpense, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.GetFixedExpense(ctx, req.Id, userID)
@@ -140,6 +150,7 @@ func (h *GRPCHandler) GetFixedExpense(ctx context.Context, req *transactionv1.Ge
 	return fixedExpenseToProto(resp), nil
 }
 
+// UpdateFixedExpense handles the gRPC request for updating a fixed expense.
 func (h *GRPCHandler) UpdateFixedExpense(ctx context.Context, req *transactionv1.UpdateFixedExpenseRequest) (*transactionv1.FixedExpense, error) {
 	userID := mustExtractUserID(ctx)
 	appReq := application.UpdateFixedExpenseRequest{
@@ -168,6 +179,7 @@ func (h *GRPCHandler) UpdateFixedExpense(ctx context.Context, req *transactionv1
 	return fixedExpenseToProto(resp), nil
 }
 
+// DeleteFixedExpense handles the gRPC request for deleting a fixed expense.
 func (h *GRPCHandler) DeleteFixedExpense(ctx context.Context, req *transactionv1.DeleteFixedExpenseRequest) (*emptypb.Empty, error) {
 	userID := mustExtractUserID(ctx)
 	if err := h.svc.DeleteFixedExpense(ctx, req.Id, userID); err != nil {
@@ -176,6 +188,7 @@ func (h *GRPCHandler) DeleteFixedExpense(ctx context.Context, req *transactionv1
 	return &emptypb.Empty{}, nil
 }
 
+// ListFixedExpenses handles the gRPC request for listing fixed expenses.
 func (h *GRPCHandler) ListFixedExpenses(ctx context.Context, req *transactionv1.ListFixedExpensesRequest) (*transactionv1.ListFixedExpensesResponse, error) {
 	userID := mustExtractUserID(ctx)
 	filter := domain.FixedExpenseFilter{
@@ -207,6 +220,7 @@ func (h *GRPCHandler) ListFixedExpenses(ctx context.Context, req *transactionv1.
 	return &transactionv1.ListFixedExpensesResponse{FixedExpenses: protoItems, TotalCount: int32(total)}, nil
 }
 
+// CreateVariableExpense handles the gRPC request for creating a variable expense.
 func (h *GRPCHandler) CreateVariableExpense(ctx context.Context, req *transactionv1.CreateVariableExpenseRequest) (*transactionv1.VariableExpense, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.CreateVariableExpense(ctx, application.CreateVariableExpenseRequest{
@@ -227,6 +241,7 @@ func (h *GRPCHandler) CreateVariableExpense(ctx context.Context, req *transactio
 	return variableExpenseToProto(resp), nil
 }
 
+// GetVariableExpense handles the gRPC request for retrieving a variable expense.
 func (h *GRPCHandler) GetVariableExpense(ctx context.Context, req *transactionv1.GetVariableExpenseRequest) (*transactionv1.VariableExpense, error) {
 	userID := mustExtractUserID(ctx)
 	resp, err := h.svc.GetVariableExpense(ctx, req.Id, userID)
@@ -236,6 +251,7 @@ func (h *GRPCHandler) GetVariableExpense(ctx context.Context, req *transactionv1
 	return variableExpenseToProto(resp), nil
 }
 
+// UpdateVariableExpense handles the gRPC request for updating a variable expense.
 func (h *GRPCHandler) UpdateVariableExpense(ctx context.Context, req *transactionv1.UpdateVariableExpenseRequest) (*transactionv1.VariableExpense, error) {
 	userID := mustExtractUserID(ctx)
 	appReq := application.UpdateVariableExpenseRequest{
@@ -267,6 +283,7 @@ func (h *GRPCHandler) UpdateVariableExpense(ctx context.Context, req *transactio
 	return variableExpenseToProto(resp), nil
 }
 
+// DeleteVariableExpense handles the gRPC request for deleting a variable expense.
 func (h *GRPCHandler) DeleteVariableExpense(ctx context.Context, req *transactionv1.DeleteVariableExpenseRequest) (*emptypb.Empty, error) {
 	userID := mustExtractUserID(ctx)
 	if err := h.svc.DeleteVariableExpense(ctx, req.Id, userID); err != nil {
@@ -275,6 +292,7 @@ func (h *GRPCHandler) DeleteVariableExpense(ctx context.Context, req *transactio
 	return &emptypb.Empty{}, nil
 }
 
+// ListVariableExpenses handles the gRPC request for listing variable expenses.
 func (h *GRPCHandler) ListVariableExpenses(ctx context.Context, req *transactionv1.ListVariableExpensesRequest) (*transactionv1.ListVariableExpensesResponse, error) {
 	userID := mustExtractUserID(ctx)
 	filter := domain.VariableExpenseFilter{
@@ -507,6 +525,7 @@ func mustExtractUserID(ctx context.Context) string {
 	return uid
 }
 
+// UserContext embeds a user ID into the context for downstream propagation.
 func UserContext(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }

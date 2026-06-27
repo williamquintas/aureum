@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// HTTPMiddleware wraps an HTTP handler with OpenTelemetry instrumentation.
 func HTTPMiddleware(serviceName string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return otelhttp.NewHandler(next, serviceName,
@@ -18,6 +19,7 @@ func HTTPMiddleware(serviceName string) func(next http.Handler) http.Handler {
 	}
 }
 
+// GRPCUnaryInterceptor returns a gRPC server option with OpenTelemetry stats handling.
 func GRPCUnaryInterceptor() grpc.ServerOption {
 	return grpc.StatsHandler(otelgrpc.NewServerHandler())
 }

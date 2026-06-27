@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import (
@@ -8,6 +9,7 @@ import (
 // AssetType represents the type of investment asset.
 type AssetType string
 
+// Supported asset type constants.
 const (
 	AssetTypeStock          AssetType = "stock"
 	AssetTypeETF            AssetType = "etf"
@@ -24,6 +26,7 @@ const (
 	AssetTypeOther          AssetType = "other"
 )
 
+// ValidAssetTypes returns all valid asset types.
 func ValidAssetTypes() []AssetType {
 	return []AssetType{
 		AssetTypeStock, AssetTypeETF, AssetTypeRealEstateFund,
@@ -33,6 +36,7 @@ func ValidAssetTypes() []AssetType {
 	}
 }
 
+// Valid checks whether the asset type is valid.
 func (a AssetType) Valid() bool {
 	for _, v := range ValidAssetTypes() {
 		if a == v {
@@ -45,12 +49,14 @@ func (a AssetType) Valid() bool {
 // InvestmentStatus represents the lifecycle status of an investment.
 type InvestmentStatus string
 
+// Supported investment status constants.
 const (
 	StatusActive    InvestmentStatus = "active"
 	StatusSold      InvestmentStatus = "sold"
 	StatusCancelled InvestmentStatus = "cancelled"
 )
 
+// Valid checks whether the investment status is valid.
 func (s InvestmentStatus) Valid() bool {
 	switch s {
 	case StatusActive, StatusSold, StatusCancelled:

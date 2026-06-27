@@ -2,6 +2,7 @@ package domain
 
 import "time"
 
+// FixedExpense represents a recurring fixed expense with a monthly due day.
 type FixedExpense struct {
 	ID            string
 	UserID        string
@@ -15,6 +16,7 @@ type FixedExpense struct {
 	DeletedAt     *time.Time
 }
 
+// CreateFixedExpenseInput contains the fields required to create a new FixedExpense.
 type CreateFixedExpenseInput struct {
 	UserID         string
 	Description    string
@@ -25,6 +27,7 @@ type CreateFixedExpenseInput struct {
 	IdempotencyKey string
 }
 
+// UpdateFixedExpenseInput contains the fields that can be updated on a FixedExpense.
 type UpdateFixedExpenseInput struct {
 	ID             string
 	UserID         string
@@ -36,6 +39,7 @@ type UpdateFixedExpenseInput struct {
 	IdempotencyKey string
 }
 
+// NewFixedExpense creates a new FixedExpense after validating the input.
 func NewFixedExpense(input CreateFixedExpenseInput) (*FixedExpense, error) {
 	if input.UserID == "" {
 		return nil, ErrMissingField
@@ -75,6 +79,7 @@ func NewFixedExpense(input CreateFixedExpenseInput) (*FixedExpense, error) {
 	}, nil
 }
 
+// ApplyUpdate applies the provided update input to the FixedExpense, validating each field.
 func (f *FixedExpense) ApplyUpdate(input UpdateFixedExpenseInput) error {
 	if input.UserID != "" && input.UserID != f.UserID {
 		return ErrAccessDenied
@@ -112,6 +117,7 @@ func (f *FixedExpense) ApplyUpdate(input UpdateFixedExpenseInput) error {
 	return nil
 }
 
+// TransitionStatus moves the FixedExpense to a new status, enforcing valid state transitions.
 func (f *FixedExpense) TransitionStatus(newStatus TransactionStatus) error {
 	if !newStatus.Valid() {
 		return ErrInvalidStatus

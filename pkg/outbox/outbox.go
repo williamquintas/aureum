@@ -1,3 +1,4 @@
+// Package outbox implements the transactional outbox pattern for reliable event publishing.
 package outbox
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Event represents a domain event stored in the outbox table before being published to Kafka.
 type Event struct {
 	ID            string          `json:"id"`
 	AggregateType string          `json:"aggregate_type"`
@@ -19,6 +21,7 @@ type Event struct {
 	PublishedAt   *time.Time      `json:"published_at"`
 }
 
+// NewEvent creates a new outbox Event with a generated UUID and current timestamp.
 func NewEvent(aggregateType, aggregateID, eventType string, payload interface{}) (*Event, error) {
 	id := uuid.New().String()
 	now := time.Now().UTC()
@@ -42,20 +45,24 @@ func NewEvent(aggregateType, aggregateID, eventType string, payload interface{})
 	}, nil
 }
 
+// Repository defines the interface for outbox event persistence.
 type Repository interface {
 	Save(ctx context.Context, tx any, event *Event) error
 	Pending(ctx context.Context) ([]Event, error)
 	MarkPublished(ctx context.Context, id string) error
 }
 
+// Store implements the outbox Repository using PostgreSQL.
 type Store struct {
 	pool *pgxpool.Pool
 }
 
+// NewStore creates a new outbox Store backed by the given PostgreSQL pool.
 func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
+// Pending retrieves all unpublished events ordered by creation time.
 func (s *Store) Pending(ctx context.Context) ([]Event, error) {
 	query := `SELECT id, aggregate_type, aggregate_id, event_type, payload, created_at, published_at
 		FROM outbox_events WHERE published_at IS NULL ORDER BY created_at ASC`
@@ -80,6 +87,7 @@ func (s *Store) Pending(ctx context.Context) ([]Event, error) {
 	return events, rows.Err()
 }
 
+// MarkPublished sets the published_at timestamp for an outbox event.
 func (s *Store) MarkPublished(ctx context.Context, id string) error {
 	now := time.Now().UTC()
 	_, err := s.pool.Exec(ctx, `UPDATE outbox_events SET published_at = $1 WHERE id = $2`, now, id)

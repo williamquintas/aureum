@@ -1,3 +1,4 @@
+// Package api_test contains tests for the api package.
 package api_test
 
 import (

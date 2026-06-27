@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL-based repository implementations for the debt service.
 package persistence
 
 import (
@@ -12,18 +13,22 @@ import (
 	"github.com/aureum/debt-svc/internal/domain"
 )
 
+// DebtRepo implements domain.DebtRepository using PostgreSQL (pgx).
 type DebtRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewDebtRepo creates a new DebtRepo.
 func NewDebtRepo(pool *pgxpool.Pool) *DebtRepo {
 	return &DebtRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *DebtRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save inserts a new debt record.
 func (r *DebtRepo) Save(ctx context.Context, debt *domain.Debt) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -44,6 +49,7 @@ func (r *DebtRepo) Save(ctx context.Context, debt *domain.Debt) error {
 	return nil
 }
 
+// FindByID retrieves a debt by ID and user ID, excluding soft-deleted records.
 func (r *DebtRepo) FindByID(ctx context.Context, id, userID string) (*domain.Debt, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, user_id, name, description, debt_type, total_amount, remaining_amount, interest_rate, start_date, expected_end_date, status, creditor, created_at, updated_at, deleted_at
@@ -76,6 +82,7 @@ func (r *DebtRepo) FindByID(ctx context.Context, id, userID string) (*domain.Deb
 	return &debt, nil
 }
 
+// Update applies changes to an existing debt.
 func (r *DebtRepo) Update(ctx context.Context, debt *domain.Debt) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -96,6 +103,7 @@ func (r *DebtRepo) Update(ctx context.Context, debt *domain.Debt) error {
 	return nil
 }
 
+// Delete performs a soft-delete on a debt.
 func (r *DebtRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -112,6 +120,7 @@ func (r *DebtRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
+// List returns debts filtered by user ID with optional filters, ordered by created_at DESC.
 func (r *DebtRepo) List(ctx context.Context, userID string, filter domain.DebtFilter) ([]*domain.Debt, error) {
 	query := `SELECT id, user_id, name, description, debt_type, total_amount, remaining_amount, interest_rate, start_date, expected_end_date, status, creditor, created_at, updated_at
 			  FROM debts WHERE user_id=$1 AND deleted_at IS NULL`
@@ -171,6 +180,7 @@ func (r *DebtRepo) List(ctx context.Context, userID string, filter domain.DebtFi
 	return debts, nil
 }
 
+// Count returns the total number of debts matching the filter.
 func (r *DebtRepo) Count(ctx context.Context, userID string, filter domain.DebtFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM debts WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

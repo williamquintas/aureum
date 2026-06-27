@@ -1,3 +1,4 @@
+// Package application provides application services, DTOs, and use case orchestration.
 package application
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/aureum/investment-svc/internal/domain"
 )
 
+// Service implements the application use cases for investments, transactions, and portfolios.
 type Service struct {
 	investments  domain.InvestmentRepository
 	transactions domain.TransactionRepository
@@ -19,6 +21,7 @@ type Service struct {
 	featureFlag  FeatureFlag
 }
 
+// NewService creates a new Service with the required dependencies.
 func NewService(
 	investments domain.InvestmentRepository,
 	transactions domain.TransactionRepository,
@@ -43,6 +46,7 @@ func cacheKey(prefix, userID, id string) string {
 
 // ── Investment ───────────────────────────────────────────────────────────────
 
+// CreateInvestment creates a new investment using the provided request.
 func (s *Service) CreateInvestment(ctx context.Context, req CreateInvestmentRequest) (*CreateInvestmentResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateInvestmentResponse
@@ -127,6 +131,7 @@ func (s *Service) CreateInvestment(ctx context.Context, req CreateInvestmentRequ
 	return resp, nil
 }
 
+// GetInvestment retrieves an investment by ID and user ID.
 func (s *Service) GetInvestment(ctx context.Context, id, userID string) (*GetInvestmentResponse, error) {
 	key := cacheKey("investment", userID, id)
 	if s.cache != nil {
@@ -163,6 +168,7 @@ func (s *Service) GetInvestment(ctx context.Context, id, userID string) (*GetInv
 	return resp, nil
 }
 
+// UpdateInvestment updates an existing investment with the provided fields.
 func (s *Service) UpdateInvestment(ctx context.Context, req UpdateInvestmentRequest) (*GetInvestmentResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached GetInvestmentResponse
@@ -264,6 +270,7 @@ func (s *Service) UpdateInvestment(ctx context.Context, req UpdateInvestmentRequ
 	return resp, nil
 }
 
+// DeleteInvestment soft-deletes an investment by ID and user ID.
 func (s *Service) DeleteInvestment(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKey("investment", userID, id))
@@ -283,6 +290,7 @@ func (s *Service) DeleteInvestment(ctx context.Context, id, userID string) error
 	})
 }
 
+// ListInvestments returns paginated investments for a user, with optional filtering.
 func (s *Service) ListInvestments(ctx context.Context, userID string, filter domain.InvestmentFilter) ([]*GetInvestmentResponse, int, error) {
 	items, err := s.investments.List(ctx, userID, filter)
 	if err != nil {
@@ -315,6 +323,7 @@ func (s *Service) ListInvestments(ctx context.Context, userID string, filter dom
 
 // ── Transaction ──────────────────────────────────────────────────────────────
 
+// RecordTransaction records a new transaction and updates the related investment.
 func (s *Service) RecordTransaction(ctx context.Context, req RecordTransactionRequest) (*RecordTransactionResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached RecordTransactionResponse
@@ -415,6 +424,7 @@ func (s *Service) RecordTransaction(ctx context.Context, req RecordTransactionRe
 	return resp, nil
 }
 
+// ListTransactions returns paginated transactions for a user, optionally filtered by investment.
 func (s *Service) ListTransactions(ctx context.Context, userID, investmentID string, filter domain.TransactionFilter) ([]*GetTransactionResponse, int, error) {
 	var items []*domain.InvestmentTransaction
 	var total int
@@ -457,6 +467,7 @@ func (s *Service) ListTransactions(ctx context.Context, userID, investmentID str
 
 // ── Portfolio ────────────────────────────────────────────────────────────────
 
+// GetPortfolioSummary returns a cached/computed portfolio summary for the user.
 func (s *Service) GetPortfolioSummary(ctx context.Context, userID string) (*PortfolioSummaryResponse, error) {
 	key := cacheKey("portfolio", userID, "")
 	if s.cache != nil {

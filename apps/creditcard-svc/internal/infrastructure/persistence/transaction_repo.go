@@ -9,18 +9,22 @@ import (
 	"github.com/aureum/creditcard-svc/internal/domain"
 )
 
+// TransactionRepo implements domain.InvoiceTransactionRepository using PostgreSQL (pgx).
 type TransactionRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewTransactionRepo creates a new TransactionRepo.
 func NewTransactionRepo(pool *pgxpool.Pool) *TransactionRepo {
 	return &TransactionRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *TransactionRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save inserts a new transaction record.
 func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvoiceTransaction) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -38,6 +42,7 @@ func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvoiceTransactio
 	return nil
 }
 
+// FindByInvoice retrieves all transactions for a given invoice.
 func (r *TransactionRepo) FindByInvoice(ctx context.Context, invoiceID string) ([]*domain.InvoiceTransaction, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, invoice_id, user_id, description, amount, category, transaction_date, installments, created_at
@@ -64,6 +69,7 @@ func (r *TransactionRepo) FindByInvoice(ctx context.Context, invoiceID string) (
 	return transactions, nil
 }
 
+// List returns transactions filtered by invoice ID with optional filters.
 func (r *TransactionRepo) List(ctx context.Context, invoiceID string, filter domain.TransactionFilter) ([]*domain.InvoiceTransaction, error) {
 	query := `SELECT id, invoice_id, user_id, description, amount, category, transaction_date, installments, created_at
 			  FROM invoice_transactions WHERE invoice_id=$1`
@@ -109,6 +115,7 @@ func (r *TransactionRepo) List(ctx context.Context, invoiceID string, filter dom
 	return transactions, nil
 }
 
+// Count returns the total number of transactions matching the filter.
 func (r *TransactionRepo) Count(ctx context.Context, invoiceID string, filter domain.TransactionFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM invoice_transactions WHERE invoice_id=$1`
 	args := []interface{}{invoiceID}

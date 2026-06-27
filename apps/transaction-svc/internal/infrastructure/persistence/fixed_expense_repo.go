@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL-backed repository implementations.
 package persistence
 
 import (
@@ -13,18 +14,22 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// FixedExpenseRepo implements the FixedExpenseRepository interface using PostgreSQL.
 type FixedExpenseRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewFixedExpenseRepo creates a new FixedExpenseRepo.
 func NewFixedExpenseRepo(pool *pgxpool.Pool) *FixedExpenseRepo {
 	return &FixedExpenseRepo{pool: pool}
 }
 
+// WithTx executes the given function within a database transaction.
 func (r *FixedExpenseRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new fixed expense record.
 func (r *FixedExpenseRepo) Save(ctx context.Context, expense *domain.FixedExpense) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -43,6 +48,7 @@ func (r *FixedExpenseRepo) Save(ctx context.Context, expense *domain.FixedExpens
 	return nil
 }
 
+// FindByID retrieves a fixed expense by its ID and user ID.
 func (r *FixedExpenseRepo) FindByID(ctx context.Context, id, userID string) (*domain.FixedExpense, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, user_id, description, category, day_of_month, payment_method, status, created_at, updated_at, deleted_at
@@ -69,6 +75,7 @@ func (r *FixedExpenseRepo) FindByID(ctx context.Context, id, userID string) (*do
 	return &expense, nil
 }
 
+// Update modifies an existing fixed expense record.
 func (r *FixedExpenseRepo) Update(ctx context.Context, expense *domain.FixedExpense) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -87,6 +94,7 @@ func (r *FixedExpenseRepo) Update(ctx context.Context, expense *domain.FixedExpe
 	return nil
 }
 
+// Delete soft-deletes a fixed expense record by ID and user ID.
 func (r *FixedExpenseRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -102,6 +110,7 @@ func (r *FixedExpenseRepo) Delete(ctx context.Context, id, userID string) error 
 	return nil
 }
 
+// List returns a paginated list of fixed expenses for a user.
 func (r *FixedExpenseRepo) List(ctx context.Context, userID string, filter domain.FixedExpenseFilter) ([]*domain.FixedExpense, error) {
 	query := `SELECT id, user_id, description, category, day_of_month, payment_method, status, created_at, updated_at
 			  FROM fixed_expenses WHERE user_id=$1 AND deleted_at IS NULL`
@@ -162,6 +171,7 @@ func (r *FixedExpenseRepo) List(ctx context.Context, userID string, filter domai
 	return expenses, nil
 }
 
+// Count returns the total number of fixed expenses matching the filter.
 func (r *FixedExpenseRepo) Count(ctx context.Context, userID string, filter domain.FixedExpenseFilter) (int, error) {
 	var conditions []string
 	args := []interface{}{userID}

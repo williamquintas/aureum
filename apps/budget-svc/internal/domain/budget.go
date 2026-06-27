@@ -1,3 +1,4 @@
+// Package domain contains domain entities, value objects, and repository interfaces for budget management.
 package domain
 
 import (
@@ -11,12 +12,18 @@ import (
 type BudgetPeriod string
 
 const (
-	BudgetPeriodMonthly   BudgetPeriod = "monthly"
+	// BudgetPeriodMonthly indicates a monthly budget period.
+	BudgetPeriodMonthly BudgetPeriod = "monthly"
+	// BudgetPeriodBimonthly indicates a bimonthly budget period.
 	BudgetPeriodBimonthly BudgetPeriod = "bimonthly"
+	// BudgetPeriodQuarterly indicates a quarterly budget period.
 	BudgetPeriodQuarterly BudgetPeriod = "quarterly"
+	// BudgetPeriodSemestral indicates a semestral budget period.
 	BudgetPeriodSemestral BudgetPeriod = "semestral"
-	BudgetPeriodYearly    BudgetPeriod = "yearly"
-	BudgetPeriodCustom    BudgetPeriod = "custom"
+	// BudgetPeriodYearly indicates a yearly budget period.
+	BudgetPeriodYearly BudgetPeriod = "yearly"
+	// BudgetPeriodCustom indicates a custom budget period.
+	BudgetPeriodCustom BudgetPeriod = "custom"
 )
 
 // ValidBudgetPeriods returns all valid budget periods.
@@ -27,6 +34,7 @@ func ValidBudgetPeriods() []BudgetPeriod {
 	}
 }
 
+// Valid checks if the budget period is a recognized value.
 func (p BudgetPeriod) Valid() bool {
 	for _, v := range ValidBudgetPeriods() {
 		if p == v {
@@ -40,9 +48,13 @@ func (p BudgetPeriod) Valid() bool {
 type BudgetStatus string
 
 const (
-	BudgetStatusActive    BudgetStatus = "active"
-	BudgetStatusPaused    BudgetStatus = "paused"
+	// BudgetStatusActive indicates an active budget.
+	BudgetStatusActive BudgetStatus = "active"
+	// BudgetStatusPaused indicates a paused budget.
+	BudgetStatusPaused BudgetStatus = "paused"
+	// BudgetStatusCompleted indicates a completed budget.
 	BudgetStatusCompleted BudgetStatus = "completed"
+	// BudgetStatusCancelled indicates a cancelled budget.
 	BudgetStatusCancelled BudgetStatus = "cancelled"
 )
 
@@ -54,6 +66,7 @@ func ValidBudgetStatuses() []BudgetStatus {
 	}
 }
 
+// Valid checks if the budget status is a recognized value.
 func (s BudgetStatus) Valid() bool {
 	for _, v := range ValidBudgetStatuses() {
 		if s == v {

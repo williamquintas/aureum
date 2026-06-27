@@ -1,7 +1,9 @@
+// Package application contains application-layer DTOs, services, and use-case orchestrations.
 package application
 
 import "github.com/aureum/transaction-svc/internal/domain"
 
+// CreateIncomeRequest represents the input for creating a new income record.
 type CreateIncomeRequest struct {
 	UserID         string
 	Description    string
@@ -13,6 +15,7 @@ type CreateIncomeRequest struct {
 	IdempotencyKey string
 }
 
+// CreateIncomeResponse represents the output after successfully creating an income record.
 type CreateIncomeResponse struct {
 	ID             string
 	UserID         string
@@ -26,6 +29,7 @@ type CreateIncomeResponse struct {
 	UpdatedAt      int64
 }
 
+// GetIncomeResponse represents the output for retrieving an income record.
 type GetIncomeResponse struct {
 	ID             string
 	UserID         string
@@ -39,6 +43,7 @@ type GetIncomeResponse struct {
 	UpdatedAt      int64
 }
 
+// UpdateIncomeRequest represents the input for updating an existing income record.
 type UpdateIncomeRequest struct {
 	ID             string
 	UserID         string
@@ -51,6 +56,7 @@ type UpdateIncomeRequest struct {
 	IdempotencyKey string
 }
 
+// CreateFixedExpenseRequest represents the input for creating a new fixed expense.
 type CreateFixedExpenseRequest struct {
 	UserID         string
 	Description    string
@@ -61,6 +67,7 @@ type CreateFixedExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateFixedExpenseResponse represents the output after creating a fixed expense.
 type CreateFixedExpenseResponse struct {
 	ID            string
 	UserID        string
@@ -73,6 +80,7 @@ type CreateFixedExpenseResponse struct {
 	UpdatedAt     int64
 }
 
+// UpdateFixedExpenseRequest represents the input for updating a fixed expense.
 type UpdateFixedExpenseRequest struct {
 	ID             string
 	UserID         string
@@ -84,6 +92,7 @@ type UpdateFixedExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateVariableExpenseRequest represents the input for creating a new variable expense.
 type CreateVariableExpenseRequest struct {
 	UserID         string
 	Description    string
@@ -97,6 +106,7 @@ type CreateVariableExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateVariableExpenseResponse represents the output after creating a variable expense.
 type CreateVariableExpenseResponse struct {
 	ID            string
 	UserID        string
@@ -112,6 +122,7 @@ type CreateVariableExpenseResponse struct {
 	UpdatedAt     int64
 }
 
+// UpdateVariableExpenseRequest represents the input for updating a variable expense.
 type UpdateVariableExpenseRequest struct {
 	ID             string
 	UserID         string
@@ -126,6 +137,7 @@ type UpdateVariableExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// ListResponse is a generic paginated list response.
 type ListResponse struct {
 	Items      interface{} `json:"items"`
 	TotalCount int         `json:"total_count"`

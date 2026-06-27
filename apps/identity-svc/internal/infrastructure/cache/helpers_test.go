@@ -1,3 +1,4 @@
+// Package cache_test contains tests for the cache package.
 package cache_test
 
 import (

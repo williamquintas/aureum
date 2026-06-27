@@ -1,3 +1,4 @@
+// Package auth_test contains tests for the auth package.
 package auth_test
 
 import (

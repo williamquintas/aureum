@@ -1,3 +1,4 @@
+// Package main is the entry point for the investment service.
 package main
 
 import (
@@ -180,6 +181,7 @@ func run() int {
 	return 0
 }
 
+// config holds the service configuration loaded from environment variables.
 type config struct {
 	GRPCPort     string
 	DatabaseURL  string
@@ -233,6 +235,7 @@ func loadConfig() config {
 	}
 }
 
+// envFlag implements FeatureFlag using environment-configured flags.
 type envFlag struct {
 	flags []string
 }
@@ -246,6 +249,7 @@ func (e *envFlag) IsEnabled(_ context.Context, flag string) bool {
 	return false
 }
 
+// unleashFlag implements FeatureFlag using Unleash.
 type unleashFlag struct {
 	client *ff.Client
 }

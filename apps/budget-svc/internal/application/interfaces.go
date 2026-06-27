@@ -1,3 +1,4 @@
+// Package application contains application-layer use cases, DTOs, and service interfaces.
 package application
 
 import (

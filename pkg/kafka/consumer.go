@@ -1,3 +1,4 @@
+// Package kafka provides consumer and producer wrappers for Kafka messaging.
 package kafka
 
 import (
@@ -8,10 +9,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// ConsumerGroup wraps a kafka.Reader for consuming messages from a consumer group.
 type ConsumerGroup struct {
 	reader *kafka.Reader
 }
 
+// NewConsumerGroup creates a new Kafka consumer group reader.
 func NewConsumerGroup(brokers []string, groupID string, topics []string) (*ConsumerGroup, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        brokers,
@@ -27,6 +30,7 @@ func NewConsumerGroup(brokers []string, groupID string, topics []string) (*Consu
 	return &ConsumerGroup{reader: reader}, nil
 }
 
+// Consume starts a blocking loop that reads messages and passes them to the handler.
 func (c *ConsumerGroup) Consume(ctx context.Context, handler func(msg kafka.Message) error) error {
 	for {
 		msg, err := c.reader.ReadMessage(ctx)
@@ -40,6 +44,7 @@ func (c *ConsumerGroup) Consume(ctx context.Context, handler func(msg kafka.Mess
 	}
 }
 
+// Close shuts down the consumer group reader.
 func (c *ConsumerGroup) Close() error {
 	return c.reader.Close()
 }

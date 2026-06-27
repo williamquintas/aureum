@@ -1,9 +1,11 @@
+// Package application provides the application-layer DTOs and use case orchestration.
 package application
 
 import "github.com/aureum/debt-svc/internal/domain"
 
 // ── Debt DTOs ───────────────────────────────────────────────────────────────
 
+// CreateDebtRequest is the application-layer DTO for creating a debt.
 type CreateDebtRequest struct {
 	UserID          string
 	Name            string
@@ -18,6 +20,7 @@ type CreateDebtRequest struct {
 	IdempotencyKey  string
 }
 
+// DebtResponse is the application-layer DTO returned after debt operations.
 type DebtResponse struct {
 	ID              string
 	UserID          string
@@ -35,6 +38,7 @@ type DebtResponse struct {
 	UpdatedAt       int64
 }
 
+// UpdateDebtRequest is the application-layer DTO for updating a debt.
 type UpdateDebtRequest struct {
 	ID              string
 	UserID          string
@@ -51,6 +55,7 @@ type UpdateDebtRequest struct {
 
 // ── Payment DTOs ─────────────────────────────────────────────────────────────
 
+// RegisterPaymentRequest is the application-layer DTO for registering a payment.
 type RegisterPaymentRequest struct {
 	DebtID         string
 	UserID         string
@@ -60,6 +65,7 @@ type RegisterPaymentRequest struct {
 	IdempotencyKey string
 }
 
+// PaymentResponse is the application-layer DTO returned after payment operations.
 type PaymentResponse struct {
 	ID          string
 	DebtID      string

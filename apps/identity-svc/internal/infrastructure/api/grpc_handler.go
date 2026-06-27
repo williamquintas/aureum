@@ -15,16 +15,19 @@ import (
 	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
 )
 
+// GRPCHandler handles gRPC requests for the identity service.
 type GRPCHandler struct {
 	identityv1.UnimplementedIdentityServiceServer
 	authSvc  *application.AuthService
 	authzSvc *application.AuthorizationService
 }
 
+// NewGRPCHandler creates a new gRPC handler.
 func NewGRPCHandler(authSvc *application.AuthService, authzSvc *application.AuthorizationService) *GRPCHandler {
 	return &GRPCHandler{authSvc: authSvc, authzSvc: authzSvc}
 }
 
+// ValidateToken validates an access token via gRPC.
 func (h *GRPCHandler) ValidateToken(
 	ctx context.Context, req *identityv1.ValidateTokenRequest,
 ) (*identityv1.ValidateTokenResponse, error) {
@@ -44,6 +47,7 @@ func (h *GRPCHandler) ValidateToken(
 	}, nil
 }
 
+// GetUser retrieves a user profile via gRPC.
 func (h *GRPCHandler) GetUser(
 	ctx context.Context, req *identityv1.GetUserRequest,
 ) (*identityv1.GetUserResponse, error) {
@@ -74,6 +78,7 @@ func (h *GRPCHandler) GetUser(
 	return resp, nil
 }
 
+// ABACCheck performs an ABAC permission check via gRPC.
 func (h *GRPCHandler) ABACCheck(
 	ctx context.Context, req *identityv1.ABACCheckRequest,
 ) (*identityv1.ABACCheckResponse, error) {

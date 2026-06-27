@@ -1,3 +1,4 @@
+// Package application contains the application service and use case orchestration for credit cards.
 package application
 
 import (
@@ -11,25 +12,30 @@ import (
 	"github.com/aureum/creditcard-svc/internal/domain"
 )
 
+// IdempotencyStore interface for idempotency key checks.
 type IdempotencyStore interface {
 	Get(ctx context.Context, key string, dest interface{}) error
 	Store(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 }
 
+// OutboxRepository interface for persisting outbox events.
 type OutboxRepository interface {
 	Save(ctx context.Context, event interface{}) error
 }
 
+// Cache interface for cache-first reads.
 type Cache interface {
 	Get(ctx context.Context, key string, dest interface{}) (bool, error)
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 }
 
+// FeatureFlag interface for feature flag evaluation.
 type FeatureFlag interface {
 	IsEnabled(ctx context.Context, flag string) bool
 }
 
+// Service implements the application use cases for credit card management.
 type Service struct {
 	creditCards  domain.CreditCardRepository
 	invoices     domain.InvoiceRepository
@@ -40,6 +46,7 @@ type Service struct {
 	featureFlag  FeatureFlag
 }
 
+// NewService creates a new credit card application service.
 func NewService(
 	creditCards domain.CreditCardRepository,
 	invoices domain.InvoiceRepository,
@@ -66,6 +73,8 @@ func cacheKey(prefix, userID, id string) string {
 
 // ── CreditCard ───────────────────────────────────────────────────────────────
 
+// CreateCreditCard creates a new credit card with idempotency support
+// and publishes a CreditCardCreated event.
 func (s *Service) CreateCreditCard(ctx context.Context, req CreateCreditCardRequest) (*CreditCardResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreditCardResponse
@@ -131,6 +140,7 @@ func (s *Service) CreateCreditCard(ctx context.Context, req CreateCreditCardRequ
 	return resp, nil
 }
 
+// GetCreditCard retrieves a credit card by ID and user ID, with cache-first support.
 func (s *Service) GetCreditCard(ctx context.Context, id, userID string) (*CreditCardResponse, error) {
 	key := cacheKey("card", userID, id)
 	if s.cache != nil {
@@ -154,6 +164,8 @@ func (s *Service) GetCreditCard(ctx context.Context, id, userID string) (*Credit
 	return resp, nil
 }
 
+// UpdateCreditCard updates an existing credit card with idempotency support
+// and publishes a CreditCardUpdated event.
 func (s *Service) UpdateCreditCard(ctx context.Context, req UpdateCreditCardRequest) (*CreditCardResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreditCardResponse
@@ -226,6 +238,7 @@ func (s *Service) UpdateCreditCard(ctx context.Context, req UpdateCreditCardRequ
 	return resp, nil
 }
 
+// DeleteCreditCard deletes a credit card and publishes a CreditCardDeleted event.
 func (s *Service) DeleteCreditCard(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKey("card", userID, id))
@@ -245,6 +258,7 @@ func (s *Service) DeleteCreditCard(ctx context.Context, id, userID string) error
 	})
 }
 
+// ListCreditCards returns a paginated list of credit cards for a user.
 func (s *Service) ListCreditCards(ctx context.Context, userID string, filter domain.CreditCardFilter) ([]*CreditCardResponse, int, error) {
 	items, err := s.creditCards.List(ctx, userID, filter)
 	if err != nil {
@@ -264,6 +278,7 @@ func (s *Service) ListCreditCards(ctx context.Context, userID string, filter dom
 
 // ── Invoice ──────────────────────────────────────────────────────────────────
 
+// CreateInvoice creates a new invoice for a credit card with idempotency support.
 func (s *Service) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (*InvoiceResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached InvoiceResponse
@@ -330,6 +345,7 @@ func (s *Service) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (
 	return resp, nil
 }
 
+// GetInvoice retrieves an invoice by ID and user ID, with cache-first support.
 func (s *Service) GetInvoice(ctx context.Context, id, userID string) (*InvoiceResponse, error) {
 	key := cacheKey("invoice", userID, id)
 	if s.cache != nil {
@@ -353,6 +369,7 @@ func (s *Service) GetInvoice(ctx context.Context, id, userID string) (*InvoiceRe
 	return resp, nil
 }
 
+// ListInvoices returns a paginated list of invoices for a user with optional filters.
 func (s *Service) ListInvoices(ctx context.Context, userID string, filter domain.InvoiceFilter) ([]*InvoiceResponse, int, error) {
 	items, err := s.invoices.List(ctx, userID, filter)
 	if err != nil {
@@ -370,6 +387,8 @@ func (s *Service) ListInvoices(ctx context.Context, userID string, filter domain
 	return resp, total, nil
 }
 
+// PayInvoice processes an invoice payment, restores available credit,
+// and publishes an InvoicePaid event.
 func (s *Service) PayInvoice(ctx context.Context, req PayInvoiceRequest) (*InvoiceResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached InvoiceResponse
@@ -440,6 +459,8 @@ func (s *Service) PayInvoice(ctx context.Context, req PayInvoiceRequest) (*Invoi
 
 // ── Transaction ──────────────────────────────────────────────────────────────
 
+// AddTransaction adds a transaction to an invoice, handling closed invoice
+// rollover, and publishes a TransactionAdded event.
 func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest) (*TransactionResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached TransactionResponse
@@ -572,6 +593,7 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 	return resp, nil
 }
 
+// ListTransactions returns a paginated list of transactions for an invoice.
 func (s *Service) ListTransactions(ctx context.Context, invoiceID string, filter domain.TransactionFilter) ([]*TransactionResponse, int, error) {
 	items, err := s.transactions.List(ctx, invoiceID, filter)
 	if err != nil {

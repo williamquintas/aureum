@@ -1,3 +1,4 @@
+// Package application contains the application-layer interfaces for the credit card service.
 package application
 
 import (

@@ -1,3 +1,4 @@
+// Package api provides the gRPC API handler for the debt service.
 package api
 
 import (
@@ -18,17 +19,20 @@ import (
 	debtv1 "github.com/aureum/proto/gen/debt/debtv1"
 )
 
+// GRPCHandler implements the debtv1.DebtServiceServer interface.
 type GRPCHandler struct {
 	debtv1.UnimplementedDebtServiceServer
 	svc application.DebtService
 }
 
+// NewGRPCHandler creates a new gRPC handler for debt operations.
 func NewGRPCHandler(svc application.DebtService) *GRPCHandler {
 	return &GRPCHandler{svc: svc}
 }
 
 // ── Debt ─────────────────────────────────────────────────────────────────────
 
+// CreateDebt handles gRPC requests for creating a debt.
 func (h *GRPCHandler) CreateDebt(ctx context.Context, req *debtv1.CreateDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -54,6 +58,7 @@ func (h *GRPCHandler) CreateDebt(ctx context.Context, req *debtv1.CreateDebtRequ
 	return debtToProto(resp), nil
 }
 
+// GetDebt handles gRPC requests for retrieving a debt.
 func (h *GRPCHandler) GetDebt(ctx context.Context, req *debtv1.GetDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -67,6 +72,7 @@ func (h *GRPCHandler) GetDebt(ctx context.Context, req *debtv1.GetDebtRequest) (
 	return debtToProto(resp), nil
 }
 
+// UpdateDebt handles gRPC requests for updating a debt.
 func (h *GRPCHandler) UpdateDebt(ctx context.Context, req *debtv1.UpdateDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -111,6 +117,7 @@ func (h *GRPCHandler) UpdateDebt(ctx context.Context, req *debtv1.UpdateDebtRequ
 	return debtToProto(resp), nil
 }
 
+// DeleteDebt handles gRPC requests for deleting a debt.
 func (h *GRPCHandler) DeleteDebt(ctx context.Context, req *debtv1.DeleteDebtRequest) (*emptypb.Empty, error) {
 	start := time.Now()
 
@@ -123,6 +130,7 @@ func (h *GRPCHandler) DeleteDebt(ctx context.Context, req *debtv1.DeleteDebtRequ
 	return &emptypb.Empty{}, nil
 }
 
+// ListDebts handles gRPC requests for listing debts.
 func (h *GRPCHandler) ListDebts(ctx context.Context, req *debtv1.ListDebtsRequest) (*debtv1.ListDebtsResponse, error) {
 	start := time.Now()
 
@@ -164,6 +172,7 @@ func (h *GRPCHandler) ListDebts(ctx context.Context, req *debtv1.ListDebtsReques
 
 // ── Payment ──────────────────────────────────────────────────────────────────
 
+// RegisterPayment handles gRPC requests for registering a payment.
 func (h *GRPCHandler) RegisterPayment(ctx context.Context, req *debtv1.RegisterPaymentRequest) (*debtv1.Payment, error) {
 	start := time.Now()
 
@@ -184,6 +193,7 @@ func (h *GRPCHandler) RegisterPayment(ctx context.Context, req *debtv1.RegisterP
 	return paymentToProto(resp), nil
 }
 
+// ListPayments handles gRPC requests for listing payments.
 func (h *GRPCHandler) ListPayments(ctx context.Context, req *debtv1.ListPaymentsRequest) (*debtv1.ListPaymentsResponse, error) {
 	start := time.Now()
 
@@ -363,6 +373,7 @@ func mustExtractUserID(ctx context.Context) string {
 	return uid
 }
 
+// UserContext injects a user ID into the context for testing.
 func UserContext(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }

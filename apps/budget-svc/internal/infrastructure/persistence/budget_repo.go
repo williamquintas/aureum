@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL-based repository implementations for the budget service.
 package persistence
 
 import (
@@ -22,8 +23,9 @@ func NewBudgetRepo(pool *pgxpool.Pool) *BudgetRepo {
 	return &BudgetRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *BudgetRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
 // Save inserts a new budget record.

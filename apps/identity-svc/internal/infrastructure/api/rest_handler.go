@@ -1,3 +1,4 @@
+// Package api provides HTTP and gRPC handlers for the identity service.
 package api
 
 import (
@@ -15,15 +16,18 @@ import (
 	"github.com/aureum/pkg/telemetry"
 )
 
+// Handler handles HTTP REST API requests for the identity service.
 type Handler struct {
 	authService  *application.AuthService
 	authzService *application.AuthorizationService
 }
 
+// NewHandler creates a new HTTP Handler.
 func NewHandler(authService *application.AuthService, authzService *application.AuthorizationService) *Handler {
 	return &Handler{authService: authService, authzService: authzService}
 }
 
+// RegisterRoutes registers all HTTP routes on the given chi router.
 func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 	r.Post("/signup", h.Signup)
 	r.Post("/login", h.Login)
@@ -55,6 +59,7 @@ func (h *Handler) RegisterRoutes(r chi.Router, jwtSecret string) {
 	})
 }
 
+// Signup handles POST /signup requests.
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.SignupRequest
@@ -82,6 +87,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// Login handles POST /login requests.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.LoginRequest
@@ -109,6 +115,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// VerifyEmail handles POST /verify-email requests.
 func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.VerifyEmailRequest
@@ -133,6 +140,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetProfile handles GET /me requests.
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -155,6 +163,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, profile)
 }
 
+// RefreshToken handles POST /refresh requests.
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.RefreshTokenRequest
@@ -177,6 +186,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Logout handles POST /logout requests.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -199,6 +209,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ForgotPassword handles POST /forgot-password requests.
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ForgotPasswordRequest
@@ -220,6 +231,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ResetPassword handles POST /reset-password requests.
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ResetPasswordRequest
@@ -244,6 +256,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// AdminCreateUser handles POST /admin/users requests.
 func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.AdminCreateUserRequest
@@ -269,6 +282,7 @@ func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// AssignRole handles POST /admin/users/{id}/assign-role requests.
 func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	userID := chi.URLParam(r, "id")
@@ -297,6 +311,7 @@ func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// RemoveRole handles POST /admin/users/{id}/remove-role requests.
 func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	userID := chi.URLParam(r, "id")
@@ -325,6 +340,7 @@ func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ListUsers handles GET /admin/users requests.
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	offset := 0
@@ -340,6 +356,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// ListRoles handles GET /admin/roles requests.
 func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	roles, err := h.authzService.ListRoles(r.Context())
@@ -352,6 +369,7 @@ func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, roles)
 }
 
+// ABACCheck handles POST /admin/abac-check requests.
 func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ABACCheckRequest
@@ -370,6 +388,7 @@ func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// UpdateProfile handles PUT /me requests.
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -399,6 +418,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// SetupMFA handles POST /mfa/setup requests.
 func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -422,6 +442,7 @@ func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// VerifyMFA handles POST /mfa/verify requests.
 func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -452,6 +473,7 @@ func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// DisableMFA handles POST /mfa/disable requests.
 func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -482,6 +504,7 @@ func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ListSessions handles GET /sessions requests.
 func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
@@ -500,6 +523,7 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sessions)
 }
 
+// RevokeSession handles POST /sessions/{id}/revoke requests.
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())

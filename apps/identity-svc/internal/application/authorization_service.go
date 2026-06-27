@@ -6,15 +6,18 @@ import (
 	"github.com/aureum/identity-svc/internal/domain"
 )
 
+// AuthorizationService implements authorization and role management use cases.
 type AuthorizationService struct {
 	users domain.UserRepository
 	roles domain.RoleRepository
 }
 
+// NewAuthorizationService creates a new AuthorizationService.
 func NewAuthorizationService(users domain.UserRepository, roles domain.RoleRepository) *AuthorizationService {
 	return &AuthorizationService{users: users, roles: roles}
 }
 
+// Evaluate checks whether a user has permission to perform an action on a resource.
 func (s *AuthorizationService) Evaluate(ctx context.Context, req ABACCheckRequest) (*ABACCheckResponse, error) {
 	user, err := s.users.FindByID(ctx, req.UserID)
 	if err != nil {
@@ -38,6 +41,7 @@ func (s *AuthorizationService) Evaluate(ctx context.Context, req ABACCheckReques
 	return &ABACCheckResponse{Allowed: true}, nil
 }
 
+// AssignRole assigns a role to a target user, with admin authorization check.
 func (s *AuthorizationService) AssignRole(
 	ctx context.Context, requesterID, targetUserID string, role domain.RoleName,
 ) error {
@@ -77,6 +81,7 @@ func (s *AuthorizationService) AssignRole(
 	return s.users.Update(ctx, user)
 }
 
+// RemoveRole removes a role from a target user, with admin authorization check.
 func (s *AuthorizationService) RemoveRole(
 	ctx context.Context, requesterID, targetUserID string, role domain.RoleName,
 ) error {
@@ -119,6 +124,7 @@ func (s *AuthorizationService) RemoveRole(
 	return s.users.Update(ctx, user)
 }
 
+// ListRoles returns all predefined roles with their permissions.
 func (s *AuthorizationService) ListRoles(ctx context.Context) ([]RoleResponse, error) {
 	roles := make([]RoleResponse, 0, len(domain.DefaultRoles))
 	for _, role := range domain.DefaultRoles {
@@ -138,6 +144,7 @@ func (s *AuthorizationService) ListRoles(ctx context.Context) ([]RoleResponse, e
 	return roles, nil
 }
 
+// ListUsers returns a paginated list of users.
 func (s *AuthorizationService) ListUsers(ctx context.Context, offset, limit int) (*UserListResponse, error) {
 	users, err := s.users.List(ctx, offset, limit)
 	if err != nil {

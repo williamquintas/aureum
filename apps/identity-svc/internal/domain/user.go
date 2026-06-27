@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import (
@@ -6,15 +7,21 @@ import (
 	"unicode"
 )
 
+// UserStatus represents the lifecycle status of a user account.
 type UserStatus string
 
 const (
+	// UserStatusUnverified indicates the user has not verified their email.
 	UserStatusUnverified UserStatus = "UNVERIFIED"
-	UserStatusActive     UserStatus = "ACTIVE"
-	UserStatusLocked     UserStatus = "LOCKED"
-	UserStatusDisabled   UserStatus = "DISABLED"
+	// UserStatusActive indicates the user account is active.
+	UserStatusActive UserStatus = "ACTIVE"
+	// UserStatusLocked indicates the user account is locked.
+	UserStatusLocked UserStatus = "LOCKED"
+	// UserStatusDisabled indicates the user account is disabled.
+	UserStatusDisabled UserStatus = "DISABLED"
 )
 
+// User is the core domain entity for a user account.
 type User struct {
 	ID               string
 	KeycloakID       string
@@ -32,21 +39,25 @@ type User struct {
 	UpdatedAt        time.Time
 }
 
+// SignupInput is the input for creating a new user account.
 type SignupInput struct {
 	Email    string
 	Password string
 	Name     string
 }
 
+// LoginInput is the input for authenticating a user.
 type LoginInput struct {
 	Email    string
 	Password string
 }
 
+// Email is a value object representing an email address.
 type Email struct {
 	Address string
 }
 
+// NewEmail creates a new Email value object with validation.
 func NewEmail(address string) (Email, error) {
 	_, err := mail.ParseAddress(address)
 	if err != nil {
@@ -55,10 +66,12 @@ func NewEmail(address string) (Email, error) {
 	return Email{Address: address}, nil
 }
 
+// Password is a value object representing a password.
 type Password struct {
 	Value string
 }
 
+// NewPassword creates a new Password with strength validation.
 func NewPassword(value string) (Password, error) {
 	if len(value) < 8 {
 		return Password{}, ErrWeakPassword

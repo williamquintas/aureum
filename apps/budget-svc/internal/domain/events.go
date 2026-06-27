@@ -4,8 +4,11 @@ package domain
 type EventType string
 
 const (
+	// EventBudgetCreated is emitted when a new budget is created.
 	EventBudgetCreated EventType = "budget.created"
+	// EventBudgetUpdated is emitted when a budget is updated.
 	EventBudgetUpdated EventType = "budget.updated"
+	// EventBudgetDeleted is emitted when a budget is deleted.
 	EventBudgetDeleted EventType = "budget.deleted"
 )
 

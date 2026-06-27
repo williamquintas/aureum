@@ -1,3 +1,4 @@
+// Package domain contains domain entities, value objects, and repository interfaces for credit card management.
 package domain
 
 import (
@@ -5,22 +6,32 @@ import (
 	"time"
 )
 
+// CardBrand represents a credit card brand.
 type CardBrand string
 
 const (
-	CardBrandVisa       CardBrand = "visa"
+	// CardBrandVisa is the Visa brand.
+	CardBrandVisa CardBrand = "visa"
+	// CardBrandMastercard is the Mastercard brand.
 	CardBrandMastercard CardBrand = "mastercard"
-	CardBrandAmex       CardBrand = "amex"
-	CardBrandElo        CardBrand = "elo"
-	CardBrandHipercard  CardBrand = "hipercard"
-	CardBrandDiners     CardBrand = "diners"
-	CardBrandOther      CardBrand = "other"
+	// CardBrandAmex is the American Express brand.
+	CardBrandAmex CardBrand = "amex"
+	// CardBrandElo is the Elo brand.
+	CardBrandElo CardBrand = "elo"
+	// CardBrandHipercard is the Hipercard brand.
+	CardBrandHipercard CardBrand = "hipercard"
+	// CardBrandDiners is the Diners Club brand.
+	CardBrandDiners CardBrand = "diners"
+	// CardBrandOther represents other/unknown card brands.
+	CardBrandOther CardBrand = "other"
 )
 
+// ValidCardBrands returns all valid card brands.
 func ValidCardBrands() []CardBrand {
 	return []CardBrand{CardBrandVisa, CardBrandMastercard, CardBrandAmex, CardBrandElo, CardBrandHipercard, CardBrandDiners, CardBrandOther}
 }
 
+// Valid checks if the card brand is a recognized value.
 func (b CardBrand) Valid() bool {
 	for _, valid := range ValidCardBrands() {
 		if b == valid {
@@ -30,18 +41,24 @@ func (b CardBrand) Valid() bool {
 	return false
 }
 
+// CardType represents the type of a credit card.
 type CardType string
 
 const (
-	CardTypeCredit   CardType = "credit"
-	CardTypeDebit    CardType = "debit"
+	// CardTypeCredit is a credit card.
+	CardTypeCredit CardType = "credit"
+	// CardTypeDebit is a debit card.
+	CardTypeDebit CardType = "debit"
+	// CardTypeMultiple is a multiple (credit + debit) card.
 	CardTypeMultiple CardType = "multiple"
 )
 
+// ValidCardTypes returns all valid card types.
 func ValidCardTypes() []CardType {
 	return []CardType{CardTypeCredit, CardTypeDebit, CardTypeMultiple}
 }
 
+// Valid checks if the card type is a recognized value.
 func (t CardType) Valid() bool {
 	for _, valid := range ValidCardTypes() {
 		if t == valid {
@@ -51,6 +68,7 @@ func (t CardType) Valid() bool {
 	return false
 }
 
+// CreditCard represents a credit card entity.
 type CreditCard struct {
 	ID              string
 	UserID          string
@@ -68,6 +86,7 @@ type CreditCard struct {
 	DeletedAt       *time.Time
 }
 
+// CreateCreditCardInput contains validated input for creating a new credit card.
 type CreateCreditCardInput struct {
 	UserID         string
 	Name           string
@@ -80,6 +99,7 @@ type CreateCreditCardInput struct {
 	IdempotencyKey string
 }
 
+// UpdateCreditCardInput contains optional fields for updating a credit card.
 type UpdateCreditCardInput struct {
 	ID             string
 	UserID         string
@@ -91,6 +111,7 @@ type UpdateCreditCardInput struct {
 	IdempotencyKey string
 }
 
+// NewCreditCard creates a new CreditCard with validation.
 func NewCreditCard(input CreateCreditCardInput) (*CreditCard, error) {
 	if input.UserID == "" {
 		return nil, ErrMissingField
@@ -140,6 +161,7 @@ func NewCreditCard(input CreateCreditCardInput) (*CreditCard, error) {
 	}, nil
 }
 
+// ApplyUpdate applies partial updates to a credit card.
 func (c *CreditCard) ApplyUpdate(input UpdateCreditCardInput) error {
 	if input.UserID != "" && input.UserID != c.UserID {
 		return ErrAccessDenied

@@ -52,6 +52,7 @@ func validateResetToken(tokenStr string, secret []byte) (*resetClaims, error) {
 	return claims, nil
 }
 
+// KeycloakClient defines the interface for interacting with Keycloak.
 type KeycloakClient interface {
 	CreateUser(ctx context.Context, email, password, name string) (string, error)
 	Authenticate(ctx context.Context, email, password string) (*LoginResponse, error)
@@ -62,29 +63,35 @@ type KeycloakClient interface {
 	UpdatePassword(ctx context.Context, userID, newPassword string) error
 }
 
+// TokenValidator defines the interface for validating access tokens.
 type TokenValidator interface {
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
 }
 
+// TokenBlacklist defines the interface for managing a token blacklist.
 type TokenBlacklist interface {
 	Add(ctx context.Context, jti string, ttl time.Duration) error
 	IsBlacklisted(ctx context.Context, jti string) (bool, error)
 }
 
+// FeatureFlag defines the interface for feature flag evaluation.
 type FeatureFlag interface {
 	IsEnabled(ctx context.Context, flag string) bool
 }
 
+// TOTPStore defines the interface for storing TOTP setup data.
 type TOTPStore interface {
 	Save(ctx context.Context, userID string, data interface{}, ttl time.Duration) error
 	GetAndDelete(ctx context.Context, userID string) (interface{}, error)
 }
 
+// EmailOTPStore defines the interface for storing email OTP data.
 type EmailOTPStore interface {
 	Save(ctx context.Context, email, otp string, ttl time.Duration) error
 	GetAndDelete(ctx context.Context, email string) (string, error)
 }
 
+// UserSessionRepresentation represents a user session from Keycloak.
 type UserSessionRepresentation struct {
 	ID         string
 	UserID     string
@@ -94,11 +101,13 @@ type UserSessionRepresentation struct {
 	Expires    time.Time
 }
 
+// KeycloakClientSession defines the interface for session management in Keycloak.
 type KeycloakClientSession interface {
 	GetUserSessions(ctx context.Context, userID string) ([]UserSessionRepresentation, error)
 	LogoutUserSession(ctx context.Context, sessionID string) error
 }
 
+// AuthService implements the authentication use cases for the identity service.
 type AuthService struct {
 	users          domain.UserRepository
 	keycloak       KeycloakClient
@@ -114,12 +123,14 @@ type AuthService struct {
 	jwtSecret      []byte
 }
 
+// Cache defines the interface for a generic cache store.
 type Cache interface {
 	GetOrSet(ctx context.Context, key string, ttl time.Duration, fn func() (interface{}, error), dest interface{}) error
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Get(ctx context.Context, key string, dest interface{}) (bool, error)
 }
 
+// NewAuthService creates a new AuthService with the required dependencies.
 func NewAuthService(
 	users domain.UserRepository,
 	keycloak KeycloakClient,
@@ -158,10 +169,12 @@ func generateOTP() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
+// ValidateToken validates an access token and returns the associated user.
 func (s *AuthService) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
 	return s.tokenValidator.ValidateToken(ctx, token)
 }
 
+// Signup registers a new user account, sends a verification OTP, and supports idempotency.
 func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotencyKey string) (*SignupResponse, error) {
 	if idempotencyKey != "" {
 		var existing SignupResponse
@@ -268,6 +281,7 @@ func (s *AuthService) Signup(ctx context.Context, req SignupRequest, idempotency
 	return resp, nil
 }
 
+// Login authenticates a user and returns access, refresh, and ID tokens.
 func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	_, err := domain.NewEmail(req.Email)
 	if err != nil {
@@ -317,6 +331,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	return tokens, nil
 }
 
+// VerifyEmail verifies a user's email address using an OTP code.
 func (s *AuthService) VerifyEmail(ctx context.Context, req VerifyEmailRequest) error {
 	_, err := domain.NewEmail(req.Email)
 	if err != nil {
@@ -360,6 +375,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, req VerifyEmailRequest) e
 	})
 }
 
+// RefreshToken refreshes an expired access token using a refresh token.
 func (s *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (*LoginResponse, error) {
 	if req.RefreshToken == "" {
 		return nil, domain.ErrTokenInvalid
@@ -373,6 +389,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 	return tokens, nil
 }
 
+// Logout invalidates an access token and emits a logout event.
 func (s *AuthService) Logout(ctx context.Context, userID, accessToken string) error {
 	claims, err := authpkg.ExtractClaims(accessToken, s.jwtSecret)
 	if err != nil {
@@ -395,6 +412,7 @@ func (s *AuthService) Logout(ctx context.Context, userID, accessToken string) er
 	return nil
 }
 
+// ForgotPassword initiates a password reset flow by sending a reset token.
 func (s *AuthService) ForgotPassword(ctx context.Context, req ForgotPasswordRequest) error {
 	_, err := domain.NewEmail(req.Email)
 	if err != nil {
@@ -432,6 +450,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req ForgotPasswordRequ
 	return nil
 }
 
+// ResetPassword completes a password reset using a valid reset token.
 func (s *AuthService) ResetPassword(ctx context.Context, req ResetPasswordRequest) error {
 	claims, err := validateResetToken(req.Token, s.jwtSecret)
 	if err != nil {
@@ -464,6 +483,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, req ResetPasswordReques
 	return s.outbox.Save(ctx, nil, event)
 }
 
+// GetProfile retrieves the user profile with cache-first semantics.
 func (s *AuthService) GetProfile(ctx context.Context, userID string) (*UserProfileResponse, error) {
 	cacheKey := "profile:" + userID
 	var cached UserProfileResponse
@@ -492,6 +512,7 @@ func (s *AuthService) GetProfile(ctx context.Context, userID string) (*UserProfi
 	return &cached, nil
 }
 
+// SetupMFA initiates MFA setup by generating a TOTP secret and QR code.
 func (s *AuthService) SetupMFA(ctx context.Context, userID string) (*EnableMFAResponse, error) {
 	if !s.featureFlag.IsEnabled(ctx, "mfa") {
 		return nil, domain.ErrFeatureDisabled
@@ -528,6 +549,7 @@ func (s *AuthService) SetupMFA(ctx context.Context, userID string) (*EnableMFARe
 	}, nil
 }
 
+// VerifyAndEnableMFA verifies a TOTP code and enables MFA for the user.
 func (s *AuthService) VerifyAndEnableMFA(ctx context.Context, userID, code string) error {
 	if !s.featureFlag.IsEnabled(ctx, "mfa") {
 		return domain.ErrFeatureDisabled
@@ -574,6 +596,7 @@ func (s *AuthService) VerifyAndEnableMFA(ctx context.Context, userID, code strin
 	})
 }
 
+// DisableMFA disables MFA for a user after verifying their password.
 func (s *AuthService) DisableMFA(ctx context.Context, userID, password string) error {
 	if !s.featureFlag.IsEnabled(ctx, "mfa") {
 		return domain.ErrFeatureDisabled
@@ -608,6 +631,7 @@ func (s *AuthService) DisableMFA(ctx context.Context, userID, password string) e
 	})
 }
 
+// ListSessions returns all active sessions for a user.
 func (s *AuthService) ListSessions(ctx context.Context, userID string) ([]SessionResponse, error) {
 	if !s.featureFlag.IsEnabled(ctx, "sessions") {
 		return nil, domain.ErrFeatureDisabled
@@ -631,6 +655,7 @@ func (s *AuthService) ListSessions(ctx context.Context, userID string) ([]Sessio
 	return sessions, nil
 }
 
+// RevokeSession revokes a specific user session.
 func (s *AuthService) RevokeSession(ctx context.Context, sessionID string) error {
 	if !s.featureFlag.IsEnabled(ctx, "sessions") {
 		return domain.ErrFeatureDisabled
@@ -638,6 +663,7 @@ func (s *AuthService) RevokeSession(ctx context.Context, sessionID string) error
 	return s.sessionClient.LogoutUserSession(ctx, sessionID)
 }
 
+// UpdateProfile updates a user's profile fields with idempotency support.
 func (s *AuthService) UpdateProfile(
 	ctx context.Context, userID string, req UpdateProfileRequest, idempotencyKey string,
 ) error {
@@ -690,6 +716,7 @@ func (s *AuthService) UpdateProfile(
 	return nil
 }
 
+// AdminCreateUser creates a new user on behalf of an admin.
 func (s *AuthService) AdminCreateUser(ctx context.Context, req AdminCreateUserRequest) (*SignupResponse, error) {
 	return s.Signup(ctx, SignupRequest(req), "")
 }

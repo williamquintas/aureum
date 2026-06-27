@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 // AssetAllocation represents the allocation for a single asset type.

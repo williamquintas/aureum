@@ -1,3 +1,4 @@
+// Package persistence provides database repository implementations.
 package persistence
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/aureum/pkg/outbox"
 )
 
+// UserWriteRepository implements the write-side user repository backed by PostgreSQL.
 type UserWriteRepository struct {
 	pool *pgxpool.Pool
 }
@@ -25,10 +27,12 @@ func getTx(ctx context.Context) pgx.Tx {
 	return tx
 }
 
+// NewUserWriteRepository creates a new UserWriteRepository.
 func NewUserWriteRepository(pool *pgxpool.Pool) *UserWriteRepository {
 	return &UserWriteRepository{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *UserWriteRepository) WithTx(ctx context.Context, fn func(context.Context) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -43,6 +47,7 @@ func (r *UserWriteRepository) WithTx(ctx context.Context, fn func(context.Contex
 	return tx.Commit(ctx)
 }
 
+// Save inserts a new user record into the database.
 func (r *UserWriteRepository) Save(ctx context.Context, user *domain.User) error {
 	query := `INSERT INTO users
 		(keycloak_id, email, email_verified, status, name, roles, custom_attributes, created_at, updated_at)
@@ -71,6 +76,7 @@ func (r *UserWriteRepository) Save(ctx context.Context, user *domain.User) error
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
+// FindByEmail finds a user by email address.
 func (r *UserWriteRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `SELECT id, keycloak_id, email, email_verified, status, name, avatar_url, cpf,
 		mfa_enabled, roles, custom_attributes, last_login_at, created_at, updated_at
@@ -83,6 +89,7 @@ func (r *UserWriteRepository) FindByEmail(ctx context.Context, email string) (*d
 	return user, nil
 }
 
+// FindByID finds a user by their unique ID.
 func (r *UserWriteRepository) FindByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `SELECT id, keycloak_id, email, email_verified, status, name, avatar_url, cpf,
 		mfa_enabled, roles, custom_attributes, last_login_at, created_at, updated_at
@@ -95,6 +102,7 @@ func (r *UserWriteRepository) FindByID(ctx context.Context, id string) (*domain.
 	return user, nil
 }
 
+// FindByKeycloakID finds a user by their Keycloak ID.
 func (r *UserWriteRepository) FindByKeycloakID(ctx context.Context, keycloakID string) (*domain.User, error) {
 	query := `SELECT id, keycloak_id, email, email_verified, status, name, avatar_url, cpf,
 		mfa_enabled, roles, custom_attributes, last_login_at, created_at, updated_at
@@ -107,6 +115,7 @@ func (r *UserWriteRepository) FindByKeycloakID(ctx context.Context, keycloakID s
 	return user, nil
 }
 
+// Update updates an existing user record in the database.
 func (r *UserWriteRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `UPDATE users SET
 		email = $1, email_verified = $2, status = $3, name = $4, avatar_url = $5,
@@ -179,14 +188,17 @@ func (r *UserWriteRepository) scanUser(ctx context.Context, query string, args .
 	return &user, nil
 }
 
+// OutboxRepository implements the outbox pattern repository backed by PostgreSQL.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewOutboxRepository creates a new OutboxRepository.
 func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
+// Save inserts an outbox event into the database.
 func (r *OutboxRepository) Save(ctx context.Context, tx any, event *outbox.Event) error {
 	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
@@ -214,11 +226,13 @@ func (r *OutboxRepository) Save(ctx context.Context, tx any, event *outbox.Event
 	return err
 }
 
+// Pending returns all unpublished outbox events.
 func (r *OutboxRepository) Pending(ctx context.Context) ([]outbox.Event, error) {
 	store := outbox.NewStore(r.pool)
 	return store.Pending(ctx)
 }
 
+// MarkPublished marks an outbox event as published.
 func (r *OutboxRepository) MarkPublished(ctx context.Context, id string) error {
 	store := outbox.NewStore(r.pool)
 	return store.MarkPublished(ctx, id)

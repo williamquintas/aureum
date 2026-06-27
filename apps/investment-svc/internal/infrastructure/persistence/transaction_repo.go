@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL repository implementations.
 package persistence
 
 import (
@@ -9,18 +10,22 @@ import (
 	"github.com/aureum/investment-svc/internal/domain"
 )
 
+// TransactionRepo implements domain.TransactionRepository using PostgreSQL.
 type TransactionRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewTransactionRepo creates a new TransactionRepo.
 func NewTransactionRepo(pool *pgxpool.Pool) *TransactionRepo {
 	return &TransactionRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *TransactionRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new investment transaction.
 func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvestmentTransaction) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -40,6 +45,7 @@ func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvestmentTransac
 	return nil
 }
 
+// FindByID retrieves a single transaction by its ID and user ID.
 func (r *TransactionRepo) FindByID(ctx context.Context, id, userID string) (*domain.InvestmentTransaction, error) {
 	row := r.pool.QueryRow(ctx,
 		`SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
@@ -62,6 +68,7 @@ func (r *TransactionRepo) FindByID(ctx context.Context, id, userID string) (*dom
 	return &t, nil
 }
 
+// FindByInvestment returns transactions for a given investment with optional filters.
 func (r *TransactionRepo) FindByInvestment(ctx context.Context, investmentID, userID string, filter domain.TransactionFilter) ([]*domain.InvestmentTransaction, error) {
 	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
 			  FROM investment_transactions WHERE investment_id=$1 AND user_id=$2`
@@ -121,6 +128,7 @@ func (r *TransactionRepo) FindByInvestment(ctx context.Context, investmentID, us
 	return transactions, nil
 }
 
+// CountByInvestment returns the total number of transactions for an investment matching the filter.
 func (r *TransactionRepo) CountByInvestment(ctx context.Context, investmentID, userID string, filter domain.TransactionFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM investment_transactions WHERE investment_id=$1 AND user_id=$2`
 	args := []interface{}{investmentID, userID}
@@ -149,6 +157,7 @@ func (r *TransactionRepo) CountByInvestment(ctx context.Context, investmentID, u
 	return count, nil
 }
 
+// List returns all transactions for a user with optional filters.
 func (r *TransactionRepo) List(ctx context.Context, userID string, filter domain.TransactionFilter) ([]*domain.InvestmentTransaction, error) {
 	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
 			  FROM investment_transactions WHERE user_id=$1`

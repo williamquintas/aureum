@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// AmortizationEntry represents a single month in an amortization schedule.
 type AmortizationEntry struct {
 	Month        int32
 	Principal    int64
@@ -13,6 +14,7 @@ type AmortizationEntry struct {
 	TotalPayment int64
 }
 
+// AmortizationSchedule represents the full amortization schedule for a debt.
 type AmortizationSchedule struct {
 	DebtID          string
 	TotalAmount     int64

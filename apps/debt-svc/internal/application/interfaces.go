@@ -1,3 +1,4 @@
+// Package application contains the application-layer interfaces for the debt service.
 package application
 
 import (
@@ -7,16 +8,19 @@ import (
 	"github.com/aureum/debt-svc/internal/domain"
 )
 
+// Cache interface for cache-first reads.
 type Cache interface {
 	Get(ctx context.Context, key string, dest interface{}) (bool, error)
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 }
 
+// FeatureFlag interface for feature flag evaluation.
 type FeatureFlag interface {
 	IsEnabled(ctx context.Context, flag string) bool
 }
 
+// DebtService defines the application use cases for debt operations.
 type DebtService interface {
 	CreateDebt(ctx context.Context, req CreateDebtRequest) (*DebtResponse, error)
 	GetDebt(ctx context.Context, id, userID string) (*DebtResponse, error)

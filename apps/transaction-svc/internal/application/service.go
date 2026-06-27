@@ -10,15 +10,18 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// IdempotencyStore defines the contract for idempotency key storage.
 type IdempotencyStore interface {
 	Get(ctx context.Context, key string, dest interface{}) error
 	Store(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 }
 
+// OutboxRepository defines the contract for persisting outbox events.
 type OutboxRepository interface {
 	Save(ctx context.Context, event interface{}) error
 }
 
+// Service orchestrates transaction use cases including income and expense management.
 type Service struct {
 	incomes          domain.IncomeRepository
 	fixedExpenses    domain.FixedExpenseRepository
@@ -29,6 +32,7 @@ type Service struct {
 	featureFlag      FeatureFlag
 }
 
+// NewService creates a new Service with the required repository and infrastructure dependencies.
 func NewService(
 	incomes domain.IncomeRepository,
 	fixedExpenses domain.FixedExpenseRepository,
@@ -59,6 +63,7 @@ func cacheKeyForUser(prefix, id, userID string) string {
 
 // ── Income ──────────────────────────────────────────────────────────────────
 
+// CreateIncome creates a new income record with idempotency support and outbox event publishing.
 func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*CreateIncomeResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateIncomeResponse
@@ -138,6 +143,7 @@ func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*C
 	return resp, nil
 }
 
+// GetIncome retrieves a single income record by ID, with cache-first support.
 func (s *Service) GetIncome(ctx context.Context, id, userID string) (*GetIncomeResponse, error) {
 	key := cacheKeyForUser("income", id, userID)
 	if s.cache != nil {
@@ -169,6 +175,7 @@ func (s *Service) GetIncome(ctx context.Context, id, userID string) (*GetIncomeR
 	return resp, nil
 }
 
+// UpdateIncome applies partial updates to an income record and publishes an update event.
 func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*GetIncomeResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached GetIncomeResponse
@@ -260,6 +267,7 @@ func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*G
 	return resp, nil
 }
 
+// DeleteIncome soft-deletes an income record and publishes a deletion event.
 func (s *Service) DeleteIncome(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKeyForUser("income", id, userID))
@@ -279,6 +287,7 @@ func (s *Service) DeleteIncome(ctx context.Context, id, userID string) error {
 	})
 }
 
+// ListIncomes returns a paginated list of income records for a user.
 func (s *Service) ListIncomes(ctx context.Context, userID string, filter domain.IncomeFilter) ([]*GetIncomeResponse, int, error) {
 	items, err := s.incomes.List(ctx, userID, filter)
 	if err != nil {
@@ -309,6 +318,7 @@ func (s *Service) ListIncomes(ctx context.Context, userID string, filter domain.
 
 // ── FixedExpense ────────────────────────────────────────────────────────────
 
+// CreateFixedExpense creates a new fixed expense record with idempotency and event publishing.
 func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpenseRequest) (*CreateFixedExpenseResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateFixedExpenseResponse
@@ -384,6 +394,7 @@ func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpense
 	return resp, nil
 }
 
+// GetFixedExpense retrieves a single fixed expense record by ID.
 func (s *Service) GetFixedExpense(ctx context.Context, id, userID string) (*CreateFixedExpenseResponse, error) {
 	key := cacheKey("fixed_expense", id)
 	if s.cache != nil {
@@ -414,6 +425,7 @@ func (s *Service) GetFixedExpense(ctx context.Context, id, userID string) (*Crea
 	return resp, nil
 }
 
+// UpdateFixedExpense applies partial updates to a fixed expense record.
 func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpenseRequest) (*CreateFixedExpenseResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateFixedExpenseResponse
@@ -499,6 +511,7 @@ func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpense
 	return resp, nil
 }
 
+// DeleteFixedExpense soft-deletes a fixed expense record.
 func (s *Service) DeleteFixedExpense(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKey("fixed_expense", id))
@@ -518,6 +531,7 @@ func (s *Service) DeleteFixedExpense(ctx context.Context, id, userID string) err
 	})
 }
 
+// ListFixedExpenses returns a paginated list of fixed expense records for a user.
 func (s *Service) ListFixedExpenses(ctx context.Context, userID string, filter domain.FixedExpenseFilter) ([]*CreateFixedExpenseResponse, int, error) {
 	items, err := s.fixedExpenses.List(ctx, userID, filter)
 	if err != nil {
@@ -547,6 +561,7 @@ func (s *Service) ListFixedExpenses(ctx context.Context, userID string, filter d
 
 // ── VariableExpense ─────────────────────────────────────────────────────────
 
+// CreateVariableExpense creates a new variable expense record with idempotency and event publishing.
 func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableExpenseRequest) (*CreateVariableExpenseResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateVariableExpenseResponse
@@ -635,6 +650,7 @@ func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableE
 	return resp, nil
 }
 
+// GetVariableExpense retrieves a single variable expense record by ID.
 func (s *Service) GetVariableExpense(ctx context.Context, id, userID string) (*CreateVariableExpenseResponse, error) {
 	key := cacheKey("variable_expense", id)
 	if s.cache != nil {
@@ -668,6 +684,7 @@ func (s *Service) GetVariableExpense(ctx context.Context, id, userID string) (*C
 	return resp, nil
 }
 
+// UpdateVariableExpense applies partial updates to a variable expense record.
 func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableExpenseRequest) (*CreateVariableExpenseResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateVariableExpenseResponse
@@ -769,6 +786,7 @@ func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableE
 	return resp, nil
 }
 
+// DeleteVariableExpense soft-deletes a variable expense record.
 func (s *Service) DeleteVariableExpense(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKey("variable_expense", id))
@@ -788,6 +806,7 @@ func (s *Service) DeleteVariableExpense(ctx context.Context, id, userID string) 
 	})
 }
 
+// ListVariableExpenses returns a paginated list of variable expense records for a user.
 func (s *Service) ListVariableExpenses(ctx context.Context, userID string, filter domain.VariableExpenseFilter) ([]*CreateVariableExpenseResponse, int, error) {
 	items, err := s.variableExpenses.List(ctx, userID, filter)
 	if err != nil {

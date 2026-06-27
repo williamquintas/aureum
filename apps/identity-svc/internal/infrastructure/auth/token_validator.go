@@ -11,12 +11,14 @@ import (
 	"github.com/aureum/pkg/telemetry"
 )
 
+// CachedTokenValidator caches token validation results to reduce Keycloak requests.
 type CachedTokenValidator struct {
 	keycloak *Client
 	cache    *cachepkg.Cache
 	ttl      time.Duration
 }
 
+// NewCachedTokenValidator creates a new CachedTokenValidator.
 func NewCachedTokenValidator(keycloak *Client, cache *cachepkg.Cache, ttl time.Duration) *CachedTokenValidator {
 	return &CachedTokenValidator{
 		keycloak: keycloak,
@@ -25,6 +27,7 @@ func NewCachedTokenValidator(keycloak *Client, cache *cachepkg.Cache, ttl time.D
 	}
 }
 
+// ValidateToken validates a token with cache-first semantics.
 func (v *CachedTokenValidator) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
 	cacheKey := fmt.Sprintf("token:validated:%x", sha256.Sum256([]byte(token)))
 

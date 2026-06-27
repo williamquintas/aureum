@@ -1,3 +1,4 @@
+// Package main is the entry point for the identity service.
 package main
 
 import (
@@ -36,6 +37,7 @@ import (
 	"github.com/aureum/pkg/telemetry"
 )
 
+// Config holds the service configuration loaded from environment variables.
 type Config struct {
 	Port              string `envconfig:"PORT" default:"8080"`
 	GRPCPort          string `envconfig:"GRPC_PORT" default:"9090"`

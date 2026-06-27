@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import "context"

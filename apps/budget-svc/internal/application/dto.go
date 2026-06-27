@@ -1,3 +1,4 @@
+// Package application provides the application-layer DTOs and use case orchestration.
 package application
 
 import "github.com/aureum/budget-svc/internal/domain"

@@ -1,3 +1,4 @@
+// Package main is the entry point for the credit card service.
 package main
 
 import (

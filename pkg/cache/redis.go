@@ -1,3 +1,4 @@
+// Package cache provides a Redis-backed caching layer with JSON serialization.
 package cache
 
 import (
@@ -9,10 +10,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Cache wraps a Redis client to provide Get/Set/Delete/Exists operations.
 type Cache struct {
 	client *redis.Client
 }
 
+// NewRedisCache creates a new Cache connected to the specified Redis server.
 func NewRedisCache(addr, password string, db int) (*Cache, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -30,10 +33,12 @@ func NewRedisCache(addr, password string, db int) (*Cache, error) {
 	return &Cache{client: client}, nil
 }
 
+// Close closes the underlying Redis connection.
 func (c *Cache) Close() error {
 	return c.client.Close()
 }
 
+// Get retrieves a JSON value from cache and unmarshals it into dest. Returns false if key does not exist.
 func (c *Cache) Get(ctx context.Context, key string, dest interface{}) (bool, error) {
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err == redis.Nil {
@@ -50,6 +55,7 @@ func (c *Cache) Get(ctx context.Context, key string, dest interface{}) (bool, er
 	return true, nil
 }
 
+// Set stores a JSON-marshaled value in cache with the given TTL.
 func (c *Cache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -63,6 +69,7 @@ func (c *Cache) Set(ctx context.Context, key string, value interface{}, ttl time
 	return nil
 }
 
+// Delete removes a key from the cache.
 func (c *Cache) Delete(ctx context.Context, key string) error {
 	if err := c.client.Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("delete cache key: %w", err)
@@ -70,6 +77,7 @@ func (c *Cache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+// Exists checks whether a key exists in the cache.
 func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
 	n, err := c.client.Exists(ctx, key).Result()
 	if err != nil {
@@ -78,6 +86,7 @@ func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
 	return n > 0, nil
 }
 
+// GetOrSet retrieves a value from cache or computes it via fn and stores the result.
 func (c *Cache) GetOrSet(ctx context.Context, key string, ttl time.Duration,
 	fn func() (interface{}, error), dest interface{},
 ) error {

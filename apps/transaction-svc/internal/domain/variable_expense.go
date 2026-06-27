@@ -2,6 +2,7 @@ package domain
 
 import "time"
 
+// VariableExpense represents a non-recurring expense with a specific amount and date.
 type VariableExpense struct {
 	ID            string
 	UserID        string
@@ -18,6 +19,7 @@ type VariableExpense struct {
 	DeletedAt     *time.Time
 }
 
+// CreateVariableExpenseInput contains the fields required to create a new VariableExpense.
 type CreateVariableExpenseInput struct {
 	UserID         string
 	Description    string
@@ -31,6 +33,7 @@ type CreateVariableExpenseInput struct {
 	IdempotencyKey string
 }
 
+// UpdateVariableExpenseInput contains the fields that can be updated on a VariableExpense.
 type UpdateVariableExpenseInput struct {
 	ID             string
 	UserID         string
@@ -45,6 +48,7 @@ type UpdateVariableExpenseInput struct {
 	IdempotencyKey string
 }
 
+// NewVariableExpense creates a new VariableExpense after validating the input.
 func NewVariableExpense(input CreateVariableExpenseInput) (*VariableExpense, error) {
 	if input.UserID == "" {
 		return nil, ErrMissingField
@@ -99,6 +103,7 @@ func NewVariableExpense(input CreateVariableExpenseInput) (*VariableExpense, err
 	}, nil
 }
 
+// ApplyUpdate applies the provided update input to the VariableExpense, validating each field.
 func (v *VariableExpense) ApplyUpdate(input UpdateVariableExpenseInput) error {
 	if input.UserID != "" && input.UserID != v.UserID {
 		return ErrAccessDenied
@@ -154,6 +159,7 @@ func (v *VariableExpense) ApplyUpdate(input UpdateVariableExpenseInput) error {
 	return nil
 }
 
+// TransitionStatus transitions the variable expense status to a new valid status.
 func (v *VariableExpense) TransitionStatus(newStatus TransactionStatus) error {
 	if !newStatus.Valid() {
 		return ErrInvalidStatus
