@@ -25,7 +25,7 @@ func TestAuditLogger_NilPool_DoesNotCrash(t *testing.T) {
 	logger := middleware.NewAuditLogger(nil)
 	handler := logger.Middleware(auditHandler(http.StatusOK))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -36,7 +36,7 @@ func TestAuditLogger_NilPool_Status400DoesNotCrash(t *testing.T) {
 	logger := middleware.NewAuditLogger(nil)
 	handler := logger.Middleware(auditHandler(http.StatusBadRequest))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -47,7 +47,7 @@ func TestAuditLogger_NilPool_Status500DoesNotCrash(t *testing.T) {
 	logger := middleware.NewAuditLogger(nil)
 	handler := logger.Middleware(auditHandler(http.StatusInternalServerError))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -60,7 +60,7 @@ func TestAuditLogger_SkipsBelow400(t *testing.T) {
 	// 3xx should be skipped
 	handler := logger.Middleware(auditHandler(http.StatusFound))
 
-	req := httptest.NewRequest(http.MethodGet, "/redirect", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/redirect", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -86,7 +86,7 @@ func TestAuditLogger_ResponseWriterCapturesStatus(t *testing.T) {
 
 	for _, code := range codes {
 		handler := logger.Middleware(auditHandler(code))
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 		assert.Equal(t, code, w.Code)
@@ -121,7 +121,7 @@ func TestAuditLogger_TableDriven(t *testing.T) {
 			logger := middleware.NewAuditLogger(nil)
 			handler := logger.Middleware(auditHandler(tt.statusCode))
 
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 
@@ -151,7 +151,7 @@ func TestAuditLogger_WithRealPool(t *testing.T) {
 	logger := middleware.NewAuditLogger(pool)
 	handler := logger.Middleware(auditHandler(http.StatusBadRequest))
 
-	req := httptest.NewRequest(http.MethodPost, "/test-audit", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/test-audit", nil)
 	req.RemoteAddr = "127.0.0.1:12345"
 	req.Header.Set("User-Agent", "test-agent")
 	w := httptest.NewRecorder()

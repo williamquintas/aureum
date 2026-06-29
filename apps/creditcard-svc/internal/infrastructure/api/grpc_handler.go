@@ -19,6 +19,12 @@ import (
 	creditcardv1 "github.com/aureum/proto/gen/creditcard/creditcardv1"
 )
 
+const (
+	strOther  = "other"
+	strCredit = "credit"
+	strOpen   = "open"
+)
+
 // GRPCHandler implements the creditcardv1.CreditCardServiceServer interface.
 type GRPCHandler struct {
 	creditcardv1.UnimplementedCreditCardServiceServer
@@ -33,7 +39,9 @@ func NewGRPCHandler(svc application.CreditCardService) *GRPCHandler {
 // ── CreditCard ───────────────────────────────────────────────────────────────
 
 // CreateCreditCard handles gRPC requests for creating a new credit card.
-func (h *GRPCHandler) CreateCreditCard(ctx context.Context, req *creditcardv1.CreateCreditCardRequest) (*creditcardv1.CreditCard, error) {
+func (h *GRPCHandler) CreateCreditCard(
+	ctx context.Context, req *creditcardv1.CreateCreditCardRequest,
+) (*creditcardv1.CreditCard, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -57,7 +65,9 @@ func (h *GRPCHandler) CreateCreditCard(ctx context.Context, req *creditcardv1.Cr
 }
 
 // GetCreditCard handles gRPC requests for retrieving a credit card.
-func (h *GRPCHandler) GetCreditCard(ctx context.Context, req *creditcardv1.GetCreditCardRequest) (*creditcardv1.CreditCard, error) {
+func (h *GRPCHandler) GetCreditCard(
+	ctx context.Context, req *creditcardv1.GetCreditCardRequest,
+) (*creditcardv1.CreditCard, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -71,7 +81,9 @@ func (h *GRPCHandler) GetCreditCard(ctx context.Context, req *creditcardv1.GetCr
 }
 
 // UpdateCreditCard handles gRPC requests for updating a credit card.
-func (h *GRPCHandler) UpdateCreditCard(ctx context.Context, req *creditcardv1.UpdateCreditCardRequest) (*creditcardv1.CreditCard, error) {
+func (h *GRPCHandler) UpdateCreditCard(
+	ctx context.Context, req *creditcardv1.UpdateCreditCardRequest,
+) (*creditcardv1.CreditCard, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -107,7 +119,9 @@ func (h *GRPCHandler) UpdateCreditCard(ctx context.Context, req *creditcardv1.Up
 }
 
 // DeleteCreditCard handles gRPC requests for deleting a credit card.
-func (h *GRPCHandler) DeleteCreditCard(ctx context.Context, req *creditcardv1.DeleteCreditCardRequest) (*emptypb.Empty, error) {
+func (h *GRPCHandler) DeleteCreditCard(
+	ctx context.Context, req *creditcardv1.DeleteCreditCardRequest,
+) (*emptypb.Empty, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -120,7 +134,9 @@ func (h *GRPCHandler) DeleteCreditCard(ctx context.Context, req *creditcardv1.De
 }
 
 // ListCreditCards handles gRPC requests for listing credit cards.
-func (h *GRPCHandler) ListCreditCards(ctx context.Context, req *creditcardv1.ListCreditCardsRequest) (*creditcardv1.ListCreditCardsResponse, error) {
+func (h *GRPCHandler) ListCreditCards(
+	ctx context.Context, req *creditcardv1.ListCreditCardsRequest,
+) (*creditcardv1.ListCreditCardsResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -145,14 +161,16 @@ func (h *GRPCHandler) ListCreditCards(ctx context.Context, req *creditcardv1.Lis
 	telemetry.RecordRequest(ctx, "ListCreditCards", "ok", time.Since(start))
 	return &creditcardv1.ListCreditCardsResponse{
 		CreditCards: protoItems,
-		TotalCount:  int32(total),
+		TotalCount:  int32(total), //nolint:gosec
 	}, nil
 }
 
 // ── Invoice ──────────────────────────────────────────────────────────────────
 
 // CreateInvoice handles gRPC requests for creating an invoice.
-func (h *GRPCHandler) CreateInvoice(ctx context.Context, req *creditcardv1.CreateInvoiceRequest) (*creditcardv1.Invoice, error) {
+func (h *GRPCHandler) CreateInvoice(
+	ctx context.Context, req *creditcardv1.CreateInvoiceRequest,
+) (*creditcardv1.Invoice, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -173,7 +191,9 @@ func (h *GRPCHandler) CreateInvoice(ctx context.Context, req *creditcardv1.Creat
 }
 
 // GetInvoice handles gRPC requests for retrieving an invoice.
-func (h *GRPCHandler) GetInvoice(ctx context.Context, req *creditcardv1.GetInvoiceRequest) (*creditcardv1.Invoice, error) {
+func (h *GRPCHandler) GetInvoice(
+	ctx context.Context, req *creditcardv1.GetInvoiceRequest,
+) (*creditcardv1.Invoice, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -187,7 +207,9 @@ func (h *GRPCHandler) GetInvoice(ctx context.Context, req *creditcardv1.GetInvoi
 }
 
 // ListInvoices handles gRPC requests for listing invoices.
-func (h *GRPCHandler) ListInvoices(ctx context.Context, req *creditcardv1.ListInvoicesRequest) (*creditcardv1.ListInvoicesResponse, error) {
+func (h *GRPCHandler) ListInvoices(
+	ctx context.Context, req *creditcardv1.ListInvoicesRequest,
+) (*creditcardv1.ListInvoicesResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -223,12 +245,14 @@ func (h *GRPCHandler) ListInvoices(ctx context.Context, req *creditcardv1.ListIn
 	telemetry.RecordRequest(ctx, "ListInvoices", "ok", time.Since(start))
 	return &creditcardv1.ListInvoicesResponse{
 		Invoices:   protoItems,
-		TotalCount: int32(total),
+		TotalCount: int32(total), //nolint:gosec
 	}, nil
 }
 
 // PayInvoice handles gRPC requests for paying an invoice.
-func (h *GRPCHandler) PayInvoice(ctx context.Context, req *creditcardv1.PayInvoiceRequest) (*creditcardv1.Invoice, error) {
+func (h *GRPCHandler) PayInvoice(
+	ctx context.Context, req *creditcardv1.PayInvoiceRequest,
+) (*creditcardv1.Invoice, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -249,7 +273,9 @@ func (h *GRPCHandler) PayInvoice(ctx context.Context, req *creditcardv1.PayInvoi
 // ── Transaction ──────────────────────────────────────────────────────────────
 
 // AddTransaction handles gRPC requests for adding a transaction.
-func (h *GRPCHandler) AddTransaction(ctx context.Context, req *creditcardv1.AddTransactionRequest) (*creditcardv1.InvoiceTransaction, error) {
+func (h *GRPCHandler) AddTransaction(
+	ctx context.Context, req *creditcardv1.AddTransactionRequest,
+) (*creditcardv1.InvoiceTransaction, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -272,7 +298,9 @@ func (h *GRPCHandler) AddTransaction(ctx context.Context, req *creditcardv1.AddT
 }
 
 // ListTransactions handles gRPC requests for listing transactions.
-func (h *GRPCHandler) ListTransactions(ctx context.Context, req *creditcardv1.ListTransactionsRequest) (*creditcardv1.ListTransactionsResponse, error) {
+func (h *GRPCHandler) ListTransactions(
+	ctx context.Context, req *creditcardv1.ListTransactionsRequest,
+) (*creditcardv1.ListTransactionsResponse, error) {
 	start := time.Now()
 
 	_ = mustExtractUserID(ctx) // user context is carried for tracing
@@ -297,7 +325,7 @@ func (h *GRPCHandler) ListTransactions(ctx context.Context, req *creditcardv1.Li
 	telemetry.RecordRequest(ctx, "ListTransactions", "ok", time.Since(start))
 	return &creditcardv1.ListTransactionsResponse{
 		Transactions: protoItems,
-		TotalCount:   int32(total),
+		TotalCount:   int32(total), //nolint:gosec
 	}, nil
 }
 
@@ -318,37 +346,27 @@ func brandFromProto(b creditcardv1.CardBrand) string {
 	case creditcardv1.CardBrand_DINERS:
 		return "diners"
 	case creditcardv1.CardBrand_OTHER_BRAND:
-		return "other"
+		return strOther
 	default:
-		return "other"
+		return strOther
 	}
 }
 
 func cardTypeFromProto(t creditcardv1.CardType) string {
 	switch t {
 	case creditcardv1.CardType_CREDIT:
-		return "credit"
-	case creditcardv1.CardType_DEBIT:
-		return "debit"
-	case creditcardv1.CardType_MULTIPLE:
-		return "multiple"
+		return strCredit
 	default:
-		return "credit"
+		return strCredit
 	}
 }
 
 func invoiceStatusFromProto(s creditcardv1.InvoiceStatus) string {
 	switch s {
 	case creditcardv1.InvoiceStatus_OPEN:
-		return "open"
-	case creditcardv1.InvoiceStatus_CLOSED:
-		return "closed"
-	case creditcardv1.InvoiceStatus_PAID:
-		return "paid"
-	case creditcardv1.InvoiceStatus_OVERDUE:
-		return "overdue"
+		return strOpen
 	default:
-		return "open"
+		return strOpen
 	}
 }
 

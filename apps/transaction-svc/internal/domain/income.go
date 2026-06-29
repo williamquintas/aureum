@@ -22,7 +22,10 @@ const (
 
 // ValidIncomeTypes returns all recognised income type values.
 func ValidIncomeTypes() []IncomeType {
-	return []IncomeType{IncomeTypeSalary, IncomeTypeFreelance, IncomeTypeInvestment, IncomeTypeBusiness, IncomeTypeRefund, IncomeTypeOther}
+	return []IncomeType{
+		IncomeTypeSalary, IncomeTypeFreelance, IncomeTypeInvestment,
+		IncomeTypeBusiness, IncomeTypeRefund, IncomeTypeOther,
+	}
 }
 
 // Income represents a received income record with type, source, and amount.

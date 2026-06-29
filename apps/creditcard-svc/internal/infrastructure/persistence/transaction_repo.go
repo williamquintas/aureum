@@ -31,7 +31,8 @@ func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvoiceTransactio
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`INSERT INTO invoice_transactions (id, invoice_id, user_id, description, amount, category, transaction_date, installments, created_at)
+		`INSERT INTO invoice_transactions (id, invoice_id, user_id, description, amount,
+		 category, transaction_date, installments, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		tx.ID, tx.InvoiceID, tx.UserID, tx.Description, tx.Amount,
 		tx.Category, tx.TransactionDate, tx.Installments, tx.CreatedAt,
@@ -70,7 +71,8 @@ func (r *TransactionRepo) FindByInvoice(ctx context.Context, invoiceID string) (
 }
 
 // List returns transactions filtered by invoice ID with optional filters.
-func (r *TransactionRepo) List(ctx context.Context, invoiceID string, filter domain.TransactionFilter) ([]*domain.InvoiceTransaction, error) {
+func (r *TransactionRepo) List(ctx context.Context, invoiceID string,
+	filter domain.TransactionFilter) ([]*domain.InvoiceTransaction, error) {
 	query := `SELECT id, invoice_id, user_id, description, amount, category, transaction_date, installments, created_at
 			  FROM invoice_transactions WHERE invoice_id=$1`
 	args := []interface{}{invoiceID}

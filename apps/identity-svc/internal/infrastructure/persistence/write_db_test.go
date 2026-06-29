@@ -1,5 +1,5 @@
 // Package persistence_test contains tests for the persistence package.
-package persistence_test
+package persistence_test //nolint:goconst
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func setupTestDB(t *testing.T) *testDB {
 	req := testcontainers.ContainerRequest{
 		Image: "postgres:16-alpine",
 		Env: map[string]string{
-			"POSTGRES_USER":     "test",
+			"POSTGRES_USER":     "test", //nolint:goconst
 			"POSTGRES_PASSWORD": "test",
 			"POSTGRES_DB":       "test",
 		},
@@ -138,7 +138,7 @@ func TestUserWriteRepository_Save(t *testing.T) {
 		Email:      "save@example.com",
 		Status:     domain.UserStatusUnverified,
 		Name:       "Save User",
-		Roles:      []string{"user"},
+		Roles:      []string{"user"}, //nolint:goconst
 	}
 
 	err := repo.Save(ctx, user)
@@ -329,7 +329,7 @@ func TestOutboxRepository_Save(t *testing.T) {
 	ctx := context.Background()
 
 	event, err := outbox.NewEvent("user", "user-id-1", "UserRegistered", map[string]interface{}{
-		"user_id": "user-id-1",
+		"user_id": "user-id-1", //nolint:goconst
 		"email":   "event@example.com",
 	})
 	require.NoError(t, err)

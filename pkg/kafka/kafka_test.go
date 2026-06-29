@@ -1,3 +1,4 @@
+//nolint:goconst
 package kafka
 
 import (
@@ -94,9 +95,9 @@ func TestNewConsumerGroup_Valid(t *testing.T) {
 }
 
 func TestNewConsumerGroup_EmptyTopics(t *testing.T) {
-	require.Panics(t, func() {
-		_, _ = NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{})
-	}, "NewConsumerGroup should panic with empty topics (index out of range)")
+	_, err := NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "at least one topic")
 }
 
 func TestProducer_PublishAsyncNonBlocking(t *testing.T) {

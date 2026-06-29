@@ -35,8 +35,10 @@ func (r *CreditCardRepo) Save(ctx context.Context, card *domain.CreditCard) erro
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`INSERT INTO credit_cards (id, user_id, name, brand, card_type, last_four_digits, closing_day, due_day, credit_limit, available_credit, active, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		`INSERT INTO credit_cards (id, user_id, name, brand, card_type, `+
+			`last_four_digits, closing_day, due_day, credit_limit, `+
+			`available_credit, active, created_at, updated_at) `+
+			`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		card.ID, card.UserID, card.Name, string(card.Brand), string(card.CardType),
 		card.LastFourDigits, card.ClosingDay, card.DueDay, card.CreditLimit,
 		card.AvailableCredit, card.Active, card.CreatedAt, card.UpdatedAt,
@@ -50,7 +52,9 @@ func (r *CreditCardRepo) Save(ctx context.Context, card *domain.CreditCard) erro
 // FindByID retrieves a credit card by ID and user ID, excluding soft-deleted records.
 func (r *CreditCardRepo) FindByID(ctx context.Context, id, userID string) (*domain.CreditCard, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, name, brand, card_type, last_four_digits, closing_day, due_day, credit_limit, available_credit, active, created_at, updated_at, deleted_at
+		`SELECT id, user_id, name, brand, card_type, last_four_digits, `+
+			`closing_day, due_day, credit_limit, available_credit, active, `+
+			`created_at, updated_at, deleted_at
 		 FROM credit_cards WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -84,7 +88,9 @@ func (r *CreditCardRepo) Update(ctx context.Context, card *domain.CreditCard) er
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`UPDATE credit_cards SET name=$1, brand=$2, card_type=$3, last_four_digits=$4, closing_day=$5, due_day=$6, credit_limit=$7, available_credit=$8, active=$9, updated_at=$10
+		`UPDATE credit_cards SET name=$1, brand=$2, card_type=$3, `+
+			`last_four_digits=$4, closing_day=$5, due_day=$6, `+
+			`credit_limit=$7, available_credit=$8, active=$9, updated_at=$10
 		 WHERE id=$11 AND deleted_at IS NULL`,
 		card.Name, string(card.Brand), string(card.CardType), card.LastFourDigits,
 		card.ClosingDay, card.DueDay, card.CreditLimit, card.AvailableCredit,
@@ -115,7 +121,9 @@ func (r *CreditCardRepo) Delete(ctx context.Context, id, userID string) error {
 // FindByUser retrieves all active credit cards belonging to a user.
 func (r *CreditCardRepo) FindByUser(ctx context.Context, userID string) ([]*domain.CreditCard, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, brand, card_type, last_four_digits, closing_day, due_day, credit_limit, available_credit, active, created_at, updated_at
+		`SELECT id, user_id, name, brand, card_type, last_four_digits, `+
+			`closing_day, due_day, credit_limit, available_credit, active, `+
+			`created_at, updated_at
 		 FROM credit_cards WHERE user_id=$1 AND deleted_at IS NULL ORDER BY name ASC`,
 		userID,
 	)
@@ -145,8 +153,11 @@ func (r *CreditCardRepo) FindByUser(ctx context.Context, userID string) ([]*doma
 }
 
 // List returns credit cards filtered by user ID with optional filters, ordered by name ASC.
-func (r *CreditCardRepo) List(ctx context.Context, userID string, filter domain.CreditCardFilter) ([]*domain.CreditCard, error) {
-	query := `SELECT id, user_id, name, brand, card_type, last_four_digits, closing_day, due_day, credit_limit, available_credit, active, created_at, updated_at
+func (r *CreditCardRepo) List(
+	ctx context.Context, userID string, filter domain.CreditCardFilter,
+) ([]*domain.CreditCard, error) {
+	query := `SELECT id, user_id, name, brand, card_type, last_four_digits, ` +
+		`closing_day, due_day, credit_limit, available_credit, active, created_at, updated_at
 			  FROM credit_cards WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2

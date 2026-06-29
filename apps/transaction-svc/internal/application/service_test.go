@@ -1,3 +1,4 @@
+//nolint:goconst // test file - repeated strings acceptable for readability
 package application
 
 import (

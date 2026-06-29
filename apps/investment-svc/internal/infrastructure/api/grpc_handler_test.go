@@ -1,3 +1,4 @@
+//nolint:goconst
 package api_test
 
 import (

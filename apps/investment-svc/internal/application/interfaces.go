@@ -37,8 +37,16 @@ type InvestmentService interface {
 	GetInvestment(ctx context.Context, id, userID string) (*GetInvestmentResponse, error)
 	UpdateInvestment(ctx context.Context, req UpdateInvestmentRequest) (*GetInvestmentResponse, error)
 	DeleteInvestment(ctx context.Context, id, userID string) error
-	ListInvestments(ctx context.Context, userID string, filter domain.InvestmentFilter) ([]*GetInvestmentResponse, int, error)
+	ListInvestments(
+		ctx context.Context,
+		userID string,
+		filter domain.InvestmentFilter,
+	) ([]*GetInvestmentResponse, int, error)
 	RecordTransaction(ctx context.Context, req RecordTransactionRequest) (*RecordTransactionResponse, error)
-	ListTransactions(ctx context.Context, userID, investmentID string, filter domain.TransactionFilter) ([]*GetTransactionResponse, int, error)
+	ListTransactions(
+		ctx context.Context,
+		userID, investmentID string,
+		filter domain.TransactionFilter,
+	) ([]*GetTransactionResponse, int, error)
 	GetPortfolioSummary(ctx context.Context, userID string) (*PortfolioSummaryResponse, error)
 }

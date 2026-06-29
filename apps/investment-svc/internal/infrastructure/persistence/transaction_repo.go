@@ -32,9 +32,10 @@ func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvestmentTransac
 		return fmt.Errorf("no transaction in context")
 	}
 
-	_, err := q.Exec(ctx,
-		`INSERT INTO investment_transactions (id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+	query := `INSERT INTO investment_transactions (id, investment_id, user_id, transaction_type, ` +
+		`quantity, unit_price, total_amount, transaction_date, notes, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	_, err := q.Exec(ctx, query,
 		tx.ID, tx.InvestmentID, tx.UserID, string(tx.TransactionType),
 		tx.Quantity, tx.UnitPrice, tx.TotalAmount,
 		tx.TransactionDate, tx.Notes, tx.CreatedAt,
@@ -47,9 +48,10 @@ func (r *TransactionRepo) Save(ctx context.Context, tx *domain.InvestmentTransac
 
 // FindByID retrieves a single transaction by its ID and user ID.
 func (r *TransactionRepo) FindByID(ctx context.Context, id, userID string) (*domain.InvestmentTransaction, error) {
-	row := r.pool.QueryRow(ctx,
-		`SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
-		 FROM investment_transactions WHERE id=$1 AND user_id=$2`,
+	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, ` +
+		`total_amount, transaction_date, notes, created_at
+		 FROM investment_transactions WHERE id=$1 AND user_id=$2`
+	row := r.pool.QueryRow(ctx, query,
 		id, userID,
 	)
 
@@ -69,8 +71,13 @@ func (r *TransactionRepo) FindByID(ctx context.Context, id, userID string) (*dom
 }
 
 // FindByInvestment returns transactions for a given investment with optional filters.
-func (r *TransactionRepo) FindByInvestment(ctx context.Context, investmentID, userID string, filter domain.TransactionFilter) ([]*domain.InvestmentTransaction, error) {
-	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
+func (r *TransactionRepo) FindByInvestment(
+	ctx context.Context,
+	investmentID, userID string,
+	filter domain.TransactionFilter,
+) ([]*domain.InvestmentTransaction, error) {
+	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, ` +
+		`total_amount, transaction_date, notes, created_at
 			  FROM investment_transactions WHERE investment_id=$1 AND user_id=$2`
 	args := []interface{}{investmentID, userID}
 	argIdx := 3
@@ -129,7 +136,11 @@ func (r *TransactionRepo) FindByInvestment(ctx context.Context, investmentID, us
 }
 
 // CountByInvestment returns the total number of transactions for an investment matching the filter.
-func (r *TransactionRepo) CountByInvestment(ctx context.Context, investmentID, userID string, filter domain.TransactionFilter) (int, error) {
+func (r *TransactionRepo) CountByInvestment(
+	ctx context.Context,
+	investmentID, userID string,
+	filter domain.TransactionFilter,
+) (int, error) {
 	query := `SELECT COUNT(*) FROM investment_transactions WHERE investment_id=$1 AND user_id=$2`
 	args := []interface{}{investmentID, userID}
 	argIdx := 3
@@ -158,8 +169,13 @@ func (r *TransactionRepo) CountByInvestment(ctx context.Context, investmentID, u
 }
 
 // List returns all transactions for a user with optional filters.
-func (r *TransactionRepo) List(ctx context.Context, userID string, filter domain.TransactionFilter) ([]*domain.InvestmentTransaction, error) {
-	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, total_amount, transaction_date, notes, created_at
+func (r *TransactionRepo) List(
+	ctx context.Context,
+	userID string,
+	filter domain.TransactionFilter,
+) ([]*domain.InvestmentTransaction, error) {
+	query := `SELECT id, investment_id, user_id, transaction_type, quantity, unit_price, ` +
+		`total_amount, transaction_date, notes, created_at
 			  FROM investment_transactions WHERE user_id=$1`
 	args := []interface{}{userID}
 	argIdx := 2

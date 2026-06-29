@@ -14,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aureum/pkg/db"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/db"
 	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
 	"github.com/aureum/pkg/kafka"
@@ -128,7 +128,7 @@ func run() int {
 	debtv1.RegisterDebtServiceServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GRPCPort))
+	lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf(":%s", cfg.GRPCPort))
 	if err != nil {
 		log.Error("failed to listen", "error", err)
 		return 1
@@ -152,8 +152,9 @@ func run() int {
 	})
 
 	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.MetricsPort),
-		Handler: metricsMux,
+		Addr:              fmt.Sprintf(":%s", cfg.MetricsPort),
+		Handler:           metricsMux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {
 		log.Info("metrics HTTP server listening", "port", cfg.MetricsPort)
@@ -201,7 +202,7 @@ func loadConfig() config {
 	}
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://aureum:aureum@localhost:5432/debtdb"
+		dbURL = "postgres://aureum:aureum@localhost:5432/debtdb" //nolint:gosec // G101: default dev URL, overridden by DATABASE_URL env var
 	}
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
@@ -255,7 +256,12 @@ func (u *unleashFlag) IsEnabled(ctx context.Context, flag string) bool {
 	return u.client.IsEnabled(ctx, flag)
 }
 
-func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func authInterceptor(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
 	userID := extractUserIDFromToken(ctx)
 	if userID == "" {
 		userID = extractUserIDFromMetadata(ctx)

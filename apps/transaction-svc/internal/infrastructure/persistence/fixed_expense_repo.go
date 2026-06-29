@@ -36,7 +36,8 @@ func (r *FixedExpenseRepo) Save(ctx context.Context, expense *domain.FixedExpens
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`INSERT INTO fixed_expenses (id, user_id, description, category, day_of_month, payment_method, status, created_at, updated_at)
+		`INSERT INTO fixed_expenses (id, user_id, description, category,
+		 day_of_month, payment_method, status, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		expense.ID, expense.UserID, expense.Description, expense.Category,
 		expense.DayOfMonth, string(expense.PaymentMethod), string(expense.Status),
@@ -111,7 +112,8 @@ func (r *FixedExpenseRepo) Delete(ctx context.Context, id, userID string) error 
 }
 
 // List returns a paginated list of fixed expenses for a user.
-func (r *FixedExpenseRepo) List(ctx context.Context, userID string, filter domain.FixedExpenseFilter) ([]*domain.FixedExpense, error) {
+func (r *FixedExpenseRepo) List(ctx context.Context, userID string,
+	filter domain.FixedExpenseFilter) ([]*domain.FixedExpense, error) {
 	query := `SELECT id, user_id, description, category, day_of_month, payment_method, status, created_at, updated_at
 			  FROM fixed_expenses WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

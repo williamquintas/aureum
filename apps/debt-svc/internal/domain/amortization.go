@@ -48,17 +48,18 @@ func CalculateAmortization(totalAmount, interestRate, monthlyPayment int64, mont
 		principalCents := int64(math.Round(principal))
 		interestCents := int64(math.Round(interest))
 
-		if principalCents <= 0 {
+		switch {
+		case principalCents <= 0:
 			// Payment too small to cover interest; pay what we can
 			principalCents = 0
 			interestCents = int64(math.Round(balance))
 			balance = 0
-		} else if float64(principalCents) >= balance {
+		case float64(principalCents) >= balance:
 			// Final payment: use integer-rounded principal to match total amount
 			principalCents = int64(math.Round(balance))
 			interestCents = int64(math.Round(balance * monthlyRate))
 			balance = 0
-		} else {
+		default:
 			// Use rounded principal to keep balance consistent with entries
 			balance -= float64(principalCents)
 		}
@@ -82,7 +83,7 @@ func CalculateAmortization(totalAmount, interestRate, monthlyPayment int64, mont
 		TotalAmount:     totalAmount,
 		MonthlyPayment:  monthlyPayment,
 		InterestRate:    interestRate,
-		RemainingMonths: int32(len(entries)),
+		RemainingMonths: int32(len(entries)), //nolint:gosec // G115: entry count fits in int32
 		TotalInterest:   totalInterestCents,
 		TotalPaid:       totalPaid,
 		Entries:         entries,

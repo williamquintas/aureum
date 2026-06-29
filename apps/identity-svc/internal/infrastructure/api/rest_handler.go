@@ -16,6 +16,16 @@ import (
 	"github.com/aureum/pkg/telemetry"
 )
 
+// Common response messages used across REST handlers.
+const (
+	msgInternalError      = "internal error"
+	msgInvalidRequestBody = "invalid request body"
+	msgUnauthenticated    = "unauthenticated"
+	msgUserNotFound       = "user not found"
+	msgRoleNotFound       = "role not found"
+	msgInsufficientPerms  = "insufficient permissions"
+)
+
 // Handler handles HTTP REST API requests for the identity service.
 type Handler struct {
 	authService  *application.AuthService
@@ -64,7 +74,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -92,7 +102,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -106,7 +116,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrUserLocked):
 			writeError(w, http.StatusForbidden, "account locked")
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -120,7 +130,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.VerifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -131,7 +141,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrOTPExpired):
 			writeError(w, http.StatusGone, "verification code expired")
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -145,16 +155,16 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
 	profile, err := h.authService.GetProfile(r.Context(), claims.Subject)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			writeError(w, http.StatusNotFound, "user not found")
+			writeError(w, http.StatusNotFound, msgUserNotFound)
 		} else {
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -168,7 +178,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -177,7 +187,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domain.ErrTokenInvalid) || errors.Is(err, domain.ErrTokenExpired) {
 			writeError(w, http.StatusUnauthorized, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -191,7 +201,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
@@ -201,7 +211,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.Logout(r.Context(), claims.Subject, token); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 
@@ -214,7 +224,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -222,7 +232,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domain.ErrInvalidEmail) {
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -236,7 +246,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -247,7 +257,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrWeakPassword):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -261,7 +271,7 @@ func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.AdminCreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -273,7 +283,7 @@ func (h *Handler) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidEmail), errors.Is(err, domain.ErrWeakPassword):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -288,7 +298,7 @@ func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
 	var req application.AssignRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -296,13 +306,13 @@ func (h *Handler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	if err := h.authzService.AssignRole(r.Context(), claims.Subject, userID, domain.RoleName(req.Role)); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			writeError(w, http.StatusNotFound, "user not found")
+			writeError(w, http.StatusNotFound, msgUserNotFound)
 		case errors.Is(err, domain.ErrRoleNotFound):
-			writeError(w, http.StatusNotFound, "role not found")
+			writeError(w, http.StatusNotFound, msgRoleNotFound)
 		case errors.Is(err, domain.ErrInsufficientRole):
-			writeError(w, http.StatusForbidden, "insufficient permissions")
+			writeError(w, http.StatusForbidden, msgInsufficientPerms)
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -317,7 +327,7 @@ func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
 	var req application.RemoveRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -325,13 +335,13 @@ func (h *Handler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	if err := h.authzService.RemoveRole(r.Context(), claims.Subject, userID, domain.RoleName(req.Role)); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			writeError(w, http.StatusNotFound, "user not found")
+			writeError(w, http.StatusNotFound, msgUserNotFound)
 		case errors.Is(err, domain.ErrRoleNotFound):
-			writeError(w, http.StatusNotFound, "role not found")
+			writeError(w, http.StatusNotFound, msgRoleNotFound)
 		case errors.Is(err, domain.ErrInsufficientRole):
-			writeError(w, http.StatusForbidden, "insufficient permissions")
+			writeError(w, http.StatusForbidden, msgInsufficientPerms)
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -348,7 +358,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authzService.ListUsers(r.Context(), offset, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 
@@ -361,7 +371,7 @@ func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	roles, err := h.authzService.ListRoles(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 
@@ -374,13 +384,13 @@ func (h *Handler) ABACCheck(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req application.ABACCheckRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
 	resp, err := h.authzService.Evaluate(r.Context(), req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 
@@ -393,13 +403,13 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
 	var req application.UpdateProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -407,9 +417,9 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authService.UpdateProfile(r.Context(), claims.Subject, req, idempotencyKey); err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			writeError(w, http.StatusNotFound, "user not found")
+			writeError(w, http.StatusNotFound, msgUserNotFound)
 		} else {
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -423,7 +433,7 @@ func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
@@ -433,7 +443,7 @@ func (h *Handler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrMFAAlreadyEnabled):
 			writeError(w, http.StatusConflict, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -447,13 +457,13 @@ func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
 	var req application.VerifyMFARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -464,7 +474,7 @@ func (h *Handler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrMFAInvalidCode):
 			writeError(w, http.StatusBadRequest, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -478,13 +488,13 @@ func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
 	var req application.DisableMFARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, msgInvalidRequestBody)
 		return
 	}
 
@@ -495,7 +505,7 @@ func (h *Handler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidCredentials):
 			writeError(w, http.StatusUnauthorized, "invalid credentials")
 		default:
-			writeError(w, http.StatusInternalServerError, "internal error")
+			writeError(w, http.StatusInternalServerError, msgInternalError)
 		}
 		return
 	}
@@ -509,13 +519,13 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
 	sessions, err := h.authService.ListSessions(r.Context(), claims.Subject)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 
@@ -528,7 +538,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	claims := auth.GetClaims(r.Context())
 	if claims == nil {
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, msgUnauthenticated)
 		return
 	}
 
@@ -539,7 +549,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.RevokeSession(r.Context(), sessionID); err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeError(w, http.StatusInternalServerError, msgInternalError)
 		return
 	}
 

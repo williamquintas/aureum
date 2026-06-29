@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aureum/pkg/db"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/kelseyhightower/envconfig"
@@ -28,13 +27,13 @@ import (
 	"github.com/aureum/identity-svc/internal/infrastructure/middleware"
 	"github.com/aureum/identity-svc/internal/infrastructure/persistence"
 	"github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/db"
 	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
 	"github.com/aureum/pkg/kafka"
 	"github.com/aureum/pkg/outbox"
-	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
-
 	"github.com/aureum/pkg/telemetry"
+	identityv1 "github.com/aureum/proto/gen/identity/identityv1"
 )
 
 // Config holds the service configuration loaded from environment variables.

@@ -28,7 +28,10 @@ const (
 
 // ValidCardBrands returns all valid card brands.
 func ValidCardBrands() []CardBrand {
-	return []CardBrand{CardBrandVisa, CardBrandMastercard, CardBrandAmex, CardBrandElo, CardBrandHipercard, CardBrandDiners, CardBrandOther}
+	return []CardBrand{
+		CardBrandVisa, CardBrandMastercard, CardBrandAmex,
+		CardBrandElo, CardBrandHipercard, CardBrandDiners, CardBrandOther,
+	}
 }
 
 // Valid checks if the card brand is a recognized value.

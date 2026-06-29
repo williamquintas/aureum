@@ -19,6 +19,11 @@ import (
 	budgetv1 "github.com/aureum/proto/gen/budget/budgetv1"
 )
 
+const (
+	periodMonthly = "monthly"
+	statusActive  = "active"
+)
+
 // GRPCHandler implements the budgetv1.BudgetServiceServer interface.
 type GRPCHandler struct {
 	budgetv1.UnimplementedBudgetServiceServer
@@ -137,7 +142,9 @@ func (h *GRPCHandler) DeleteBudget(ctx context.Context, req *budgetv1.DeleteBudg
 }
 
 // ListBudgets handles gRPC requests for listing budgets.
-func (h *GRPCHandler) ListBudgets(ctx context.Context, req *budgetv1.ListBudgetsRequest) (*budgetv1.ListBudgetsResponse, error) {
+func (h *GRPCHandler) ListBudgets(ctx context.Context,
+	req *budgetv1.ListBudgetsRequest,
+) (*budgetv1.ListBudgetsResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -176,12 +183,14 @@ func (h *GRPCHandler) ListBudgets(ctx context.Context, req *budgetv1.ListBudgets
 	return &budgetv1.ListBudgetsResponse{
 		Budgets:       protoItems,
 		NextPageToken: nextToken,
-		TotalCount:    int32(total),
+		TotalCount:    int32(total), //nolint:gosec
 	}, nil
 }
 
 // GetBudgetSummary handles gRPC requests for retrieving a budget summary.
-func (h *GRPCHandler) GetBudgetSummary(ctx context.Context, req *budgetv1.GetBudgetSummaryRequest) (*budgetv1.BudgetSummary, error) {
+func (h *GRPCHandler) GetBudgetSummary(ctx context.Context,
+	req *budgetv1.GetBudgetSummaryRequest,
+) (*budgetv1.BudgetSummary, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -199,7 +208,7 @@ func (h *GRPCHandler) GetBudgetSummary(ctx context.Context, req *budgetv1.GetBud
 func periodFromProto(p budgetv1.BudgetPeriod) string {
 	switch p {
 	case budgetv1.BudgetPeriod_MONTHLY:
-		return "monthly"
+		return periodMonthly
 	case budgetv1.BudgetPeriod_BIMONTHLY:
 		return "bimonthly"
 	case budgetv1.BudgetPeriod_QUARTERLY:
@@ -211,14 +220,14 @@ func periodFromProto(p budgetv1.BudgetPeriod) string {
 	case budgetv1.BudgetPeriod_CUSTOM:
 		return "custom"
 	default:
-		return "monthly"
+		return periodMonthly
 	}
 }
 
 func statusFromProto(s budgetv1.BudgetStatus) string {
 	switch s {
 	case budgetv1.BudgetStatus_ACTIVE:
-		return "active"
+		return statusActive
 	case budgetv1.BudgetStatus_PAUSED:
 		return "paused"
 	case budgetv1.BudgetStatus_COMPLETED:
@@ -226,7 +235,7 @@ func statusFromProto(s budgetv1.BudgetStatus) string {
 	case budgetv1.BudgetStatus_CANCELLED:
 		return "cancelled"
 	default:
-		return "active"
+		return statusActive
 	}
 }
 
@@ -234,7 +243,7 @@ func statusFromProto(s budgetv1.BudgetStatus) string {
 
 func periodToProto(p string) budgetv1.BudgetPeriod {
 	switch p {
-	case "monthly":
+	case periodMonthly:
 		return budgetv1.BudgetPeriod_MONTHLY
 	case "bimonthly":
 		return budgetv1.BudgetPeriod_BIMONTHLY
@@ -253,7 +262,7 @@ func periodToProto(p string) budgetv1.BudgetPeriod {
 
 func statusToProto(s string) budgetv1.BudgetStatus {
 	switch s {
-	case "active":
+	case statusActive:
 		return budgetv1.BudgetStatus_ACTIVE
 	case "paused":
 		return budgetv1.BudgetStatus_PAUSED

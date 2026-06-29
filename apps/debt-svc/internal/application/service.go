@@ -306,7 +306,11 @@ func (s *Service) DeleteDebt(ctx context.Context, id, userID string) error {
 }
 
 // ListDebts returns a paginated list of debts for a user.
-func (s *Service) ListDebts(ctx context.Context, userID string, filter domain.DebtFilter) ([]*DebtResponse, int, error) {
+func (s *Service) ListDebts(
+	ctx context.Context,
+	userID string,
+	filter domain.DebtFilter,
+) ([]*DebtResponse, int, error) {
 	items, err := s.debts.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err

@@ -35,7 +35,9 @@ func (r *InvoiceRepo) Save(ctx context.Context, invoice *domain.Invoice) error {
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`INSERT INTO invoices (id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at)
+		`INSERT INTO invoices (id, credit_card_id, user_id, reference_month, `+
+			`total_amount, paid_amount, status, closing_date, due_date, `+
+			`created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		invoice.ID, invoice.CreditCardID, invoice.UserID, invoice.ReferenceMonth,
 		invoice.TotalAmount, invoice.PaidAmount, string(invoice.Status),
@@ -50,7 +52,8 @@ func (r *InvoiceRepo) Save(ctx context.Context, invoice *domain.Invoice) error {
 // FindByID retrieves an invoice by ID and user ID, excluding soft-deleted records.
 func (r *InvoiceRepo) FindByID(ctx context.Context, id, userID string) (*domain.Invoice, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at, deleted_at
+		`SELECT id, credit_card_id, user_id, reference_month, total_amount, `+
+			`paid_amount, status, closing_date, due_date, created_at, updated_at, deleted_at
 		 FROM invoices WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -82,7 +85,8 @@ func (r *InvoiceRepo) FindByID(ctx context.Context, id, userID string) (*domain.
 // FindByCreditCard retrieves all invoices for a given credit card.
 func (r *InvoiceRepo) FindByCreditCard(ctx context.Context, creditCardID, userID string) ([]*domain.Invoice, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at
+		`SELECT id, credit_card_id, user_id, reference_month, total_amount, `+
+			`paid_amount, status, closing_date, due_date, created_at, updated_at
 		 FROM invoices WHERE credit_card_id=$1 AND user_id=$2 AND deleted_at IS NULL
 		 ORDER BY reference_month DESC`,
 		creditCardID, userID,
@@ -116,7 +120,9 @@ func (r *InvoiceRepo) FindByCreditCard(ctx context.Context, creditCardID, userID
 // FindByMonth retrieves an invoice by credit card ID and reference month.
 func (r *InvoiceRepo) FindByMonth(ctx context.Context, creditCardID, referenceMonth string) (*domain.Invoice, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at, deleted_at
+		`SELECT id, credit_card_id, user_id, reference_month, total_amount, `+
+			`paid_amount, status, closing_date, due_date, created_at, `+
+			`updated_at, deleted_at
 		 FROM invoices WHERE credit_card_id=$1 AND reference_month=$2 AND deleted_at IS NULL`,
 		creditCardID, referenceMonth,
 	)
@@ -181,7 +187,8 @@ func (r *InvoiceRepo) Delete(ctx context.Context, id, userID string) error {
 
 // List returns invoices filtered by user ID with optional filters, ordered by reference month DESC.
 func (r *InvoiceRepo) List(ctx context.Context, userID string, filter domain.InvoiceFilter) ([]*domain.Invoice, error) {
-	query := `SELECT id, credit_card_id, user_id, reference_month, total_amount, paid_amount, status, closing_date, due_date, created_at, updated_at
+	query := `SELECT id, credit_card_id, user_id, reference_month, total_amount, ` +
+		`paid_amount, status, closing_date, due_date, created_at, updated_at
 			  FROM invoices WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2

@@ -36,6 +36,7 @@ func (r *DebtRepo) Save(ctx context.Context, debt *domain.Debt) error {
 	}
 
 	_, err := q.Exec(ctx,
+		//nolint:lll // SQL column list is clearer on one line
 		`INSERT INTO debts (id, user_id, name, description, debt_type, total_amount, remaining_amount, interest_rate, start_date, expected_end_date, status, creditor, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		debt.ID, debt.UserID, debt.Name, debt.Description,
@@ -52,6 +53,7 @@ func (r *DebtRepo) Save(ctx context.Context, debt *domain.Debt) error {
 // FindByID retrieves a debt by ID and user ID, excluding soft-deleted records.
 func (r *DebtRepo) FindByID(ctx context.Context, id, userID string) (*domain.Debt, error) {
 	row := r.pool.QueryRow(ctx,
+		//nolint:lll // SQL column list is clearer on one line
 		`SELECT id, user_id, name, description, debt_type, total_amount, remaining_amount, interest_rate, start_date, expected_end_date, status, creditor, created_at, updated_at, deleted_at
 		 FROM debts WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
@@ -90,6 +92,7 @@ func (r *DebtRepo) Update(ctx context.Context, debt *domain.Debt) error {
 	}
 
 	_, err := q.Exec(ctx,
+		//nolint:lll // SQL column list is clearer on one line
 		`UPDATE debts SET name=$1, description=$2, debt_type=$3, total_amount=$4, remaining_amount=$5, interest_rate=$6, start_date=$7, expected_end_date=$8, status=$9, creditor=$10, updated_at=$11
 		 WHERE id=$12 AND deleted_at IS NULL`,
 		debt.Name, debt.Description, string(debt.DebtType),
@@ -122,6 +125,7 @@ func (r *DebtRepo) Delete(ctx context.Context, id, userID string) error {
 
 // List returns debts filtered by user ID with optional filters, ordered by created_at DESC.
 func (r *DebtRepo) List(ctx context.Context, userID string, filter domain.DebtFilter) ([]*domain.Debt, error) {
+	//nolint:lll // SQL column list is clearer on one line
 	query := `SELECT id, user_id, name, description, debt_type, total_amount, remaining_amount, interest_rate, start_date, expected_end_date, status, creditor, created_at, updated_at
 			  FROM debts WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

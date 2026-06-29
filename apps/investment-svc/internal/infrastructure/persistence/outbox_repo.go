@@ -13,6 +13,10 @@ import (
 	"github.com/aureum/pkg/outbox"
 )
 
+// outboxInsertQuery is the SQL query for inserting into the outbox_events table.
+const outboxInsertQuery = `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+
 // OutboxRepository implements the outbox event persistence using PostgreSQL.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
@@ -40,9 +44,7 @@ func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 }
 
 func (r *OutboxRepository) saveOutboxEvent(ctx context.Context, e *outbox.Event) error {
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
+	return r.exec(ctx, outboxInsertQuery, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
 }
 
 func (r *OutboxRepository) saveInvestmentEvent(ctx context.Context, e *domain.InvestmentEvent) error {
@@ -51,9 +53,7 @@ func (r *OutboxRepository) saveInvestmentEvent(ctx context.Context, e *domain.In
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, uuid.New().String(), "investment", e.EntityID, string(e.Type), payload, &now)
+	return r.exec(ctx, outboxInsertQuery, uuid.New().String(), "investment", e.EntityID, string(e.Type), payload, &now)
 }
 
 func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) error {
@@ -62,9 +62,7 @@ func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) 
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, "", "investment", "", "InvestmentEvent", payload, &now)
+	return r.exec(ctx, outboxInsertQuery, "", "investment", "", "InvestmentEvent", payload, &now)
 }
 
 func (r *OutboxRepository) exec(ctx context.Context, query string, args ...interface{}) error {

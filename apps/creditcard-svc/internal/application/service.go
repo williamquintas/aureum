@@ -12,6 +12,14 @@ import (
 	"github.com/aureum/creditcard-svc/internal/domain"
 )
 
+const (
+	keyCreditCardID = "credit_card_id"
+	keyRefMonth     = "reference_month"
+	keyTotalAmount  = "total_amount"
+	keyClosingDate  = "closing_date"
+	keyDueDate      = "due_date"
+)
+
 // IdempotencyStore interface for idempotency key checks.
 type IdempotencyStore interface {
 	Get(ctx context.Context, key string, dest interface{}) error
@@ -259,7 +267,9 @@ func (s *Service) DeleteCreditCard(ctx context.Context, id, userID string) error
 }
 
 // ListCreditCards returns a paginated list of credit cards for a user.
-func (s *Service) ListCreditCards(ctx context.Context, userID string, filter domain.CreditCardFilter) ([]*CreditCardResponse, int, error) {
+func (s *Service) ListCreditCards(
+	ctx context.Context, userID string, filter domain.CreditCardFilter,
+) ([]*CreditCardResponse, int, error) {
 	items, err := s.creditCards.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -318,11 +328,11 @@ func (s *Service) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (
 			EntityID: invoice.ID,
 			UserID:   invoice.UserID,
 			Payload: map[string]interface{}{
-				"credit_card_id":  invoice.CreditCardID,
-				"reference_month": invoice.ReferenceMonth,
-				"total_amount":    invoice.TotalAmount,
-				"closing_date":    invoice.ClosingDate,
-				"due_date":        invoice.DueDate,
+				keyCreditCardID: invoice.CreditCardID,
+				keyRefMonth:     invoice.ReferenceMonth,
+				keyTotalAmount:  invoice.TotalAmount,
+				keyClosingDate:  invoice.ClosingDate,
+				keyDueDate:      invoice.DueDate,
 			},
 			Timestamp: time.Now().Unix(),
 		}
@@ -370,7 +380,9 @@ func (s *Service) GetInvoice(ctx context.Context, id, userID string) (*InvoiceRe
 }
 
 // ListInvoices returns a paginated list of invoices for a user with optional filters.
-func (s *Service) ListInvoices(ctx context.Context, userID string, filter domain.InvoiceFilter) ([]*InvoiceResponse, int, error) {
+func (s *Service) ListInvoices(
+	ctx context.Context, userID string, filter domain.InvoiceFilter,
+) ([]*InvoiceResponse, int, error) {
 	items, err := s.invoices.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -429,11 +441,11 @@ func (s *Service) PayInvoice(ctx context.Context, req PayInvoiceRequest) (*Invoi
 			EntityID: invoice.ID,
 			UserID:   invoice.UserID,
 			Payload: map[string]interface{}{
-				"credit_card_id": invoice.CreditCardID,
-				"amount":         req.Amount,
-				"paid_amount":    invoice.PaidAmount,
-				"total_amount":   invoice.TotalAmount,
-				"status":         string(invoice.Status),
+				keyCreditCardID: invoice.CreditCardID,
+				keyRefMonth:     invoice.ReferenceMonth,
+				keyTotalAmount:  invoice.TotalAmount,
+				keyClosingDate:  invoice.ClosingDate,
+				keyDueDate:      invoice.DueDate,
 			},
 			Timestamp: time.Now().Unix(),
 		}
@@ -564,13 +576,12 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 			EntityID: tx.ID,
 			UserID:   tx.UserID,
 			Payload: map[string]interface{}{
-				"invoice_id":       tx.InvoiceID,
-				"credit_card_id":   invoice.CreditCardID,
-				"description":      tx.Description,
-				"amount":           tx.Amount,
-				"category":         tx.Category,
-				"transaction_date": tx.TransactionDate,
-				"installments":     tx.Installments,
+				"invoice_id":    tx.InvoiceID,
+				keyCreditCardID: invoice.CreditCardID,
+				keyRefMonth:     invoice.ReferenceMonth,
+				keyTotalAmount:  invoice.TotalAmount,
+				keyClosingDate:  invoice.ClosingDate,
+				keyDueDate:      invoice.DueDate,
 			},
 			Timestamp: time.Now().Unix(),
 		}
@@ -594,7 +605,9 @@ func (s *Service) AddTransaction(ctx context.Context, req AddTransactionRequest)
 }
 
 // ListTransactions returns a paginated list of transactions for an invoice.
-func (s *Service) ListTransactions(ctx context.Context, invoiceID string, filter domain.TransactionFilter) ([]*TransactionResponse, int, error) {
+func (s *Service) ListTransactions(
+	ctx context.Context, invoiceID string, filter domain.TransactionFilter,
+) ([]*TransactionResponse, int, error) {
 	items, err := s.transactions.List(ctx, invoiceID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -621,8 +634,8 @@ func toCreditCardResponse(c *domain.CreditCard) *CreditCardResponse {
 		Brand:           string(c.Brand),
 		CardType:        string(c.CardType),
 		LastFourDigits:  c.LastFourDigits,
-		ClosingDay:      int32(c.ClosingDay),
-		DueDay:          int32(c.DueDay),
+		ClosingDay:      int32(c.ClosingDay), //nolint:gosec
+		DueDay:          int32(c.DueDay),     //nolint:gosec
 		CreditLimit:     c.CreditLimit,
 		AvailableCredit: c.AvailableCredit,
 		Active:          c.Active,

@@ -33,6 +33,7 @@ func (r *AmortizationRepo) Save(ctx context.Context, s *domain.AmortizationSched
 	}
 
 	_, err = q.Exec(ctx,
+		//nolint:lll // SQL column list is clearer on one line
 		`INSERT INTO amortization_schedules (debt_id, total_amount, monthly_payment, interest_rate, remaining_months, total_interest, total_paid, entries, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 		 ON CONFLICT (debt_id) DO UPDATE SET

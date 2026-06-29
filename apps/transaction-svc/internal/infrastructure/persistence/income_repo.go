@@ -35,7 +35,8 @@ func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`INSERT INTO incomes (id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at)
+		`INSERT INTO incomes (id, user_id, description, source, income_type,
+		 received_date, received_amount, status, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		income.ID, income.UserID, income.Description, income.Source,
 		string(income.IncomeType), income.ReceivedDate, income.ReceivedAmount,
@@ -50,7 +51,8 @@ func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 // FindByID retrieves an income record by its ID and user ID.
 func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.Income, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at, deleted_at
+		`SELECT id, user_id, description, source, income_type,
+		 received_date, received_amount, status, created_at, updated_at, deleted_at
 		 FROM incomes WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -86,7 +88,8 @@ func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`UPDATE incomes SET description=$1, source=$2, income_type=$3, received_date=$4, received_amount=$5, status=$6, updated_at=$7
+		`UPDATE incomes SET description=$1, source=$2, income_type=$3,
+		 received_date=$4, received_amount=$5, status=$6, updated_at=$7
 		 WHERE id=$8 AND deleted_at IS NULL`,
 		income.Description, income.Source, string(income.IncomeType),
 		income.ReceivedDate, income.ReceivedAmount, string(income.Status),
@@ -117,7 +120,8 @@ func (r *IncomeRepo) Delete(ctx context.Context, id, userID string) error {
 
 // List returns a paginated list of income records for a user.
 func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.IncomeFilter) ([]*domain.Income, error) {
-	query := `SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at
+	query := `SELECT id, user_id, description, source, income_type,
+	         received_date, received_amount, status, created_at, updated_at
 			  FROM incomes WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2

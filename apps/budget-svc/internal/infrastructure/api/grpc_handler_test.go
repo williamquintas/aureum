@@ -1,3 +1,4 @@
+//nolint:goconst // test file - repeated strings acceptable for readability
 package api_test
 
 import (
@@ -19,7 +20,7 @@ import (
 	budgetv1 "github.com/aureum/proto/gen/budget/budgetv1"
 )
 
-// Mock application service
+// Mock application service.
 type mockAppService struct {
 	mock.Mock
 }
@@ -487,7 +488,7 @@ func TestGRPCHandler_GetBudgetSummary_NotFound(t *testing.T) {
 	assert.Equal(t, codes.NotFound, status.Code(err))
 }
 
-// Helper functions for pointer creation
+// Helper functions for pointer creation.
 func ptr(s string) *string {
 	return &s
 }

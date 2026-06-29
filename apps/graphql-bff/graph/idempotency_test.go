@@ -70,7 +70,7 @@ func TestIdempotencyMiddleware(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}))
 
-		req := httptest.NewRequest("POST", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/graphql", nil)
 		req.Header.Set("Idempotency-Key", "test-key")
 		handler.ServeHTTP(httptest.NewRecorder(), req)
 	})
@@ -82,7 +82,7 @@ func TestIdempotencyMiddleware(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}))
 
-		req := httptest.NewRequest("POST", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/graphql", nil)
 		handler.ServeHTTP(httptest.NewRecorder(), req)
 	})
 
@@ -93,7 +93,7 @@ func TestIdempotencyMiddleware(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}))
 
-		req := httptest.NewRequest("POST", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/graphql", nil)
 		req.Header.Set("Idempotency-Key", "")
 		handler.ServeHTTP(httptest.NewRecorder(), req)
 	})

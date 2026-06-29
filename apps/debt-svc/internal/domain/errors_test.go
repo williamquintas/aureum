@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aureum/debt-svc/internal/domain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aureum/debt-svc/internal/domain"
 )
 
 func TestSentinelErrors(t *testing.T) {

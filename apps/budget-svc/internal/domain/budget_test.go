@@ -1,3 +1,4 @@
+//nolint:goconst // test file - repeated strings are acceptable for readability
 package domain_test
 
 import (
@@ -601,7 +602,7 @@ func TestBudget_CalculateUsage(t *testing.T) {
 	}
 }
 
-// Helper to copy a budget to avoid modifying the original test case data
+// Helper to copy a budget to avoid modifying the original test case data.
 func copyBudget(b *domain.Budget) *domain.Budget {
 	if b == nil {
 		return nil
@@ -637,7 +638,7 @@ func copyBudget(b *domain.Budget) *domain.Budget {
 	return newBudget
 }
 
-// Helper to get a pointer to a value
+// Helper to get a pointer to a value.
 func ptr[T any](v T) *T {
 	return &v
 }

@@ -44,7 +44,11 @@ func (r *PaymentRepo) Save(ctx context.Context, payment *domain.Payment) error {
 }
 
 // FindByDebt retrieves all payments for a given debt.
-func (r *PaymentRepo) FindByDebt(ctx context.Context, debtID string, filter domain.PaymentFilter) ([]*domain.Payment, error) {
+func (r *PaymentRepo) FindByDebt(
+	ctx context.Context,
+	debtID string,
+	filter domain.PaymentFilter,
+) ([]*domain.Payment, error) {
 	query := `SELECT id, debt_id, user_id, amount, payment_date, notes, created_at
 			  FROM payments WHERE debt_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{debtID}

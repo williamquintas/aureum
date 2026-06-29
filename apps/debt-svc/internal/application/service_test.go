@@ -14,6 +14,20 @@ import (
 	"github.com/aureum/debt-svc/internal/domain"
 )
 
+const (
+	testUserID         = "user-1"
+	testDebtID         = "debt-1"
+	testCarLoan        = "Car Loan"
+	testLoanType       = "car_loan"
+	testStartDate      = "2024-01-01"
+	testEndDate        = "2027-01-01"
+	testPaymentDate    = "2024-02-01"
+	testIdempotencyKey = "key-1"
+	testCachedDebt     = "Cached Debt"
+	testLoanName       = "Loan"
+	testFoundDebt      = "Found Debt"
+)
+
 type mockDebtRepo struct{ mock.Mock }
 
 func (m *mockDebtRepo) Save(ctx context.Context, debt *domain.Debt) error {
@@ -181,19 +195,19 @@ func TestService_CreateDebt(t *testing.T) {
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 
 		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:      "user-1",
-			Name:        "Car Loan",
-			DebtType:    "car_loan",
+			UserID:      testUserID,
+			Name:        testCarLoan,
+			DebtType:    testLoanType,
 			TotalAmount: 10000000,
-			StartDate:   "2024-01-01",
+			StartDate:   testStartDate,
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		assert.NotEmpty(t, resp.ID)
-		assert.Equal(t, "user-1", resp.UserID)
-		assert.Equal(t, "Car Loan", resp.Name)
-		assert.Equal(t, "car_loan", resp.DebtType)
+		assert.Equal(t, testUserID, resp.UserID)
+		assert.Equal(t, testCarLoan, resp.Name)
+		assert.Equal(t, testLoanType, resp.DebtType)
 		assert.Equal(t, int64(10000000), resp.TotalAmount)
 		assert.Equal(t, int64(10000000), resp.RemainingAmount)
 		assert.Equal(t, "active", resp.Status)
@@ -208,7 +222,7 @@ func TestService_CreateDebt(t *testing.T) {
 		svc := newService(nil, nil, nil, idempotency, nil, nil)
 
 		cachedResp := application.DebtResponse{ID: "cached-debt", Name: "Cached"}
-		idempotency.On("Get", mock.Anything, "key-1", mock.AnythingOfType("*application.DebtResponse")).
+		idempotency.On("Get", mock.Anything, testIdempotencyKey, mock.AnythingOfType("*application.DebtResponse")).
 			Run(func(args mock.Arguments) {
 				d := args.Get(2).(*application.DebtResponse)
 				*d = cachedResp
@@ -216,12 +230,12 @@ func TestService_CreateDebt(t *testing.T) {
 			Return(nil)
 
 		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:         "user-1",
-			Name:           "Car Loan",
-			DebtType:       "car_loan",
+			UserID:         testUserID,
+			Name:           testCarLoan,
+			DebtType:       testLoanType,
 			TotalAmount:    10000000,
-			StartDate:      "2024-01-01",
-			IdempotencyKey: "key-1",
+			StartDate:      testStartDate,
+			IdempotencyKey: testIdempotencyKey,
 		})
 
 		require.NoError(t, err)
@@ -233,11 +247,11 @@ func TestService_CreateDebt(t *testing.T) {
 	t.Run("invalid debt type", func(t *testing.T) {
 		svc := newService(nil, nil, nil, nil, nil, nil)
 		_, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:      "user-1",
+			UserID:      testUserID,
 			Name:        "Test",
 			DebtType:    "invalid_type",
 			TotalAmount: 1000,
-			StartDate:   "2024-01-01",
+			StartDate:   testStartDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrInvalidDebtType)
@@ -248,9 +262,9 @@ func TestService_CreateDebt(t *testing.T) {
 		_, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
 			UserID:      "",
 			Name:        "Test",
-			DebtType:    "car_loan",
+			DebtType:    testLoanType,
 			TotalAmount: 1000,
-			StartDate:   "2024-01-01",
+			StartDate:   testStartDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrMissingField)
@@ -264,11 +278,11 @@ func TestService_CreateDebt(t *testing.T) {
 		debtRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(errors.New("db error"))
 
 		_, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:      "user-1",
-			Name:        "Car Loan",
-			DebtType:    "car_loan",
+			UserID:      testUserID,
+			Name:        testCarLoan,
+			DebtType:    testLoanType,
 			TotalAmount: 10000000,
-			StartDate:   "2024-01-01",
+			StartDate:   testStartDate,
 		})
 		require.Error(t, err)
 		debtRepo.AssertExpectations(t)
@@ -289,13 +303,13 @@ func TestService_CreateDebt_Amortization(t *testing.T) {
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 
 		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:          "user-1",
-			Name:            "Car Loan",
-			DebtType:        "car_loan",
+			UserID:          testUserID,
+			Name:            testCarLoan,
+			DebtType:        testLoanType,
 			TotalAmount:     12000000,
 			InterestRate:    750,
-			StartDate:       "2024-01-01",
-			ExpectedEndDate: "2027-01-01",
+			StartDate:       testStartDate,
+			ExpectedEndDate: testEndDate,
 		})
 
 		require.NoError(t, err)
@@ -317,13 +331,13 @@ func TestService_CreateDebt_Amortization(t *testing.T) {
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 
 		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:          "user-1",
-			Name:            "Car Loan",
-			DebtType:        "car_loan",
+			UserID:          testUserID,
+			Name:            testCarLoan,
+			DebtType:        testLoanType,
 			TotalAmount:     12000000,
 			InterestRate:    0,
-			StartDate:       "2024-01-01",
-			ExpectedEndDate: "2027-01-01",
+			StartDate:       testStartDate,
+			ExpectedEndDate: testEndDate,
 		})
 
 		require.NoError(t, err)
@@ -341,13 +355,13 @@ func TestService_CreateDebt_Amortization(t *testing.T) {
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 
 		resp, err := svc.CreateDebt(context.Background(), application.CreateDebtRequest{
-			UserID:          "user-1",
-			Name:            "Car Loan",
-			DebtType:        "car_loan",
+			UserID:          testUserID,
+			Name:            testCarLoan,
+			DebtType:        testLoanType,
 			TotalAmount:     12000000,
 			InterestRate:    750,
-			StartDate:       "2024-01-01",
-			ExpectedEndDate: "2027-01-01",
+			StartDate:       testStartDate,
+			ExpectedEndDate: testEndDate,
 		})
 
 		require.NoError(t, err)
@@ -363,13 +377,13 @@ func TestService_GetDebt(t *testing.T) {
 		cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 			Run(func(args mock.Arguments) {
 				d := args.Get(2).(*application.DebtResponse)
-				*d = application.DebtResponse{ID: "debt-1", UserID: "user-1", Name: "Cached Debt"}
+				*d = application.DebtResponse{ID: testDebtID, UserID: testUserID, Name: "Cached Debt"}
 			}).
 			Return(true, nil)
 
-		resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+		resp, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 		require.NoError(t, err)
-		assert.Equal(t, "debt-1", resp.ID)
+		assert.Equal(t, testDebtID, resp.ID)
 		assert.Equal(t, "Cached Debt", resp.Name)
 		cache.AssertExpectations(t)
 	})
@@ -381,18 +395,18 @@ func TestService_GetDebt(t *testing.T) {
 
 		cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 			Return(false, nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(&domain.Debt{
+			ID: testDebtID, UserID: testUserID, Name: testFoundDebt,
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 8000000, Status: domain.DebtStatusActive,
 		}, nil)
 		cache.On("Set", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse"), 5*time.Minute).
 			Return(nil)
 
-		resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+		resp, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 		require.NoError(t, err)
-		assert.Equal(t, "debt-1", resp.ID)
-		assert.Equal(t, "Found Debt", resp.Name)
+		assert.Equal(t, testDebtID, resp.ID)
+		assert.Equal(t, testFoundDebt, resp.Name)
 		debtRepo.AssertExpectations(t)
 		cache.AssertExpectations(t)
 	})
@@ -404,9 +418,9 @@ func TestService_GetDebt(t *testing.T) {
 
 		cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 			Return(false, nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(nil, domain.ErrNotFound)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(nil, domain.ErrNotFound)
 
-		_, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+		_, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -417,10 +431,10 @@ func TestService_GetDebt(t *testing.T) {
 
 		cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 			Return(false, nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "other-user").
+		debtRepo.On("FindByID", mock.Anything, testDebtID, "other-user").
 			Return(nil, domain.ErrAccessDenied)
 
-		_, err := svc.GetDebt(context.Background(), "debt-1", "other-user")
+		_, err := svc.GetDebt(context.Background(), testDebtID, "other-user")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrAccessDenied)
 	})
@@ -434,11 +448,11 @@ func TestService_UpdateDebt(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Old Name",
+			ID: testDebtID, UserID: testUserID, Name: "Old Name",
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 10000000, Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
@@ -446,8 +460,8 @@ func TestService_UpdateDebt(t *testing.T) {
 
 		newName := "New Name"
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:     "debt-1",
-			UserID: "user-1",
+			ID:     testDebtID,
+			UserID: testUserID,
 			Name:   &newName,
 		})
 
@@ -462,19 +476,19 @@ func TestService_UpdateDebt(t *testing.T) {
 		idempotency := new(mockIdempotency)
 		svc := newService(nil, nil, nil, idempotency, nil, nil)
 
-		idempotency.On("Get", mock.Anything, "key-1", mock.AnythingOfType("*application.DebtResponse")).
+		idempotency.On("Get", mock.Anything, testIdempotencyKey, mock.AnythingOfType("*application.DebtResponse")).
 			Run(func(args mock.Arguments) {
 				d := args.Get(2).(*application.DebtResponse)
-				*d = application.DebtResponse{ID: "debt-1", Name: "Cached"}
+				*d = application.DebtResponse{ID: testDebtID, Name: "Cached"}
 			}).
 			Return(nil)
 
 		newName := "Should Not Matter"
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:             "debt-1",
-			UserID:         "user-1",
+			ID:             testDebtID,
+			UserID:         testUserID,
 			Name:           &newName,
-			IdempotencyKey: "key-1",
+			IdempotencyKey: testIdempotencyKey,
 		})
 
 		require.NoError(t, err)
@@ -485,11 +499,11 @@ func TestService_UpdateDebt(t *testing.T) {
 		debtRepo := new(mockDebtRepo)
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(nil, domain.ErrNotFound)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(nil, domain.ErrNotFound)
 
 		_, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:     "debt-1",
-			UserID: "user-1",
+			ID:     testDebtID,
+			UserID: testUserID,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrNotFound)
@@ -500,14 +514,14 @@ func TestService_UpdateDebt(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Status: domain.DebtStatusActive,
+			ID: testDebtID, UserID: testUserID, Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 
 		invalidType := "fake_type"
 		_, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:       "debt-1",
-			UserID:   "user-1",
+			ID:       testDebtID,
+			UserID:   testUserID,
 			DebtType: &invalidType,
 		})
 		require.Error(t, err)
@@ -519,12 +533,12 @@ func TestService_UpdateDebt(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "actual-owner", Status: domain.DebtStatusActive,
+			ID: testDebtID, UserID: "actual-owner", Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "other-user").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, "other-user").Return(existing, nil)
 
 		_, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:     "debt-1",
+			ID:     testDebtID,
 			UserID: "other-user",
 		})
 		require.Error(t, err)
@@ -535,14 +549,14 @@ func TestService_UpdateDebt(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Status: domain.DebtStatusPaidOff,
+			ID: testDebtID, UserID: testUserID, Status: domain.DebtStatusPaidOff,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 
 		newStatus := "active"
 		_, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:     "debt-1",
-			UserID: "user-1",
+			ID:     testDebtID,
+			UserID: testUserID,
 			Status: &newStatus,
 		})
 		require.Error(t, err)
@@ -559,13 +573,13 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			ID: testDebtID, UserID: testUserID, Name: testLoanName,
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 10000000, InterestRate: 750,
-			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			StartDate: testStartDate, ExpectedEndDate: testEndDate,
 			Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
 		amortRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.AmortizationSchedule")).Return(nil)
@@ -574,8 +588,8 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 
 		newAmount := int64(15000000)
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:          "debt-1",
-			UserID:      "user-1",
+			ID:          testDebtID,
+			UserID:      testUserID,
 			TotalAmount: &newAmount,
 		})
 
@@ -593,13 +607,13 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			ID: testDebtID, UserID: testUserID, Name: testLoanName,
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 10000000, InterestRate: 750,
-			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			StartDate: testStartDate, ExpectedEndDate: testEndDate,
 			Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
 		amortRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.AmortizationSchedule")).Return(nil)
@@ -608,8 +622,8 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 
 		newRate := int64(1000)
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:           "debt-1",
-			UserID:       "user-1",
+			ID:           testDebtID,
+			UserID:       testUserID,
 			InterestRate: &newRate,
 		})
 
@@ -627,23 +641,23 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil).WithAmortization(amortRepo)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			ID: testDebtID, UserID: testUserID, Name: testLoanName,
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 10000000, InterestRate: 750,
-			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			StartDate: testStartDate, ExpectedEndDate: testEndDate,
 			Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
-		amortRepo.On("DeleteByDebt", mock.Anything, "debt-1").Return(nil)
+		amortRepo.On("DeleteByDebt", mock.Anything, testDebtID).Return(nil)
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
 
 		newRate := int64(0)
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:           "debt-1",
-			UserID:       "user-1",
+			ID:           testDebtID,
+			UserID:       testUserID,
 			InterestRate: &newRate,
 		})
 
@@ -659,13 +673,13 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil)
 
 		existing := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", Name: "Loan",
+			ID: testDebtID, UserID: testUserID, Name: testLoanName,
 			DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 			RemainingAmount: 10000000, InterestRate: 750,
-			StartDate: "2024-01-01", ExpectedEndDate: "2027-01-01",
+			StartDate: testStartDate, ExpectedEndDate: testEndDate,
 			Status: domain.DebtStatusActive,
 		}
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existing, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existing, nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
@@ -673,8 +687,8 @@ func TestService_UpdateDebt_Amortization(t *testing.T) {
 
 		newAmount := int64(15000000)
 		resp, err := svc.UpdateDebt(context.Background(), application.UpdateDebtRequest{
-			ID:          "debt-1",
-			UserID:      "user-1",
+			ID:          testDebtID,
+			UserID:      testUserID,
 			TotalAmount: &newAmount,
 		})
 
@@ -691,11 +705,11 @@ func TestService_DeleteDebt(t *testing.T) {
 		svc := newService(debtRepo, nil, outbox, nil, cache, nil)
 
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("Delete", mock.Anything, "debt-1", "user-1").Return(nil)
+		debtRepo.On("Delete", mock.Anything, testDebtID, testUserID).Return(nil)
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
 
-		err := svc.DeleteDebt(context.Background(), "debt-1", "user-1")
+		err := svc.DeleteDebt(context.Background(), testDebtID, testUserID)
 		require.NoError(t, err)
 		debtRepo.AssertExpectations(t)
 		outbox.AssertExpectations(t)
@@ -709,9 +723,9 @@ func TestService_DeleteDebt(t *testing.T) {
 
 		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("Delete", mock.Anything, "debt-1", "user-1").Return(domain.ErrNotFound)
+		debtRepo.On("Delete", mock.Anything, testDebtID, testUserID).Return(domain.ErrNotFound)
 
-		err := svc.DeleteDebt(context.Background(), "debt-1", "user-1")
+		err := svc.DeleteDebt(context.Background(), testDebtID, testUserID)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -723,19 +737,19 @@ func TestService_ListDebts(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		debts := []*domain.Debt{
-			{ID: "debt-1", UserID: "user-1", Name: "Loan 1", DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000, RemainingAmount: 5000000, Status: domain.DebtStatusActive},
-			{ID: "debt-2", UserID: "user-1", Name: "Loan 2", DebtType: domain.DebtTypeMortgage, TotalAmount: 20000000, RemainingAmount: 20000000, Status: domain.DebtStatusActive},
+			{ID: testDebtID, UserID: testUserID, Name: "Loan 1", DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000, RemainingAmount: 5000000, Status: domain.DebtStatusActive},
+			{ID: "debt-2", UserID: testUserID, Name: "Loan 2", DebtType: domain.DebtTypeMortgage, TotalAmount: 20000000, RemainingAmount: 20000000, Status: domain.DebtStatusActive},
 		}
 		filter := domain.DebtFilter{Limit: 10}
-		debtRepo.On("List", mock.Anything, "user-1", filter).Return(debts, nil)
-		debtRepo.On("Count", mock.Anything, "user-1", filter).Return(2, nil)
+		debtRepo.On("List", mock.Anything, testUserID, filter).Return(debts, nil)
+		debtRepo.On("Count", mock.Anything, testUserID, filter).Return(2, nil)
 
-		items, total, err := svc.ListDebts(context.Background(), "user-1", filter)
+		items, total, err := svc.ListDebts(context.Background(), testUserID, filter)
 
 		require.NoError(t, err)
 		assert.Equal(t, 2, total)
 		assert.Len(t, items, 2)
-		assert.Equal(t, "debt-1", items[0].ID)
+		assert.Equal(t, testDebtID, items[0].ID)
 		assert.Equal(t, "debt-2", items[1].ID)
 		debtRepo.AssertExpectations(t)
 	})
@@ -745,10 +759,10 @@ func TestService_ListDebts(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		filter := domain.DebtFilter{}
-		debtRepo.On("List", mock.Anything, "user-1", filter).Return([]*domain.Debt{}, nil)
-		debtRepo.On("Count", mock.Anything, "user-1", filter).Return(0, nil)
+		debtRepo.On("List", mock.Anything, testUserID, filter).Return([]*domain.Debt{}, nil)
+		debtRepo.On("Count", mock.Anything, testUserID, filter).Return(0, nil)
 
-		items, total, err := svc.ListDebts(context.Background(), "user-1", filter)
+		items, total, err := svc.ListDebts(context.Background(), testUserID, filter)
 
 		require.NoError(t, err)
 		assert.Equal(t, 0, total)
@@ -765,31 +779,31 @@ func TestService_RegisterPayment(t *testing.T) {
 		svc := newService(debtRepo, paymentRepo, outbox, nil, cache, nil)
 
 		existingDebt := &domain.Debt{
-			ID: "debt-1", UserID: "user-1", TotalAmount: 10000000,
+			ID: testDebtID, UserID: testUserID, TotalAmount: 10000000,
 			RemainingAmount: 7000000, Status: domain.DebtStatusActive,
 		}
 
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existingDebt, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existingDebt, nil)
 		paymentRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Payment")).Return(nil)
 		debtRepo.On("Update", mock.Anything, mock.AnythingOfType("*domain.Debt")).Return(nil)
 		outbox.On("Save", mock.Anything, mock.AnythingOfType("domain.DebtEvent")).Return(nil)
 		cache.On("Delete", mock.Anything, "debt:debt:debt-1").Return(nil)
 
 		resp, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
-			DebtID:      "debt-1",
-			UserID:      "user-1",
+			DebtID:      testDebtID,
+			UserID:      testUserID,
 			Amount:      2000000,
-			PaymentDate: "2024-02-01",
+			PaymentDate: testPaymentDate,
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		assert.NotEmpty(t, resp.ID)
-		assert.Equal(t, "debt-1", resp.DebtID)
-		assert.Equal(t, "user-1", resp.UserID)
+		assert.Equal(t, testDebtID, resp.DebtID)
+		assert.Equal(t, testUserID, resp.UserID)
 		assert.Equal(t, int64(2000000), resp.Amount)
-		assert.Equal(t, "2024-02-01", resp.PaymentDate)
+		assert.Equal(t, testPaymentDate, resp.PaymentDate)
 		assert.NotZero(t, resp.CreatedAt)
 		debtRepo.AssertExpectations(t)
 		paymentRepo.AssertExpectations(t)
@@ -801,7 +815,7 @@ func TestService_RegisterPayment(t *testing.T) {
 		idempotency := new(mockIdempotency)
 		svc := newService(nil, nil, nil, idempotency, nil, nil)
 
-		idempotency.On("Get", mock.Anything, "key-1", mock.AnythingOfType("*application.PaymentResponse")).
+		idempotency.On("Get", mock.Anything, testIdempotencyKey, mock.AnythingOfType("*application.PaymentResponse")).
 			Run(func(args mock.Arguments) {
 				d := args.Get(2).(*application.PaymentResponse)
 				*d = application.PaymentResponse{ID: "pay-1", Amount: 5000}
@@ -809,11 +823,11 @@ func TestService_RegisterPayment(t *testing.T) {
 			Return(nil)
 
 		resp, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
-			DebtID:         "debt-1",
-			UserID:         "user-1",
+			DebtID:         testDebtID,
+			UserID:         testUserID,
 			Amount:         5000,
-			PaymentDate:    "2024-02-01",
-			IdempotencyKey: "key-1",
+			PaymentDate:    testPaymentDate,
+			IdempotencyKey: testIdempotencyKey,
 		})
 
 		require.NoError(t, err)
@@ -825,9 +839,9 @@ func TestService_RegisterPayment(t *testing.T) {
 
 		_, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
 			DebtID:      "",
-			UserID:      "user-1",
+			UserID:      testUserID,
 			Amount:      5000,
-			PaymentDate: "2024-02-01",
+			PaymentDate: testPaymentDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrMissingField)
@@ -838,13 +852,13 @@ func TestService_RegisterPayment(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(nil, domain.ErrNotFound)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(nil, domain.ErrNotFound)
 
 		_, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
-			DebtID:      "debt-1",
-			UserID:      "user-1",
+			DebtID:      testDebtID,
+			UserID:      testUserID,
 			Amount:      5000,
-			PaymentDate: "2024-02-01",
+			PaymentDate: testPaymentDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrNotFound)
@@ -855,18 +869,18 @@ func TestService_RegisterPayment(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		existingDebt := &domain.Debt{
-			ID: "debt-1", UserID: "user-1",
+			ID: testDebtID, UserID: testUserID,
 			RemainingAmount: 1000, Status: domain.DebtStatusActive,
 		}
 
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existingDebt, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existingDebt, nil)
 
 		_, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
-			DebtID:      "debt-1",
-			UserID:      "user-1",
+			DebtID:      testDebtID,
+			UserID:      testUserID,
 			Amount:      999999,
-			PaymentDate: "2024-02-01",
+			PaymentDate: testPaymentDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrPaymentExceedsBalance)
@@ -876,18 +890,18 @@ func TestService_RegisterPayment(t *testing.T) {
 		svc := newService(debtRepo, nil, nil, nil, nil, nil)
 
 		existingDebt := &domain.Debt{
-			ID: "debt-1", UserID: "user-1",
+			ID: testDebtID, UserID: testUserID,
 			RemainingAmount: 0, Status: domain.DebtStatusPaidOff,
 		}
 
 		debtRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil)
-		debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(existingDebt, nil)
+		debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(existingDebt, nil)
 
 		_, err := svc.RegisterPayment(context.Background(), application.RegisterPaymentRequest{
-			DebtID:      "debt-1",
-			UserID:      "user-1",
+			DebtID:      testDebtID,
+			UserID:      testUserID,
 			Amount:      1000,
-			PaymentDate: "2024-02-01",
+			PaymentDate: testPaymentDate,
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrDebtAlreadyPaid)
@@ -900,12 +914,12 @@ func TestService_ListPayments(t *testing.T) {
 		svc := newService(nil, paymentRepo, nil, nil, nil, nil)
 
 		payments := []*domain.Payment{
-			{ID: "pay-1", DebtID: "debt-1", UserID: "user-1", Amount: 5000, PaymentDate: "2024-02-01"},
-			{ID: "pay-2", DebtID: "debt-1", UserID: "user-1", Amount: 3000, PaymentDate: "2024-03-01"},
+			{ID: "pay-1", DebtID: testDebtID, UserID: testUserID, Amount: 5000, PaymentDate: testPaymentDate},
+			{ID: "pay-2", DebtID: testDebtID, UserID: testUserID, Amount: 3000, PaymentDate: "2024-03-01"},
 		}
-		filter := domain.PaymentFilter{DebtID: "debt-1", Limit: 10}
-		paymentRepo.On("FindByDebt", mock.Anything, "debt-1", filter).Return(payments, nil)
-		paymentRepo.On("CountByDebt", mock.Anything, "debt-1", filter).Return(2, nil)
+		filter := domain.PaymentFilter{DebtID: testDebtID, Limit: 10}
+		paymentRepo.On("FindByDebt", mock.Anything, testDebtID, filter).Return(payments, nil)
+		paymentRepo.On("CountByDebt", mock.Anything, testDebtID, filter).Return(2, nil)
 
 		items, total, err := svc.ListPayments(context.Background(), filter)
 
@@ -929,19 +943,19 @@ func TestService_GetDebt_CacheErrorFallsThroughToRepo(t *testing.T) {
 	// Cache returns an error — should fall through to repo
 	cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 		Return(false, errors.New("cache unavailable"))
-	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
-		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+	debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(&domain.Debt{
+		ID: testDebtID, UserID: testUserID, Name: testFoundDebt,
 		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
 	}, nil)
 	cache.On("Set", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse"), 5*time.Minute).
 		Return(nil)
 
-	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	resp, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Equal(t, "debt-1", resp.ID)
-	assert.Equal(t, "Found Debt", resp.Name)
+	assert.Equal(t, testDebtID, resp.ID)
+	assert.Equal(t, testFoundDebt, resp.Name)
 	debtRepo.AssertExpectations(t)
 	cache.AssertExpectations(t)
 }
@@ -953,8 +967,8 @@ func TestService_GetDebt_CacheSetErrorIsIgnored(t *testing.T) {
 
 	cache.On("Get", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse")).
 		Return(false, nil)
-	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
-		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+	debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(&domain.Debt{
+		ID: testDebtID, UserID: testUserID, Name: testFoundDebt,
 		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
 	}, nil)
@@ -962,10 +976,10 @@ func TestService_GetDebt_CacheSetErrorIsIgnored(t *testing.T) {
 	cache.On("Set", mock.Anything, "debt:debt:debt-1", mock.AnythingOfType("*application.DebtResponse"), 5*time.Minute).
 		Return(errors.New("cache write failed"))
 
-	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	resp, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Equal(t, "debt-1", resp.ID)
+	assert.Equal(t, testDebtID, resp.ID)
 }
 
 func TestService_GetDebt_NilCache(t *testing.T) {
@@ -973,15 +987,15 @@ func TestService_GetDebt_NilCache(t *testing.T) {
 	// Pass nil for cache — service should work without cache
 	svc := application.NewService(debtRepo, new(mockPaymentRepo), new(mockOutbox), new(mockIdempotency), nil, new(mockFeatureFlag))
 
-	debtRepo.On("FindByID", mock.Anything, "debt-1", "user-1").Return(&domain.Debt{
-		ID: "debt-1", UserID: "user-1", Name: "Found Debt",
+	debtRepo.On("FindByID", mock.Anything, testDebtID, testUserID).Return(&domain.Debt{
+		ID: testDebtID, UserID: testUserID, Name: testFoundDebt,
 		DebtType: domain.DebtTypeCarLoan, TotalAmount: 10000000,
 		RemainingAmount: 8000000, Status: domain.DebtStatusActive,
 	}, nil)
 
-	resp, err := svc.GetDebt(context.Background(), "debt-1", "user-1")
+	resp, err := svc.GetDebt(context.Background(), testDebtID, testUserID)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Equal(t, "debt-1", resp.ID)
-	assert.Equal(t, "Found Debt", resp.Name)
+	assert.Equal(t, testDebtID, resp.ID)
+	assert.Equal(t, testFoundDebt, resp.Name)
 }

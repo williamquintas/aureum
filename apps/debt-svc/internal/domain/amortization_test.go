@@ -3,9 +3,10 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/aureum/debt-svc/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aureum/debt-svc/internal/domain"
 )
 
 func TestCalculateAmortization(t *testing.T) {

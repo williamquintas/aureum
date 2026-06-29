@@ -36,7 +36,8 @@ func (r *BudgetRepo) Save(ctx context.Context, budget *domain.Budget) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`INSERT INTO budgets (id, user_id, name, description, period, total_limit, spent_amount, status, start_date, end_date, created_at, updated_at)
+		`INSERT INTO budgets (id, user_id, name, description, period, total_limit, `+
+			`spent_amount, status, start_date, end_date, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		budget.ID, budget.UserID, budget.Name, budget.Description,
 		string(budget.Period), budget.TotalLimit, budget.SpentAmount,
@@ -52,7 +53,8 @@ func (r *BudgetRepo) Save(ctx context.Context, budget *domain.Budget) error {
 // FindByID retrieves a budget by ID and user ID, excluding soft-deleted records.
 func (r *BudgetRepo) FindByID(ctx context.Context, id, userID string) (*domain.Budget, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, name, description, period, total_limit, spent_amount, status, start_date, end_date, created_at, updated_at, deleted_at
+		`SELECT id, user_id, name, description, period, total_limit, `+
+			`spent_amount, status, start_date, end_date, created_at, updated_at, deleted_at
 		 FROM budgets WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -90,7 +92,8 @@ func (r *BudgetRepo) Update(ctx context.Context, budget *domain.Budget) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`UPDATE budgets SET name=$1, description=$2, period=$3, total_limit=$4, spent_amount=$5, status=$6, start_date=$7, end_date=$8, updated_at=$9
+		`UPDATE budgets SET name=$1, description=$2, period=$3, total_limit=$4, `+
+			`spent_amount=$5, status=$6, start_date=$7, end_date=$8, updated_at=$9
 		 WHERE id=$10 AND deleted_at IS NULL`,
 		budget.Name, budget.Description, string(budget.Period),
 		budget.TotalLimit, budget.SpentAmount, string(budget.Status),
@@ -121,7 +124,8 @@ func (r *BudgetRepo) Delete(ctx context.Context, id, userID string) error {
 
 // List returns budgets filtered by user ID with optional filters, ordered by start_date DESC.
 func (r *BudgetRepo) List(ctx context.Context, userID string, filter domain.BudgetFilter) ([]*domain.Budget, error) {
-	query := `SELECT id, user_id, name, description, period, total_limit, spent_amount, status, start_date, end_date, created_at, updated_at
+	query := `SELECT id, user_id, name, description, period, total_limit, ` +
+		`spent_amount, status, start_date, end_date, created_at, updated_at
 			  FROM budgets WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2

@@ -1,6 +1,7 @@
-package middleware_test
+package middleware_test //nolint:goconst
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,7 @@ func TestAuthMiddleware_MissingHeader(t *testing.T) {
 	mw := middleware.AuthMiddleware(testJWTSecret)
 	handler := mw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -33,7 +34,7 @@ func TestAuthMiddleware_InvalidScheme(t *testing.T) {
 	mw := middleware.AuthMiddleware(testJWTSecret)
 	handler := mw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Basic somebase64")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -46,7 +47,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	mw := middleware.AuthMiddleware(testJWTSecret)
 	handler := mw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token-string")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -59,8 +60,8 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	mw := middleware.AuthMiddleware(testJWTSecret)
 	handler := mw(http.HandlerFunc(okHandler))
 
-	token := generateToken(t, []string{"user"})
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	token := generateToken(t, []string{"user"}) //nolint:goconst
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -81,7 +82,7 @@ func TestAuthMiddleware_ExpiredToken(t *testing.T) {
 	mw := middleware.AuthMiddleware(testJWTSecret)
 	handler := mw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+signed)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -103,8 +104,8 @@ func TestRequireRole_HasRole(t *testing.T) {
 	roleMw := middleware.RequireRole("admin")
 	handler := auth(roleMw(http.HandlerFunc(okHandler)))
 
-	token := generateToken(t, []string{"admin"})
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	token := generateToken(t, []string{"admin"}) //nolint:goconst
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/admin", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -118,7 +119,7 @@ func TestRequireRole_MissingRole(t *testing.T) {
 	handler := auth(roleMw(http.HandlerFunc(okHandler)))
 
 	token := generateToken(t, []string{"user"})
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/admin", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -132,7 +133,7 @@ func TestRequireRole_NoClaims(t *testing.T) {
 	roleMw := middleware.RequireRole("admin")
 	handler := roleMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/admin", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -145,7 +146,7 @@ func TestRequireRole_NoAuthMiddlewareDirectCall(t *testing.T) {
 	roleMw := middleware.RequireRole("admin")
 	handler := roleMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/admin", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -166,7 +167,7 @@ func TestAuthMiddleware_TableDriven(t *testing.T) {
 		{
 			name: "missing authorization header",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, "/test", nil)
+				return httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			},
 			wantStatus: http.StatusUnauthorized,
 			wantBody:   "missing authorization header",
@@ -174,7 +175,7 @@ func TestAuthMiddleware_TableDriven(t *testing.T) {
 		{
 			name: "invalid scheme",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 				req.Header.Set("Authorization", "Basic xyz")
 				return req
 			},
@@ -184,7 +185,7 @@ func TestAuthMiddleware_TableDriven(t *testing.T) {
 		{
 			name: "invalid jwt",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 				req.Header.Set("Authorization", "Bearer badtoken")
 				return req
 			},
@@ -195,7 +196,7 @@ func TestAuthMiddleware_TableDriven(t *testing.T) {
 			name: "valid jwt",
 			setupReq: func() *http.Request {
 				token := generateToken(t, []string{"user"})
-				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 				req.Header.Set("Authorization", "Bearer "+token)
 				return req
 			},
@@ -250,7 +251,7 @@ func TestRequireRole_TableDriven(t *testing.T) {
 			handler := auth(roleMw(http.HandlerFunc(okHandler)))
 
 			token := generateToken(t, tt.tokenRoles)
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)

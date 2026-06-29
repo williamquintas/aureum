@@ -55,9 +55,9 @@ func (h *GRPCHandler) GetUser(
 	profile, err := h.authSvc.GetProfile(ctx, req.UserId)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return nil, status.Error(codes.NotFound, "user not found")
+			return nil, status.Error(codes.NotFound, msgUserNotFound)
 		}
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, msgInternalError)
 	}
 
 	telemetry.RecordRequest(ctx, "get_user", "200", time.Since(start))
@@ -92,7 +92,7 @@ func (h *GRPCHandler) ABACCheck(
 		Attributes:      req.Attributes,
 	})
 	if err != nil {
-		return &identityv1.ABACCheckResponse{Allowed: false, Reason: "internal error"}, nil
+		return &identityv1.ABACCheckResponse{Allowed: false, Reason: msgInternalError}, nil
 	}
 
 	telemetry.RecordRequest(ctx, "abac_check", "200", time.Since(start))

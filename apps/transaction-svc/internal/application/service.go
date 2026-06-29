@@ -10,6 +10,11 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+const (
+	keyDescription = "description"
+	keyStatus      = "status"
+)
+
 // IdempotencyStore defines the contract for idempotency key storage.
 type IdempotencyStore interface {
 	Get(ctx context.Context, key string, dest interface{}) error
@@ -109,7 +114,7 @@ func (s *Service) CreateIncome(ctx context.Context, req CreateIncomeRequest) (*C
 			EntityID: income.ID,
 			UserID:   income.UserID,
 			Payload: map[string]interface{}{
-				"description":     income.Description,
+				keyDescription:    income.Description,
 				"source":          income.Source,
 				"income_type":     income.IncomeType,
 				"received_date":   income.ReceivedDate,
@@ -233,7 +238,7 @@ func (s *Service) UpdateIncome(ctx context.Context, req UpdateIncomeRequest) (*G
 			EntityID: income.ID,
 			UserID:   income.UserID,
 			Payload: map[string]interface{}{
-				"status": string(income.Status),
+				keyStatus: string(income.Status),
 			},
 			Timestamp: time.Now().Unix(),
 		}
@@ -288,7 +293,8 @@ func (s *Service) DeleteIncome(ctx context.Context, id, userID string) error {
 }
 
 // ListIncomes returns a paginated list of income records for a user.
-func (s *Service) ListIncomes(ctx context.Context, userID string, filter domain.IncomeFilter) ([]*GetIncomeResponse, int, error) {
+func (s *Service) ListIncomes(ctx context.Context, userID string,
+	filter domain.IncomeFilter) ([]*GetIncomeResponse, int, error) {
 	items, err := s.incomes.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -319,7 +325,9 @@ func (s *Service) ListIncomes(ctx context.Context, userID string, filter domain.
 // ── FixedExpense ────────────────────────────────────────────────────────────
 
 // CreateFixedExpense creates a new fixed expense record with idempotency and event publishing.
-func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpenseRequest) (*CreateFixedExpenseResponse, error) {
+func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpenseRequest) (
+	*CreateFixedExpenseResponse, error,
+) {
 	if req.IdempotencyKey != "" {
 		var cached CreateFixedExpenseResponse
 		if err := s.idempotency.Get(ctx, req.IdempotencyKey, &cached); err == nil {
@@ -362,7 +370,7 @@ func (s *Service) CreateFixedExpense(ctx context.Context, req CreateFixedExpense
 			EntityID: expense.ID,
 			UserID:   expense.UserID,
 			Payload: map[string]interface{}{
-				"description":    expense.Description,
+				keyDescription:   expense.Description,
 				"category":       expense.Category,
 				"day_of_month":   expense.DayOfMonth,
 				"payment_method": expense.PaymentMethod,
@@ -426,7 +434,9 @@ func (s *Service) GetFixedExpense(ctx context.Context, id, userID string) (*Crea
 }
 
 // UpdateFixedExpense applies partial updates to a fixed expense record.
-func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpenseRequest) (*CreateFixedExpenseResponse, error) {
+func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpenseRequest) (
+	*CreateFixedExpenseResponse, error,
+) {
 	if req.IdempotencyKey != "" {
 		var cached CreateFixedExpenseResponse
 		if err := s.idempotency.Get(ctx, req.IdempotencyKey, &cached); err == nil {
@@ -479,7 +489,7 @@ func (s *Service) UpdateFixedExpense(ctx context.Context, req UpdateFixedExpense
 			Type:      domain.EventFixedExpenseUpdated,
 			EntityID:  expense.ID,
 			UserID:    expense.UserID,
-			Payload:   map[string]interface{}{"status": string(expense.Status)},
+			Payload:   map[string]interface{}{keyStatus: string(expense.Status)},
 			Timestamp: time.Now().Unix(),
 		}
 		return s.outbox.Save(txCtx, event)
@@ -532,7 +542,8 @@ func (s *Service) DeleteFixedExpense(ctx context.Context, id, userID string) err
 }
 
 // ListFixedExpenses returns a paginated list of fixed expense records for a user.
-func (s *Service) ListFixedExpenses(ctx context.Context, userID string, filter domain.FixedExpenseFilter) ([]*CreateFixedExpenseResponse, int, error) {
+func (s *Service) ListFixedExpenses(ctx context.Context, userID string,
+	filter domain.FixedExpenseFilter) ([]*CreateFixedExpenseResponse, int, error) {
 	items, err := s.fixedExpenses.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -562,7 +573,9 @@ func (s *Service) ListFixedExpenses(ctx context.Context, userID string, filter d
 // ── VariableExpense ─────────────────────────────────────────────────────────
 
 // CreateVariableExpense creates a new variable expense record with idempotency and event publishing.
-func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableExpenseRequest) (*CreateVariableExpenseResponse, error) {
+func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableExpenseRequest) (
+	*CreateVariableExpenseResponse, error,
+) {
 	if req.IdempotencyKey != "" {
 		var cached CreateVariableExpenseResponse
 		if err := s.idempotency.Get(ctx, req.IdempotencyKey, &cached); err == nil {
@@ -612,7 +625,7 @@ func (s *Service) CreateVariableExpense(ctx context.Context, req CreateVariableE
 			EntityID: expense.ID,
 			UserID:   expense.UserID,
 			Payload: map[string]interface{}{
-				"description":    expense.Description,
+				keyDescription:   expense.Description,
 				"destination":    expense.Destination,
 				"category":       expense.Category,
 				"expense_type":   string(expense.ExpenseType),
@@ -685,7 +698,9 @@ func (s *Service) GetVariableExpense(ctx context.Context, id, userID string) (*C
 }
 
 // UpdateVariableExpense applies partial updates to a variable expense record.
-func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableExpenseRequest) (*CreateVariableExpenseResponse, error) {
+func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableExpenseRequest) (
+	*CreateVariableExpenseResponse, error,
+) {
 	if req.IdempotencyKey != "" {
 		var cached CreateVariableExpenseResponse
 		if err := s.idempotency.Get(ctx, req.IdempotencyKey, &cached); err == nil {
@@ -751,7 +766,7 @@ func (s *Service) UpdateVariableExpense(ctx context.Context, req UpdateVariableE
 			Type:      domain.EventVariableExpenseUpdated,
 			EntityID:  expense.ID,
 			UserID:    expense.UserID,
-			Payload:   map[string]interface{}{"status": string(expense.Status)},
+			Payload:   map[string]interface{}{keyStatus: string(expense.Status)},
 			Timestamp: time.Now().Unix(),
 		}
 		return s.outbox.Save(txCtx, event)
@@ -807,7 +822,8 @@ func (s *Service) DeleteVariableExpense(ctx context.Context, id, userID string) 
 }
 
 // ListVariableExpenses returns a paginated list of variable expense records for a user.
-func (s *Service) ListVariableExpenses(ctx context.Context, userID string, filter domain.VariableExpenseFilter) ([]*CreateVariableExpenseResponse, int, error) {
+func (s *Service) ListVariableExpenses(ctx context.Context, userID string,
+	filter domain.VariableExpenseFilter) ([]*CreateVariableExpenseResponse, int, error) {
 	items, err := s.variableExpenses.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err

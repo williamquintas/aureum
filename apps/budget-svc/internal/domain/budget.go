@@ -257,13 +257,14 @@ func (b *Budget) ApplyUpdate(input UpdateBudgetInput) error {
 		}
 		b.EndDate = *input.EndDate
 	}
-	if input.StartDate != nil && input.EndDate != nil {
+	switch {
+	case input.StartDate != nil && input.EndDate != nil:
 		if b.EndDate < b.StartDate {
 			return ErrInvalidDateRange
 		}
-	} else if input.EndDate != nil && *input.EndDate < b.StartDate {
+	case input.EndDate != nil && *input.EndDate < b.StartDate:
 		return ErrInvalidDateRange
-	} else if input.StartDate != nil && b.EndDate < *input.StartDate {
+	case input.StartDate != nil && b.EndDate < *input.StartDate:
 		return ErrInvalidDateRange
 	}
 	if input.Status != nil {

@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aureum/pkg/circuitbreaker"
 	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aureum/pkg/circuitbreaker"
 )
 
 // CC-22: Healthy service test — circuit starts closed, allows requests, returns success.

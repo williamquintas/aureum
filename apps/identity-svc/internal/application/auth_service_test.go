@@ -1,4 +1,4 @@
-package application
+package application //nolint:goconst
 
 import (
 	"context"
@@ -185,7 +185,8 @@ func (m *mockFlag) IsEnabled(_ context.Context, _ string) bool { return true }
 type mockCache struct {
 	getFunc      func(ctx context.Context, key string, dest interface{}) (bool, error)
 	setFunc      func(ctx context.Context, key string, value interface{}, ttl time.Duration) error
-	getOrSetFunc func(ctx context.Context, key string, ttl time.Duration, fn func() (interface{}, error), dest interface{}) error
+	getOrSetFunc func(ctx context.Context, key string, ttl time.Duration,
+		fn func() (interface{}, error), dest interface{}) error
 }
 
 func (m *mockCache) Get(ctx context.Context, key string, dest interface{}) (bool, error) {
@@ -202,7 +203,8 @@ func (m *mockCache) Set(ctx context.Context, key string, value interface{}, ttl 
 	return nil
 }
 
-func (m *mockCache) GetOrSet(ctx context.Context, key string, ttl time.Duration, fn func() (interface{}, error), dest interface{}) error {
+func (m *mockCache) GetOrSet(ctx context.Context, key string, ttl time.Duration,
+	fn func() (interface{}, error), dest interface{}) error {
 	if m.getOrSetFunc != nil {
 		return m.getOrSetFunc(ctx, key, ttl, fn, dest)
 	}
@@ -450,7 +452,7 @@ func TestAuthService_GetProfile_Success(t *testing.T) {
 		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
 			return &domain.User{
 				ID: id, Email: "profile@example.com", EmailVerified: true,
-				Name: "Profile User", Status: domain.UserStatusActive, Roles: []string{"user"},
+				Name: "Profile User", Status: domain.UserStatusActive, Roles: []string{"user"}, //nolint:goconst
 			}, nil
 		},
 	}

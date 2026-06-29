@@ -293,7 +293,9 @@ func (s *Service) Delete(ctx context.Context, id, userID string) error {
 // ── List ─────────────────────────────────────────────────────────────────────
 
 // List returns a paginated list of budgets for a user.
-func (s *Service) List(ctx context.Context, userID string, filter domain.BudgetFilter) ([]*GetBudgetResponse, int, error) {
+func (s *Service) List(ctx context.Context, userID string,
+	filter domain.BudgetFilter,
+) ([]*GetBudgetResponse, int, error) {
 	items, err := s.budgets.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -341,7 +343,7 @@ func (s *Service) GetSummary(ctx context.Context, id, userID string) (*BudgetSum
 		TotalSpent:    budget.SpentAmount,
 		Remaining:     remaining,
 		UsagePercent:  usagePct,
-		CategoryCount: int32(len(cats)),
+		CategoryCount: int32(len(cats)), //nolint:gosec
 	}
 
 	for _, cat := range cats {

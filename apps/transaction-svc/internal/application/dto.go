@@ -3,6 +3,17 @@ package application
 
 import "github.com/aureum/transaction-svc/internal/domain"
 
+const statusPending = "pending"
+
+const (
+	incomeSalary         = "salary"
+	incomeFreelance      = "freelance"
+	incomeOther          = "other"
+	pmCreditCard         = "credit_card"
+	pmDebitCard          = "debit_card"
+	expenseDiscretionary = "discretionary"
+)
+
 // CreateIncomeRequest represents the input for creating a new income record.
 type CreateIncomeRequest struct {
 	UserID         string
@@ -146,7 +157,7 @@ type ListResponse struct {
 
 func toDomainStatus(status string) (domain.TransactionStatus, error) {
 	switch status {
-	case "pending":
+	case statusPending:
 		return domain.StatusPending, nil
 	case "completed":
 		return domain.StatusCompleted, nil
@@ -159,9 +170,9 @@ func toDomainStatus(status string) (domain.TransactionStatus, error) {
 
 func toDomainIncomeType(t string) (domain.IncomeType, error) {
 	switch t {
-	case "salary":
+	case incomeSalary:
 		return domain.IncomeTypeSalary, nil
-	case "freelance":
+	case incomeFreelance:
 		return domain.IncomeTypeFreelance, nil
 	case "investment":
 		return domain.IncomeTypeInvestment, nil
@@ -169,7 +180,7 @@ func toDomainIncomeType(t string) (domain.IncomeType, error) {
 		return domain.IncomeTypeBusiness, nil
 	case "refund":
 		return domain.IncomeTypeRefund, nil
-	case "other":
+	case incomeOther:
 		return domain.IncomeTypeOther, nil
 	default:
 		return "", domain.ErrInvalidEnum
@@ -178,9 +189,9 @@ func toDomainIncomeType(t string) (domain.IncomeType, error) {
 
 func toDomainPaymentMethod(pm string) (domain.PaymentMethod, error) {
 	switch pm {
-	case "credit_card":
+	case pmCreditCard:
 		return domain.PaymentMethodCreditCard, nil
-	case "debit_card":
+	case pmDebitCard:
 		return domain.PaymentMethodDebitCard, nil
 	case "cash":
 		return domain.PaymentMethodCash, nil
@@ -188,7 +199,7 @@ func toDomainPaymentMethod(pm string) (domain.PaymentMethod, error) {
 		return domain.PaymentMethodBankTransfer, nil
 	case "pix":
 		return domain.PaymentMethodPix, nil
-	case "other":
+	case incomeOther:
 		return domain.PaymentMethodOther, nil
 	default:
 		return "", domain.ErrInvalidEnum
@@ -199,7 +210,7 @@ func toDomainExpenseType(et string) (domain.ExpenseType, error) {
 	switch et {
 	case "essential":
 		return domain.ExpenseTypeEssential, nil
-	case "discretionary":
+	case expenseDiscretionary:
 		return domain.ExpenseTypeDiscretionary, nil
 	case "occasional":
 		return domain.ExpenseTypeOccasional, nil
