@@ -11,7 +11,7 @@ RUN go mod download
 RUN go mod tidy
 RUN CGO_ENABLED=0 go build -o /app/bin/server ./cmd/server
 
-FROM alpine:3.19
+FROM alpine:3.24
 
 WORKDIR /app
 
