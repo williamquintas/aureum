@@ -12,18 +12,22 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// IncomeRepo implements the IncomeRepository interface using PostgreSQL.
 type IncomeRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewIncomeRepo creates a new IncomeRepo.
 func NewIncomeRepo(pool *pgxpool.Pool) *IncomeRepo {
 	return &IncomeRepo{pool: pool}
 }
 
+// WithTx executes the given function within a database transaction.
 func (r *IncomeRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new income record.
 func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -31,7 +35,8 @@ func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`INSERT INTO incomes (id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at)
+		`INSERT INTO incomes (id, user_id, description, source, income_type,
+		 received_date, received_amount, status, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		income.ID, income.UserID, income.Description, income.Source,
 		string(income.IncomeType), income.ReceivedDate, income.ReceivedAmount,
@@ -43,9 +48,11 @@ func (r *IncomeRepo) Save(ctx context.Context, income *domain.Income) error {
 	return nil
 }
 
+// FindByID retrieves an income record by its ID and user ID.
 func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.Income, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at, deleted_at
+		`SELECT id, user_id, description, source, income_type,
+		 received_date, received_amount, status, created_at, updated_at, deleted_at
 		 FROM incomes WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -73,6 +80,7 @@ func (r *IncomeRepo) FindByID(ctx context.Context, id, userID string) (*domain.I
 	return &income, nil
 }
 
+// Update modifies an existing income record.
 func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -80,7 +88,8 @@ func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	}
 
 	_, err := q.Exec(ctx,
-		`UPDATE incomes SET description=$1, source=$2, income_type=$3, received_date=$4, received_amount=$5, status=$6, updated_at=$7
+		`UPDATE incomes SET description=$1, source=$2, income_type=$3,
+		 received_date=$4, received_amount=$5, status=$6, updated_at=$7
 		 WHERE id=$8 AND deleted_at IS NULL`,
 		income.Description, income.Source, string(income.IncomeType),
 		income.ReceivedDate, income.ReceivedAmount, string(income.Status),
@@ -92,6 +101,7 @@ func (r *IncomeRepo) Update(ctx context.Context, income *domain.Income) error {
 	return nil
 }
 
+// Delete soft-deletes an income record by ID and user ID.
 func (r *IncomeRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -108,8 +118,10 @@ func (r *IncomeRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
+// List returns a paginated list of income records for a user.
 func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.IncomeFilter) ([]*domain.Income, error) {
-	query := `SELECT id, user_id, description, source, income_type, received_date, received_amount, status, created_at, updated_at
+	query := `SELECT id, user_id, description, source, income_type,
+	         received_date, received_amount, status, created_at, updated_at
 			  FROM incomes WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2
@@ -170,6 +182,7 @@ func (r *IncomeRepo) List(ctx context.Context, userID string, filter domain.Inco
 	return incomes, nil
 }
 
+// Count returns the total number of income records matching the filter.
 func (r *IncomeRepo) Count(ctx context.Context, userID string, filter domain.IncomeFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM incomes WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}

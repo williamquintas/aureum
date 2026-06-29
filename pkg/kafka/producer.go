@@ -9,6 +9,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// Producer wraps a kafka.Writer with sync and async publish capabilities.
 type Producer struct {
 	writer  *kafka.Writer
 	asyncCh chan asyncMessage
@@ -23,6 +24,7 @@ type asyncMessage struct {
 	value []byte
 }
 
+// NewProducer creates a new Kafka producer with configurable sync and async publishing.
 func NewProducer(brokers []string) (*Producer, error) {
 	writer := &kafka.Writer{
 		Addr:     kafka.TCP(brokers...),
@@ -44,6 +46,7 @@ func NewProducer(brokers []string) (*Producer, error) {
 	return p, nil
 }
 
+// Publish sends a synchronous message to the specified Kafka topic.
 func (p *Producer) Publish(ctx context.Context, topic string, key, value []byte) error {
 	msg := kafka.Message{
 		Topic: topic,
@@ -58,6 +61,7 @@ func (p *Producer) Publish(ctx context.Context, topic string, key, value []byte)
 	return nil
 }
 
+// PublishAsync enqueues a message for asynchronous publishing.
 func (p *Producer) PublishAsync(ctx context.Context, topic string, key, value []byte) {
 	select {
 	case p.asyncCh <- asyncMessage{topic: topic, key: key, value: value}:
@@ -66,6 +70,7 @@ func (p *Producer) PublishAsync(ctx context.Context, topic string, key, value []
 	}
 }
 
+// Close shuts down the producer, draining pending async messages.
 func (p *Producer) Close() {
 	p.cancel()
 	p.wg.Wait()

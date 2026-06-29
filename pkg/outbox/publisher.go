@@ -9,6 +9,7 @@ import (
 	"github.com/aureum/pkg/kafka"
 )
 
+// Publisher periodically polls the outbox store and publishes pending events to Kafka.
 type Publisher struct {
 	store    *Store
 	producer *kafka.Producer
@@ -17,6 +18,7 @@ type Publisher struct {
 	stopCh   chan struct{}
 }
 
+// NewPublisher creates a Publisher that polls the outbox and publishes events to Kafka.
 func NewPublisher(store *Store, producer *kafka.Producer, topic string, interval time.Duration) *Publisher {
 	return &Publisher{
 		store:    store,
@@ -27,6 +29,7 @@ func NewPublisher(store *Store, producer *kafka.Producer, topic string, interval
 	}
 }
 
+// Start begins the periodic polling loop for publishing pending events.
 func (p *Publisher) Start(ctx context.Context) {
 	go func() {
 		for {
@@ -40,6 +43,7 @@ func (p *Publisher) Start(ctx context.Context) {
 	}()
 }
 
+// Stop stops the periodic polling and releases internal resources.
 func (p *Publisher) Stop() {
 	p.ticker.Stop()
 	close(p.stopCh)

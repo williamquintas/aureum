@@ -13,25 +13,31 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+// VariableExpenseRepo implements the VariableExpenseRepository interface using PostgreSQL.
 type VariableExpenseRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewVariableExpenseRepo creates a new VariableExpenseRepo.
 func NewVariableExpenseRepo(pool *pgxpool.Pool) *VariableExpenseRepo {
 	return &VariableExpenseRepo{pool: pool}
 }
 
+// WithTx executes the given function within a database transaction.
 func (r *VariableExpenseRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new variable expense record.
 func (r *VariableExpenseRepo) Save(ctx context.Context, expense *domain.VariableExpense) error {
 	q := getQuerier(ctx)
 	if q == nil {
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`INSERT INTO variable_expenses (id, user_id, description, destination, category, expense_type, payment_method, payment_date, paid_amount, status, created_at, updated_at)
+		`INSERT INTO variable_expenses (id, user_id, description, destination,
+		 category, expense_type, payment_method, payment_date, paid_amount,
+		 status, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		expense.ID, expense.UserID, expense.Description, expense.Destination,
 		expense.Category, string(expense.ExpenseType), string(expense.PaymentMethod),
@@ -44,9 +50,12 @@ func (r *VariableExpenseRepo) Save(ctx context.Context, expense *domain.Variable
 	return nil
 }
 
+// FindByID retrieves a variable expense by its ID and user ID.
 func (r *VariableExpenseRepo) FindByID(ctx context.Context, id, userID string) (*domain.VariableExpense, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, description, destination, category, expense_type, payment_method, payment_date, paid_amount, status, created_at, updated_at, deleted_at
+		`SELECT id, user_id, description, destination, category,
+		 expense_type, payment_method, payment_date, paid_amount,
+		 status, created_at, updated_at, deleted_at
 		 FROM variable_expenses WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
 		id, userID,
 	)
@@ -73,13 +82,16 @@ func (r *VariableExpenseRepo) FindByID(ctx context.Context, id, userID string) (
 	return &expense, nil
 }
 
+// Update modifies an existing variable expense record.
 func (r *VariableExpenseRepo) Update(ctx context.Context, expense *domain.VariableExpense) error {
 	q := getQuerier(ctx)
 	if q == nil {
 		return fmt.Errorf("no transaction in context")
 	}
 	_, err := q.Exec(ctx,
-		`UPDATE variable_expenses SET description=$1, destination=$2, category=$3, expense_type=$4, payment_method=$5, payment_date=$6, paid_amount=$7, status=$8, updated_at=$9
+		`UPDATE variable_expenses SET description=$1, destination=$2, category=$3,
+		 expense_type=$4, payment_method=$5, payment_date=$6, paid_amount=$7,
+		 status=$8, updated_at=$9
 		 WHERE id=$10 AND deleted_at IS NULL`,
 		expense.Description, expense.Destination, expense.Category,
 		string(expense.ExpenseType), string(expense.PaymentMethod),
@@ -92,6 +104,7 @@ func (r *VariableExpenseRepo) Update(ctx context.Context, expense *domain.Variab
 	return nil
 }
 
+// Delete soft-deletes a variable expense record by ID and user ID.
 func (r *VariableExpenseRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -107,8 +120,12 @@ func (r *VariableExpenseRepo) Delete(ctx context.Context, id, userID string) err
 	return nil
 }
 
-func (r *VariableExpenseRepo) List(ctx context.Context, userID string, filter domain.VariableExpenseFilter) ([]*domain.VariableExpense, error) {
-	query := `SELECT id, user_id, description, destination, category, expense_type, payment_method, payment_date, paid_amount, status, created_at, updated_at
+// List returns a paginated list of variable expenses for a user.
+func (r *VariableExpenseRepo) List(ctx context.Context, userID string,
+	filter domain.VariableExpenseFilter) ([]*domain.VariableExpense, error) {
+	query := `SELECT id, user_id, description, destination, category,
+	         expense_type, payment_method, payment_date, paid_amount,
+	         status, created_at, updated_at
 			  FROM variable_expenses WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2
@@ -175,7 +192,9 @@ func (r *VariableExpenseRepo) List(ctx context.Context, userID string, filter do
 	return expenses, nil
 }
 
-func (r *VariableExpenseRepo) Count(ctx context.Context, userID string, filter domain.VariableExpenseFilter) (int, error) {
+// Count returns the total number of variable expenses matching the filter.
+func (r *VariableExpenseRepo) Count(ctx context.Context, userID string,
+	filter domain.VariableExpenseFilter) (int, error) {
 	var conditions []string
 	args := []interface{}{userID}
 	conditions = append(conditions, "user_id=$1", "deleted_at IS NULL")

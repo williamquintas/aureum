@@ -12,14 +12,20 @@ import (
 	"github.com/aureum/transaction-svc/internal/domain"
 )
 
+const outboxInsertQuery = `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+
+// OutboxRepository implements the outbox event store.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewOutboxRepository creates a new OutboxRepository.
 func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
+// Save persists an outbox event to the database.
 func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 	switch e := event.(type) {
 	case outbox.Event:
@@ -36,8 +42,7 @@ func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 }
 
 func (r *OutboxRepository) saveOutboxEvent(ctx context.Context, e *outbox.Event) error {
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
+	query := outboxInsertQuery
 	return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
 }
 
@@ -47,8 +52,7 @@ func (r *OutboxRepository) saveTransactionEvent(ctx context.Context, e *domain.T
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
+	query := outboxInsertQuery
 	return r.exec(ctx, query, uuid.New().String(), "transaction", e.EntityID, string(e.Type), payload, &now)
 }
 
@@ -58,8 +62,7 @@ func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) 
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
+	query := outboxInsertQuery
 	return r.exec(ctx, query, "", "transaction", "", "TransactionEvent", payload, &now)
 }
 

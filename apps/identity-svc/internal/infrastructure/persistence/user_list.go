@@ -7,6 +7,7 @@ import (
 	"github.com/aureum/identity-svc/internal/domain"
 )
 
+// List returns a paginated list of users ordered by creation date.
 func (r *UserWriteRepository) List(ctx context.Context, offset, limit int) ([]*domain.User, error) {
 	rows, err := r.pool.Query(ctx, `SELECT id, keycloak_id, email, email_verified, status,
 		name, avatar_url, cpf, mfa_enabled, roles, custom_attributes,

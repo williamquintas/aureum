@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// InvoiceTransaction represents a single transaction on a credit card invoice.
 type InvoiceTransaction struct {
 	ID              string
 	InvoiceID       string
@@ -16,6 +17,7 @@ type InvoiceTransaction struct {
 	CreatedAt       time.Time
 }
 
+// CreateTransactionInput contains validated input for creating a transaction.
 type CreateTransactionInput struct {
 	InvoiceID       string
 	UserID          string
@@ -27,6 +29,7 @@ type CreateTransactionInput struct {
 	IdempotencyKey  string
 }
 
+// NewInvoiceTransaction creates a new InvoiceTransaction with validation.
 func NewInvoiceTransaction(input CreateTransactionInput) (*InvoiceTransaction, error) {
 	if input.InvoiceID == "" {
 		return nil, ErrMissingField

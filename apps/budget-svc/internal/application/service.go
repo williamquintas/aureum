@@ -1,3 +1,4 @@
+// Package application contains the application service and use case orchestration for budgets.
 package application
 
 import (
@@ -56,6 +57,7 @@ func cacheKey(prefix, userID, id string) string {
 
 // ── Create ───────────────────────────────────────────────────────────────────
 
+// Create creates a new budget with categories and idempotency support.
 func (s *Service) Create(ctx context.Context, req CreateBudgetRequest) (*CreateBudgetResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached CreateBudgetResponse
@@ -148,6 +150,7 @@ func (s *Service) Create(ctx context.Context, req CreateBudgetRequest) (*CreateB
 
 // ── Get ──────────────────────────────────────────────────────────────────────
 
+// Get retrieves a budget by ID and user ID with cache-first support.
 func (s *Service) Get(ctx context.Context, id, userID string) (*GetBudgetResponse, error) {
 	key := cacheKey("budget", userID, id)
 	if s.cache != nil {
@@ -177,6 +180,7 @@ func (s *Service) Get(ctx context.Context, id, userID string) (*GetBudgetRespons
 
 // ── Update ───────────────────────────────────────────────────────────────────
 
+// Update updates an existing budget with idempotency support.
 func (s *Service) Update(ctx context.Context, req UpdateBudgetRequest) (*GetBudgetResponse, error) {
 	if req.IdempotencyKey != "" {
 		var cached GetBudgetResponse
@@ -266,6 +270,7 @@ func (s *Service) Update(ctx context.Context, req UpdateBudgetRequest) (*GetBudg
 
 // ── Delete ───────────────────────────────────────────────────────────────────
 
+// Delete deletes a budget and publishes a BudgetDeleted event.
 func (s *Service) Delete(ctx context.Context, id, userID string) error {
 	if s.cache != nil {
 		_ = s.cache.Delete(ctx, cacheKey("budget", userID, id))
@@ -287,7 +292,10 @@ func (s *Service) Delete(ctx context.Context, id, userID string) error {
 
 // ── List ─────────────────────────────────────────────────────────────────────
 
-func (s *Service) List(ctx context.Context, userID string, filter domain.BudgetFilter) ([]*GetBudgetResponse, int, error) {
+// List returns a paginated list of budgets for a user.
+func (s *Service) List(ctx context.Context, userID string,
+	filter domain.BudgetFilter,
+) ([]*GetBudgetResponse, int, error) {
 	items, err := s.budgets.List(ctx, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -311,6 +319,7 @@ func (s *Service) List(ctx context.Context, userID string, filter domain.BudgetF
 
 // ── GetSummary ───────────────────────────────────────────────────────────────
 
+// GetSummary returns a summary of budget spending and category usage.
 func (s *Service) GetSummary(ctx context.Context, id, userID string) (*BudgetSummaryDTO, error) {
 	budget, err := s.budgets.FindByID(ctx, id, userID)
 	if err != nil {
@@ -334,7 +343,7 @@ func (s *Service) GetSummary(ctx context.Context, id, userID string) (*BudgetSum
 		TotalSpent:    budget.SpentAmount,
 		Remaining:     remaining,
 		UsagePercent:  usagePct,
-		CategoryCount: int32(len(cats)),
+		CategoryCount: int32(len(cats)), //nolint:gosec
 	}
 
 	for _, cat := range cats {

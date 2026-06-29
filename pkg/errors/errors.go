@@ -1,3 +1,4 @@
+// Package errors defines domain-level sentinel errors and maps them to gRPC status codes.
 package errors
 
 import (
@@ -6,20 +7,30 @@ import (
 )
 
 var (
-	ErrNotFound       = NewSentinel("not found")
-	ErrConflict       = NewSentinel("conflict")
-	ErrAlreadyExists  = NewSentinel("already exists")
-	ErrValidation     = NewSentinel("validation error")
-	ErrUnauthorized   = NewSentinel("unauthorized")
-	ErrForbidden      = NewSentinel("forbidden")
+	// ErrNotFound is returned when a requested resource does not exist.
+	ErrNotFound = NewSentinel("not found")
+	// ErrConflict is returned when a resource conflict occurs.
+	ErrConflict = NewSentinel("conflict")
+	// ErrAlreadyExists is returned when attempting to create a duplicate resource.
+	ErrAlreadyExists = NewSentinel("already exists")
+	// ErrValidation is returned when input validation fails.
+	ErrValidation = NewSentinel("validation error")
+	// ErrUnauthorized is returned when authentication is missing or invalid.
+	ErrUnauthorized = NewSentinel("unauthorized")
+	// ErrForbidden is returned when the caller lacks permission.
+	ErrForbidden = NewSentinel("forbidden")
+	// ErrIdempotencyKey is returned when an idempotency key conflict occurs.
 	ErrIdempotencyKey = NewSentinel("idempotency key error")
-	ErrRateLimited    = NewSentinel("rate limited")
+	// ErrRateLimited is returned when the caller exceeds the rate limit.
+	ErrRateLimited = NewSentinel("rate limited")
 )
 
+// Sentinel is a simple sentinel error type that supports equality checks via errors.Is.
 type Sentinel struct {
 	msg string
 }
 
+// NewSentinel creates a new sentinel error with the given message.
 func NewSentinel(msg string) *Sentinel {
 	return &Sentinel{msg: msg}
 }
@@ -28,6 +39,7 @@ func (s *Sentinel) Error() string {
 	return s.msg
 }
 
+// MapToGRPC converts a domain sentinel error into the appropriate gRPC status error.
 func MapToGRPC(err error) error {
 	if err == nil {
 		return nil

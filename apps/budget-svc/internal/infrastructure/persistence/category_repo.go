@@ -20,8 +20,9 @@ func NewCategoryRepo(pool *pgxpool.Pool) *CategoryRepo {
 	return &CategoryRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *CategoryRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
 // Save inserts a new budget category.

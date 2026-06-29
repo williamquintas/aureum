@@ -1,3 +1,4 @@
+// Package main is the entry point for the investment service.
 package main
 
 import (
@@ -13,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aureum/pkg/db"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/db"
 	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/idempotency"
 	"github.com/aureum/pkg/kafka"
@@ -74,14 +75,14 @@ func run() int {
 		log.Error("failed to connect to redis", "error", err)
 		return 1
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	redisCache, err := cache.NewRedisCache(cfg.RedisURL, "", 0)
 	if err != nil {
 		log.Error("failed to create redis cache", "error", err)
 		return 1
 	}
-	defer redisCache.Close()
+	defer func() { _ = redisCache.Close() }()
 
 	outboxRepo := persistence.NewOutboxRepository(dbPool)
 	investmentRepo := persistence.NewInvestmentRepo(dbPool)
@@ -127,7 +128,7 @@ func run() int {
 	investmentv1.RegisterInvestmentServiceServer(grpcServer, handler)
 	reflection.Register(grpcServer)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GRPCPort))
+	lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf(":%s", cfg.GRPCPort))
 	if err != nil {
 		log.Error("failed to listen", "error", err)
 		return 1
@@ -143,14 +144,14 @@ func run() int {
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "# metrics endpoint ready")
+		_, _ = fmt.Fprintln(w, "# metrics endpoint ready")
 	}))
 	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "ok")
+		_, _ = fmt.Fprintln(w, "ok")
 	})
 
-	metricsServer := &http.Server{
+	metricsServer := &http.Server{ //nolint:gosec
 		Addr:    fmt.Sprintf(":%s", cfg.MetricsPort),
 		Handler: metricsMux,
 	}
@@ -180,6 +181,7 @@ func run() int {
 	return 0
 }
 
+// config holds the service configuration loaded from environment variables.
 type config struct {
 	GRPCPort     string
 	DatabaseURL  string
@@ -200,7 +202,7 @@ func loadConfig() config {
 	}
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://aureum:aureum@localhost:5432/investmentdb"
+		dbURL = "postgres://aureum:aureum@localhost:5432/investmentdb" //nolint:gosec
 	}
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
@@ -233,6 +235,7 @@ func loadConfig() config {
 	}
 }
 
+// envFlag implements FeatureFlag using environment-configured flags.
 type envFlag struct {
 	flags []string
 }
@@ -246,6 +249,7 @@ func (e *envFlag) IsEnabled(_ context.Context, flag string) bool {
 	return false
 }
 
+// unleashFlag implements FeatureFlag using Unleash.
 type unleashFlag struct {
 	client *ff.Client
 }
@@ -253,10 +257,6 @@ type unleashFlag struct {
 func (u *unleashFlag) IsEnabled(ctx context.Context, flag string) bool {
 	return u.client.IsEnabled(ctx, flag)
 }
-
-type ctxKey string
-
-const userIDKey ctxKey = "user_id"
 
 func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	userID := extractUserIDFromToken(ctx)

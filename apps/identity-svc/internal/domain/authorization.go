@@ -1,51 +1,73 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import "errors"
 
 var (
-	ErrAccessDenied     = errors.New("access denied")
+	// ErrAccessDenied is returned when access is denied.
+	ErrAccessDenied = errors.New("access denied")
+	// ErrInsufficientRole is returned when a user lacks the required role.
 	ErrInsufficientRole = errors.New("insufficient role")
-	ErrRoleNotFound     = errors.New("role not found")
+	// ErrRoleNotFound is returned when a role is not found.
+	ErrRoleNotFound = errors.New("role not found")
+	// ErrPermissionDenied is returned when a permission check fails.
 	ErrPermissionDenied = errors.New("permission denied")
 )
 
+// Resource represents a type of resource in the authorization system.
 type Resource string
 
 const (
-	ResourceUser    Resource = "user"
+	// ResourceUser represents the user resource.
+	ResourceUser Resource = "user"
+	// ResourceAccount represents the account resource.
 	ResourceAccount Resource = "account"
-	ResourceLedger  Resource = "ledger"
-	ResourceTenant  Resource = "tenant"
+	// ResourceLedger represents the ledger resource.
+	ResourceLedger Resource = "ledger"
+	// ResourceTenant represents the tenant resource.
+	ResourceTenant Resource = "tenant"
 )
 
+// Action represents an action that can be performed on a resource.
 type Action string
 
 const (
-	ActionRead   Action = "read"
-	ActionWrite  Action = "write"
+	// ActionRead represents the read action.
+	ActionRead Action = "read"
+	// ActionWrite represents the write action.
+	ActionWrite Action = "write"
+	// ActionDelete represents the delete action.
 	ActionDelete Action = "delete"
-	ActionAdmin  Action = "admin"
+	// ActionAdmin represents the admin action (full access).
+	ActionAdmin Action = "admin"
 )
 
+// Permission defines an action allowed on a resource.
 type Permission struct {
 	Resource Resource
 	Action   Action
 }
 
+// RoleName represents the name of a role.
 type RoleName string
 
 const (
-	RoleAdmin    RoleName = "admin"
-	RoleUser     RoleName = "user"
+	// RoleAdmin is the administrator role with full access.
+	RoleAdmin RoleName = "admin"
+	// RoleUser is the standard user role.
+	RoleUser RoleName = "user"
+	// RoleReadonly is the read-only role.
 	RoleReadonly RoleName = "readonly"
 )
 
+// Role defines a named set of permissions.
 type Role struct {
 	Name        RoleName
 	Permissions []Permission
 	Description string
 }
 
+// DefaultRoles contains the predefined roles and their permissions.
 var DefaultRoles = map[RoleName]Role{
 	RoleAdmin: {
 		Name: RoleAdmin,
@@ -78,6 +100,7 @@ var DefaultRoles = map[RoleName]Role{
 	},
 }
 
+// RoleHasPermission checks if a role has permission to perform an action on a resource.
 func RoleHasPermission(role RoleName, resource Resource, action Action) bool {
 	r, ok := DefaultRoles[role]
 	if !ok {
@@ -93,6 +116,7 @@ func RoleHasPermission(role RoleName, resource Resource, action Action) bool {
 	return false
 }
 
+// HasRequiredRole checks if the user has the required role or is an admin.
 func HasRequiredRole(userRoles []string, required RoleName) bool {
 	for _, r := range userRoles {
 		if RoleName(r) == required || RoleName(r) == RoleAdmin {
@@ -102,6 +126,7 @@ func HasRequiredRole(userRoles []string, required RoleName) bool {
 	return false
 }
 
+// ABACRequest represents an attribute-based access control request.
 type ABACRequest struct {
 	UserID          string
 	ResourceType    Resource
@@ -111,6 +136,7 @@ type ABACRequest struct {
 	Attributes      map[string]string
 }
 
+// EvaluateABAC evaluates an ABAC request against a user's roles and attributes.
 func EvaluateABAC(user *User, req ABACRequest) error {
 	if user == nil {
 		return ErrAccessDenied

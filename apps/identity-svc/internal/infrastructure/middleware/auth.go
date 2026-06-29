@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware for authentication, authorization, CORS, rate limiting, and auditing.
 package middleware
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/aureum/pkg/auth"
 )
 
+// AuthMiddleware returns middleware that validates JWT tokens from the Authorization header.
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +36,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	}
 }
 
+// RequireRole returns middleware that ensures the authenticated user has a specific role.
 func RequireRole(role string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

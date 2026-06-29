@@ -11,14 +11,17 @@ import (
 	"github.com/aureum/identity-svc/internal/domain"
 )
 
+// UserReadRepository implements the read-side user repository backed by PostgreSQL.
 type UserReadRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewUserReadRepository creates a new UserReadRepository.
 func NewUserReadRepository(pool *pgxpool.Pool) *UserReadRepository {
 	return &UserReadRepository{pool: pool}
 }
 
+// FindByID finds a user profile by ID from the read database.
 func (r *UserReadRepository) FindByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `SELECT id, email, name, avatar_url, roles, status, mfa_enabled, custom_attributes, created_at, updated_at
 		FROM user_profiles WHERE id = $1`
@@ -30,6 +33,7 @@ func (r *UserReadRepository) FindByID(ctx context.Context, id string) (*domain.U
 	return user, nil
 }
 
+// FindByEmail finds a user profile by email from the read database.
 func (r *UserReadRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `SELECT id, email, name, avatar_url, roles, status, mfa_enabled, custom_attributes, created_at, updated_at
 		FROM user_profiles WHERE email = $1`

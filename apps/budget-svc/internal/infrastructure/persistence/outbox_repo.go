@@ -12,7 +12,10 @@ import (
 	"github.com/aureum/pkg/outbox"
 )
 
-// OutboxRepository persists domain events to the outbox_events table.
+const outboxInsertQuery = `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+
+// OutboxRepository persists domain events to the outbox table.
 type OutboxRepository struct {
 	pool *pgxpool.Pool
 }
@@ -22,7 +25,7 @@ func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
-// Save persists an event in the outbox queue within the current transaction.
+// Save persists an event to the outbox table.
 func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 	switch e := event.(type) {
 	case outbox.Event:
@@ -39,9 +42,7 @@ func (r *OutboxRepository) Save(ctx context.Context, event interface{}) error {
 }
 
 func (r *OutboxRepository) saveOutboxEvent(ctx context.Context, e *outbox.Event) error {
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
+	return r.exec(ctx, outboxInsertQuery, e.ID, e.AggregateType, e.AggregateID, e.EventType, e.Payload, e.CreatedAt)
 }
 
 func (r *OutboxRepository) saveBudgetEvent(ctx context.Context, e *domain.BudgetEvent) error {
@@ -50,9 +51,11 @@ func (r *OutboxRepository) saveBudgetEvent(ctx context.Context, e *domain.Budget
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, uuid.New().String(), "budget", e.EntityID, string(e.Type), payload, &now)
+	err = r.exec(ctx, outboxInsertQuery, uuid.New().String(), "budget", e.EntityID, string(e.Type), string(payload), now)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) error {
@@ -61,9 +64,7 @@ func (r *OutboxRepository) saveRawEvent(ctx context.Context, event interface{}) 
 		return err
 	}
 	now := time.Now().UTC()
-	query := `INSERT INTO outbox_events (id, aggregate_type, aggregate_id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	return r.exec(ctx, query, "", "budget", "", "BudgetEvent", payload, &now)
+	return r.exec(ctx, outboxInsertQuery, "", "budget", "", "BudgetEvent", payload, &now)
 }
 
 func (r *OutboxRepository) exec(ctx context.Context, query string, args ...interface{}) error {

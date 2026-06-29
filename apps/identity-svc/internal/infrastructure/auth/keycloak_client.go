@@ -1,3 +1,4 @@
+// Package auth provides Keycloak authentication and token validation infrastructure.
 package auth
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/aureum/identity-svc/internal/domain"
 )
 
+// Client implements Keycloak authentication operations.
 type Client struct {
 	client   *gocloak.GoCloak
 	realm    string
@@ -18,6 +20,7 @@ type Client struct {
 	secret   string
 }
 
+// NewKeycloakClient creates a new Keycloak client.
 func NewKeycloakClient(baseURL, realm, clientID, secret string) *Client {
 	return &Client{
 		client:   gocloak.NewClient(baseURL),
@@ -35,6 +38,7 @@ func (c *Client) getToken(ctx context.Context) (*gocloak.JWT, error) {
 	return token, nil
 }
 
+// CreateUser creates a new user in Keycloak and returns the Keycloak user ID.
 func (c *Client) CreateUser(ctx context.Context, email, password, name string) (string, error) {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -62,6 +66,7 @@ func (c *Client) CreateUser(ctx context.Context, email, password, name string) (
 	return keycloakID, nil
 }
 
+// Authenticate authenticates a user against Keycloak and returns tokens.
 func (c *Client) Authenticate(ctx context.Context, email, password string) (*application.LoginResponse, error) {
 	token, err := c.client.Login(ctx, c.clientID, c.secret, c.realm, email, password)
 	if err != nil {
@@ -83,6 +88,7 @@ func (c *Client) Authenticate(ctx context.Context, email, password string) (*app
 	return resp, nil
 }
 
+// VerifyEmail marks a user's email as verified in Keycloak.
 func (c *Client) VerifyEmail(ctx context.Context, userID string) error {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -110,6 +116,7 @@ func (c *Client) VerifyEmail(ctx context.Context, userID string) error {
 	return nil
 }
 
+// GetUserByEmail retrieves a user from Keycloak by email.
 func (c *Client) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -143,6 +150,7 @@ func (c *Client) GetUserByEmail(ctx context.Context, email string) (*domain.User
 	return user, nil
 }
 
+// ValidateToken validates an access token against Keycloak.
 func (c *Client) ValidateToken(ctx context.Context, accessToken string) (*domain.User, error) {
 	rpt, err := c.client.RetrospectToken(ctx, accessToken, c.clientID, c.secret, c.realm)
 	if err != nil {
@@ -172,6 +180,7 @@ func (c *Client) ValidateToken(ctx context.Context, accessToken string) (*domain
 	return user, nil
 }
 
+// RefreshToken refreshes an access token using a refresh token in Keycloak.
 func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*application.LoginResponse, error) {
 	token, err := c.client.RefreshToken(ctx, refreshToken, c.clientID, c.secret, c.realm)
 	if err != nil {
@@ -193,6 +202,7 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*applic
 	return resp, nil
 }
 
+// Logout logs out a user session from Keycloak.
 func (c *Client) Logout(ctx context.Context, refreshToken string) error {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -208,6 +218,7 @@ func (c *Client) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
+// UpdatePassword updates a user's password in Keycloak.
 func (c *Client) UpdatePassword(ctx context.Context, userID, newPassword string) error {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -222,6 +233,7 @@ func (c *Client) UpdatePassword(ctx context.Context, userID, newPassword string)
 	return nil
 }
 
+// GetUserSessions retrieves all active sessions for a user from Keycloak.
 func (c *Client) GetUserSessions(ctx context.Context, userID string) ([]application.UserSessionRepresentation, error) {
 	token, err := c.getToken(ctx)
 	if err != nil {
@@ -252,6 +264,7 @@ func (c *Client) GetUserSessions(ctx context.Context, userID string) ([]applicat
 	return sessions, nil
 }
 
+// LogoutUserSession terminates a specific user session in Keycloak.
 func (c *Client) LogoutUserSession(ctx context.Context, sessionID string) error {
 	token, err := c.getToken(ctx)
 	if err != nil {

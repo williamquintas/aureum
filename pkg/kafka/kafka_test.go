@@ -1,3 +1,4 @@
+//nolint:goconst
 package kafka
 
 import (
@@ -90,13 +91,13 @@ func TestNewConsumerGroup_Valid(t *testing.T) {
 	cg, err := NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{"test-topic"})
 	require.NoError(t, err)
 	require.NotNil(t, cg)
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 }
 
 func TestNewConsumerGroup_EmptyTopics(t *testing.T) {
-	require.Panics(t, func() {
-		_, _ = NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{})
-	}, "NewConsumerGroup should panic with empty topics (index out of range)")
+	_, err := NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "at least one topic")
 }
 
 func TestProducer_PublishAsyncNonBlocking(t *testing.T) {
@@ -113,7 +114,7 @@ func TestProducer_PublishAsyncNonBlocking(t *testing.T) {
 func TestConsumer_ConsumeCancelledContext(t *testing.T) {
 	cg, err := NewConsumerGroup([]string{"localhost:9092"}, "test-group", []string{"test-topic"})
 	require.NoError(t, err)
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

@@ -1,3 +1,4 @@
+// Package application contains the application-layer interfaces for the credit card service.
 package application
 
 import (
@@ -19,5 +20,7 @@ type CreditCardService interface {
 	ListInvoices(ctx context.Context, userID string, filter domain.InvoiceFilter) ([]*InvoiceResponse, int, error)
 	PayInvoice(ctx context.Context, req PayInvoiceRequest) (*InvoiceResponse, error)
 	AddTransaction(ctx context.Context, req AddTransactionRequest) (*TransactionResponse, error)
-	ListTransactions(ctx context.Context, invoiceID string, filter domain.TransactionFilter) ([]*TransactionResponse, int, error)
+	ListTransactions(
+		ctx context.Context, invoiceID string, filter domain.TransactionFilter,
+	) ([]*TransactionResponse, int, error)
 }

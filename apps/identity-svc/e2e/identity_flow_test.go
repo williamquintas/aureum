@@ -1,4 +1,5 @@
-package e2e
+// Package e2e contains end-to-end tests for the identity service.
+package e2e //nolint:goconst
 
 import (
 	"context"
@@ -27,7 +28,8 @@ func (tc *testClient) post(t *testing.T, path string, body interface{}, headers 
 	t.Helper()
 	b, err := json.Marshal(body)
 	require.NoError(t, err)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, tc.baseURL+path, strings.NewReader(string(b)))
+	u := tc.baseURL + path
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u, strings.NewReader(string(b)))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range headers {
@@ -95,8 +97,8 @@ func TestIdentityFlow(t *testing.T) {
 
 	t.Run("signup", func(t *testing.T) {
 		resp := client.post(t, "/signup", map[string]string{
-			"email":    email,
-			"password": password,
+			"email":    email,    //nolint:goconst
+			"password": password, //nolint:goconst
 			"name":     "E2E User",
 		}, nil)
 		defer func() { _ = resp.Body.Close() }()
@@ -149,7 +151,7 @@ func TestIdentityFlow(t *testing.T) {
 
 	t.Run("get_profile", func(t *testing.T) {
 		resp := client.get(t, "/me", map[string]string{
-			"Authorization": "Bearer " + tokens.AccessToken,
+			"Authorization": "Bearer " + tokens.AccessToken, //nolint:goconst
 		})
 		defer func() { _ = resp.Body.Close() }()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -178,7 +180,7 @@ func TestIdentityFlow(t *testing.T) {
 		resp := client.post(t, "/me", map[string]string{
 			"name": "Updated Name",
 		}, map[string]string{
-			"Authorization":   "Bearer " + tokens.AccessToken,
+			"Authorization":   "Bearer " + tokens.AccessToken, //nolint:goconst
 			"Idempotency-Key": "e2e-update-profile",
 		})
 		defer func() { _ = resp.Body.Close() }()

@@ -1,9 +1,11 @@
+// Package application provides the application-layer DTOs and use case orchestration.
 package application
 
 import "github.com/aureum/creditcard-svc/internal/domain"
 
 // ── Credit Card DTOs ─────────────────────────────────────────────────────────
 
+// CreateCreditCardRequest is the application-layer DTO for creating a credit card.
 type CreateCreditCardRequest struct {
 	UserID         string
 	Name           string
@@ -16,6 +18,7 @@ type CreateCreditCardRequest struct {
 	IdempotencyKey string
 }
 
+// CreditCardResponse is the application-layer DTO returned after credit card operations.
 type CreditCardResponse struct {
 	ID              string
 	UserID          string
@@ -32,6 +35,7 @@ type CreditCardResponse struct {
 	UpdatedAt       int64
 }
 
+// UpdateCreditCardRequest is the application-layer DTO for updating a credit card.
 type UpdateCreditCardRequest struct {
 	ID             string
 	UserID         string
@@ -45,6 +49,7 @@ type UpdateCreditCardRequest struct {
 
 // ── Invoice DTOs ─────────────────────────────────────────────────────────────
 
+// CreateInvoiceRequest is the application-layer DTO for creating an invoice.
 type CreateInvoiceRequest struct {
 	CreditCardID   string
 	UserID         string
@@ -54,6 +59,7 @@ type CreateInvoiceRequest struct {
 	IdempotencyKey string
 }
 
+// InvoiceResponse is the application-layer DTO returned after invoice operations.
 type InvoiceResponse struct {
 	ID             string
 	CreditCardID   string
@@ -68,6 +74,7 @@ type InvoiceResponse struct {
 	UpdatedAt      int64
 }
 
+// PayInvoiceRequest is the application-layer DTO for paying an invoice.
 type PayInvoiceRequest struct {
 	ID             string
 	UserID         string
@@ -77,6 +84,7 @@ type PayInvoiceRequest struct {
 
 // ── Transaction DTOs ─────────────────────────────────────────────────────────
 
+// AddTransactionRequest is the application-layer DTO for adding a transaction.
 type AddTransactionRequest struct {
 	InvoiceID       string
 	UserID          string
@@ -88,6 +96,7 @@ type AddTransactionRequest struct {
 	IdempotencyKey  string
 }
 
+// TransactionResponse is the application-layer DTO returned after transaction operations.
 type TransactionResponse struct {
 	ID              string
 	InvoiceID       string
@@ -102,6 +111,7 @@ type TransactionResponse struct {
 
 // ── List DTO ─────────────────────────────────────────────────────────────────
 
+// ListResponse wraps a paginated list of responses.
 type ListResponse struct {
 	Items      interface{} `json:"items"`
 	TotalCount int         `json:"total_count"`
@@ -141,20 +151,5 @@ func toDomainCardType(t string) (domain.CardType, error) {
 		return domain.CardTypeMultiple, nil
 	default:
 		return "", domain.ErrInvalidCardType
-	}
-}
-
-func toDomainInvoiceStatus(s string) (domain.InvoiceStatus, error) {
-	switch s {
-	case "open":
-		return domain.InvoiceStatusOpen, nil
-	case "closed":
-		return domain.InvoiceStatusClosed, nil
-	case "paid":
-		return domain.InvoiceStatusPaid, nil
-	case "overdue":
-		return domain.InvoiceStatusOverdue, nil
-	default:
-		return "", domain.ErrInvalidInvoiceStatus
 	}
 }

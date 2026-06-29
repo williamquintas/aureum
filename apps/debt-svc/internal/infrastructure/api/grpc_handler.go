@@ -1,3 +1,4 @@
+// Package api provides the gRPC API handler for the debt service.
 package api
 
 import (
@@ -18,17 +19,20 @@ import (
 	debtv1 "github.com/aureum/proto/gen/debt/debtv1"
 )
 
+// GRPCHandler implements the debtv1.DebtServiceServer interface.
 type GRPCHandler struct {
 	debtv1.UnimplementedDebtServiceServer
 	svc application.DebtService
 }
 
+// NewGRPCHandler creates a new gRPC handler for debt operations.
 func NewGRPCHandler(svc application.DebtService) *GRPCHandler {
 	return &GRPCHandler{svc: svc}
 }
 
 // ── Debt ─────────────────────────────────────────────────────────────────────
 
+// CreateDebt handles gRPC requests for creating a debt.
 func (h *GRPCHandler) CreateDebt(ctx context.Context, req *debtv1.CreateDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -54,6 +58,7 @@ func (h *GRPCHandler) CreateDebt(ctx context.Context, req *debtv1.CreateDebtRequ
 	return debtToProto(resp), nil
 }
 
+// GetDebt handles gRPC requests for retrieving a debt.
 func (h *GRPCHandler) GetDebt(ctx context.Context, req *debtv1.GetDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -67,6 +72,7 @@ func (h *GRPCHandler) GetDebt(ctx context.Context, req *debtv1.GetDebtRequest) (
 	return debtToProto(resp), nil
 }
 
+// UpdateDebt handles gRPC requests for updating a debt.
 func (h *GRPCHandler) UpdateDebt(ctx context.Context, req *debtv1.UpdateDebtRequest) (*debtv1.Debt, error) {
 	start := time.Now()
 
@@ -111,6 +117,7 @@ func (h *GRPCHandler) UpdateDebt(ctx context.Context, req *debtv1.UpdateDebtRequ
 	return debtToProto(resp), nil
 }
 
+// DeleteDebt handles gRPC requests for deleting a debt.
 func (h *GRPCHandler) DeleteDebt(ctx context.Context, req *debtv1.DeleteDebtRequest) (*emptypb.Empty, error) {
 	start := time.Now()
 
@@ -123,6 +130,7 @@ func (h *GRPCHandler) DeleteDebt(ctx context.Context, req *debtv1.DeleteDebtRequ
 	return &emptypb.Empty{}, nil
 }
 
+// ListDebts handles gRPC requests for listing debts.
 func (h *GRPCHandler) ListDebts(ctx context.Context, req *debtv1.ListDebtsRequest) (*debtv1.ListDebtsResponse, error) {
 	start := time.Now()
 
@@ -158,13 +166,17 @@ func (h *GRPCHandler) ListDebts(ctx context.Context, req *debtv1.ListDebtsReques
 	return &debtv1.ListDebtsResponse{
 		Debts:         protoItems,
 		NextPageToken: nextToken,
-		TotalCount:    int32(total),
+		TotalCount:    int32(total), //nolint:gosec // G115: count fits in int32 for pagination
 	}, nil
 }
 
 // ── Payment ──────────────────────────────────────────────────────────────────
 
-func (h *GRPCHandler) RegisterPayment(ctx context.Context, req *debtv1.RegisterPaymentRequest) (*debtv1.Payment, error) {
+// RegisterPayment handles gRPC requests for registering a payment.
+func (h *GRPCHandler) RegisterPayment(
+	ctx context.Context,
+	req *debtv1.RegisterPaymentRequest,
+) (*debtv1.Payment, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -184,7 +196,11 @@ func (h *GRPCHandler) RegisterPayment(ctx context.Context, req *debtv1.RegisterP
 	return paymentToProto(resp), nil
 }
 
-func (h *GRPCHandler) ListPayments(ctx context.Context, req *debtv1.ListPaymentsRequest) (*debtv1.ListPaymentsResponse, error) {
+// ListPayments handles gRPC requests for listing payments.
+func (h *GRPCHandler) ListPayments(
+	ctx context.Context,
+	req *debtv1.ListPaymentsRequest,
+) (*debtv1.ListPaymentsResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -225,7 +241,7 @@ func (h *GRPCHandler) ListPayments(ctx context.Context, req *debtv1.ListPayments
 	return &debtv1.ListPaymentsResponse{
 		Payments:      protoItems,
 		NextPageToken: nextToken,
-		TotalCount:    int32(total),
+		TotalCount:    int32(total), //nolint:gosec // G115: count fits in int32 for pagination
 	}, nil
 }
 
@@ -234,38 +250,38 @@ func (h *GRPCHandler) ListPayments(ctx context.Context, req *debtv1.ListPayments
 func debtTypeFromProto(t debtv1.DebtType) string {
 	switch t {
 	case debtv1.DebtType_PERSONAL_LOAN:
-		return "personal_loan"
+		return string(domain.DebtTypePersonalLoan)
 	case debtv1.DebtType_STUDENT_LOAN:
-		return "student_loan"
+		return string(domain.DebtTypeStudentLoan)
 	case debtv1.DebtType_MORTGAGE:
-		return "mortgage"
+		return string(domain.DebtTypeMortgage)
 	case debtv1.DebtType_CAR_LOAN:
-		return "car_loan"
+		return string(domain.DebtTypeCarLoan)
 	case debtv1.DebtType_CREDIT_CARD_DEBT:
-		return "credit_card_debt"
+		return string(domain.DebtTypeCreditCardDebt)
 	case debtv1.DebtType_MEDICAL_DEBT:
-		return "medical_debt"
+		return string(domain.DebtTypeMedicalDebt)
 	case debtv1.DebtType_OTHER_DEBT:
-		return "other"
+		return string(domain.DebtTypeOther)
 	default:
-		return "other"
+		return string(domain.DebtTypeOther)
 	}
 }
 
 func statusFromProto(s debtv1.DebtStatus) string {
 	switch s {
 	case debtv1.DebtStatus_ACTIVE:
-		return "active"
+		return string(domain.DebtStatusActive)
 	case debtv1.DebtStatus_PAUSED:
-		return "paused"
+		return string(domain.DebtStatusPaused)
 	case debtv1.DebtStatus_PAID_OFF:
-		return "paid_off"
+		return string(domain.DebtStatusPaidOff)
 	case debtv1.DebtStatus_DEFAULTED:
-		return "defaulted"
+		return string(domain.DebtStatusDefaulted)
 	case debtv1.DebtStatus_SETTLED:
-		return "settled"
+		return string(domain.DebtStatusSettled)
 	default:
-		return "active"
+		return string(domain.DebtStatusActive)
 	}
 }
 
@@ -273,19 +289,19 @@ func statusFromProto(s debtv1.DebtStatus) string {
 
 func debtTypeToProto(t string) debtv1.DebtType {
 	switch t {
-	case "personal_loan":
+	case string(domain.DebtTypePersonalLoan):
 		return debtv1.DebtType_PERSONAL_LOAN
-	case "student_loan":
+	case string(domain.DebtTypeStudentLoan):
 		return debtv1.DebtType_STUDENT_LOAN
-	case "mortgage":
+	case string(domain.DebtTypeMortgage):
 		return debtv1.DebtType_MORTGAGE
-	case "car_loan":
+	case string(domain.DebtTypeCarLoan):
 		return debtv1.DebtType_CAR_LOAN
-	case "credit_card_debt":
+	case string(domain.DebtTypeCreditCardDebt):
 		return debtv1.DebtType_CREDIT_CARD_DEBT
-	case "medical_debt":
+	case string(domain.DebtTypeMedicalDebt):
 		return debtv1.DebtType_MEDICAL_DEBT
-	case "other":
+	case string(domain.DebtTypeOther):
 		return debtv1.DebtType_OTHER_DEBT
 	default:
 		return debtv1.DebtType_DEBT_TYPE_UNSPECIFIED
@@ -294,15 +310,15 @@ func debtTypeToProto(t string) debtv1.DebtType {
 
 func statusToProto(s string) debtv1.DebtStatus {
 	switch s {
-	case "active":
+	case string(domain.DebtStatusActive):
 		return debtv1.DebtStatus_ACTIVE
-	case "paused":
+	case string(domain.DebtStatusPaused):
 		return debtv1.DebtStatus_PAUSED
-	case "paid_off":
+	case string(domain.DebtStatusPaidOff):
 		return debtv1.DebtStatus_PAID_OFF
-	case "defaulted":
+	case string(domain.DebtStatusDefaulted):
 		return debtv1.DebtStatus_DEFAULTED
-	case "settled":
+	case string(domain.DebtStatusSettled):
 		return debtv1.DebtStatus_SETTLED
 	default:
 		return debtv1.DebtStatus_DEBT_STATUS_UNSPECIFIED
@@ -363,6 +379,7 @@ func mustExtractUserID(ctx context.Context) string {
 	return uid
 }
 
+// UserContext injects a user ID into the context for testing.
 func UserContext(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }

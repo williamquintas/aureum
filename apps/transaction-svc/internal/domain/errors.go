@@ -1,7 +1,10 @@
+// Package domain defines the core domain entities, value objects, errors, and
+// repository interfaces for the transaction service.
 package domain
 
 import "errors"
 
+// Sentinel errors for domain validation and business rules.
 var (
 	ErrNotFound         = errors.New("record not found")
 	ErrNegativeAmount   = errors.New("amount must be positive")

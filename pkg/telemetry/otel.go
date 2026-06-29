@@ -16,6 +16,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+// InitOTEL initializes OpenTelemetry tracing and metrics exporters with the given service identity.
 func InitOTEL(serviceName, version string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -61,6 +62,7 @@ func InitOTEL(serviceName, version string) error {
 	return nil
 }
 
+// ShutdownOTEL gracefully shuts down the tracer and meter providers.
 func ShutdownOTEL(ctx context.Context) error {
 	tp, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
 	if ok {

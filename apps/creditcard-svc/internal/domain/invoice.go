@@ -5,19 +5,26 @@ import (
 	"time"
 )
 
+// InvoiceStatus represents the lifecycle status of an invoice.
 type InvoiceStatus string
 
 const (
-	InvoiceStatusOpen    InvoiceStatus = "open"
-	InvoiceStatusClosed  InvoiceStatus = "closed"
-	InvoiceStatusPaid    InvoiceStatus = "paid"
+	// InvoiceStatusOpen is the initial open status for new invoices.
+	InvoiceStatusOpen InvoiceStatus = "open"
+	// InvoiceStatusClosed indicates the invoice has been closed.
+	InvoiceStatusClosed InvoiceStatus = "closed"
+	// InvoiceStatusPaid indicates the invoice has been fully paid.
+	InvoiceStatusPaid InvoiceStatus = "paid"
+	// InvoiceStatusOverdue indicates the invoice is past due.
 	InvoiceStatusOverdue InvoiceStatus = "overdue"
 )
 
+// ValidInvoiceStatuses returns all valid invoice statuses.
 func ValidInvoiceStatuses() []InvoiceStatus {
 	return []InvoiceStatus{InvoiceStatusOpen, InvoiceStatusClosed, InvoiceStatusPaid, InvoiceStatusOverdue}
 }
 
+// Valid checks if the invoice status is a recognized value.
 func (s InvoiceStatus) Valid() bool {
 	for _, valid := range ValidInvoiceStatuses() {
 		if s == valid {
@@ -27,6 +34,7 @@ func (s InvoiceStatus) Valid() bool {
 	return false
 }
 
+// Invoice represents a credit card invoice entity.
 type Invoice struct {
 	ID             string
 	CreditCardID   string
@@ -42,6 +50,7 @@ type Invoice struct {
 	DeletedAt      *time.Time
 }
 
+// CreateInvoiceInput contains validated input for creating a new invoice.
 type CreateInvoiceInput struct {
 	CreditCardID   string
 	UserID         string
@@ -51,6 +60,7 @@ type CreateInvoiceInput struct {
 	IdempotencyKey string
 }
 
+// NewInvoice creates a new Invoice with validation.
 func NewInvoice(input CreateInvoiceInput) (*Invoice, error) {
 	if input.CreditCardID == "" {
 		return nil, ErrMissingField

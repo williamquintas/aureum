@@ -2,6 +2,7 @@ package middleware
 
 import "net/http"
 
+// CORS returns middleware that handles Cross-Origin Resource Sharing headers.
 func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	originMap := make(map[string]bool, len(allowedOrigins))
 	for _, o := range allowedOrigins {

@@ -15,12 +15,24 @@ import (
 	"github.com/aureum/budget-svc/internal/domain"
 )
 
-// Helper to get a pointer to a value
+const (
+	testUserID     = "user123"
+	testPeriod     = "monthly"
+	testStartDate  = "2023-01-01"
+	testEndDate    = "2023-01-31"
+	testCategory   = "Food"
+	testGrocery    = "Groceries"
+	testBudgetID   = "budget123"
+	testBudgetName = "Test Budget"
+	testCat1       = "cat1"
+)
+
+// Helper to get a pointer to a value.
 func ptr[T any](v T) *T {
 	return &v
 }
 
-// Mock implementations for repository and other interfaces
+// Mock implementations for repository and other interfaces.
 type mockBudgetRepo struct {
 	mock.Mock
 }
@@ -145,18 +157,18 @@ func TestService_Create_Success(t *testing.T) {
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
 	budgetID := uuid.New().String()
-	userID := "user123"
+	userID := testUserID
 	idempotencyKey := "test-key-create"
 
 	createBudgetReq := application.CreateBudgetRequest{
 		UserID:     userID,
 		Name:       "Monthly Budget",
-		Period:     "monthly",
+		Period:     testPeriod,
 		TotalLimit: 100000,
-		StartDate:  "2023-01-01",
-		EndDate:    "2023-01-31",
+		StartDate:  testStartDate,
+		EndDate:    testEndDate,
 		Categories: []application.CreateCategoryDTO{
-			{Name: "Groceries", LimitAmount: 50000, Category: "Food"},
+			{Name: testGrocery, LimitAmount: 50000, Category: testCategory},
 		},
 		IdempotencyKey: idempotencyKey,
 	}
@@ -167,11 +179,11 @@ func TestService_Create_Success(t *testing.T) {
 		Name:       "Monthly Budget",
 		Period:     domain.BudgetPeriodMonthly,
 		TotalLimit: 100000,
-		StartDate:  "2023-01-01",
-		EndDate:    "2023-01-31",
+		StartDate:  testStartDate,
+		EndDate:    testEndDate,
 		Status:     domain.BudgetStatusActive, // Default status
 		Categories: []*domain.BudgetCategory{
-			{ID: uuid.New().String(), BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000, SpentAmount: 0, Category: "Food"},
+			{ID: uuid.New().String(), BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000, SpentAmount: 0, Category: testCategory},
 		},
 	}
 	expectedResponse := &application.CreateBudgetResponse{
@@ -238,7 +250,7 @@ func TestService_Create_IdempotencyHit(t *testing.T) {
 	idempotencyKey := "test-key-create-hit"
 	cachedResponse := &application.CreateBudgetResponse{
 		ID:          "existing-budget-id",
-		UserID:      "user123",
+		UserID:      testUserID,
 		Name:        "Existing Budget",
 		Period:      "monthly",
 		TotalLimit:  50000,
@@ -283,12 +295,12 @@ func TestService_Create_ValidationError(t *testing.T) {
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
 	req := application.CreateBudgetRequest{
-		UserID: "user123",
+		UserID: testUserID,
 		// Name is empty, which should cause a validation error
-		Period:     "monthly",
+		Period:     testPeriod,
 		TotalLimit: 100000,
-		StartDate:  "2023-01-01",
-		EndDate:    "2023-01-31",
+		StartDate:  testStartDate,
+		EndDate:    testEndDate,
 	}
 
 	_, err := svc.Create(ctx, req)
@@ -308,27 +320,27 @@ func TestService_Get_Success(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 
 	expectedBudget := &domain.Budget{
 		ID:         budgetID,
 		UserID:     userID,
-		Name:       "Test Budget",
+		Name:       testBudgetName,
 		TotalLimit: 100000,
 		Status:     domain.BudgetStatusActive,
 	}
 	expectedCategories := []*domain.BudgetCategory{
-		{ID: "cat1", BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000},
+		{ID: testCat1, BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000},
 	}
 	expectedResponse := &application.GetBudgetResponse{
 		ID:         budgetID,
 		UserID:     userID,
-		Name:       "Test Budget",
+		Name:       testBudgetName,
 		TotalLimit: 100000,
 		Status:     string(domain.BudgetStatusActive),
 		Categories: []application.CategoryDTO{
-			{ID: "cat1", BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000},
+			{ID: testCat1, BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000},
 		},
 	}
 
@@ -368,8 +380,8 @@ func TestService_Get_CacheHit(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 
 	cachedResponse := &application.GetBudgetResponse{
 		ID:         budgetID,
@@ -408,17 +420,17 @@ func TestService_Get_CacheMiss(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 
-	expectedBudget := &domain.Budget{ID: budgetID, UserID: userID, Name: "Test Budget"}
-	expectedCategories := []*domain.BudgetCategory{{ID: "cat1", BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000}}
+	expectedBudget := &domain.Budget{ID: budgetID, UserID: userID, Name: testBudgetName}
+	expectedCategories := []*domain.BudgetCategory{{ID: testCat1, BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000}}
 	expectedResponse := &application.GetBudgetResponse{
 		ID:     budgetID,
 		UserID: userID,
-		Name:   "Test Budget",
+		Name:   testBudgetName,
 		Categories: []application.CategoryDTO{
-			{ID: "cat1", BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000},
+			{ID: testCat1, BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000},
 		},
 	}
 
@@ -457,7 +469,7 @@ func TestService_Get_NotFound(t *testing.T) {
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
 	budgetID := "nonexistent-budget"
-	userID := "user123"
+	userID := testUserID
 
 	mockCache.On("Get", ctx, "budget:budget:user123:nonexistent-budget", mock.Anything).Return(false, nil)
 	mockBudgetRepo.On("FindByID", ctx, budgetID, userID).Return(nil, domain.ErrNotFound)
@@ -484,8 +496,8 @@ func TestService_Update_Success(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 	idempotencyKey := "test-key-update"
 	newStatus := "paused"
 	newPeriod := "yearly"
@@ -557,7 +569,7 @@ func TestService_Update_IdempotencyHit(t *testing.T) {
 
 	idempotencyKey := "test-key-update-hit"
 	cachedResponse := &application.GetBudgetResponse{
-		ID:         "budget123",
+		ID:         testBudgetID,
 		UserID:     "user123",
 		Name:       "Cached Budget",
 		TotalLimit: 50000,
@@ -570,7 +582,7 @@ func TestService_Update_IdempotencyHit(t *testing.T) {
 	})
 
 	req := application.UpdateBudgetRequest{
-		ID:             "budget123",
+		ID:             testBudgetID,
 		UserID:         "user123",
 		Name:           ptr("New Name"), // This should be ignored
 		IdempotencyKey: idempotencyKey,
@@ -600,12 +612,12 @@ func TestService_Update_AccessDenied(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"      // Current user ID
+	budgetID := testBudgetID
+	userID := testUserID     // Current user ID
 	otherUserID := "user456" // Budget belongs to this user
 
 	initialBudget := &domain.Budget{
-		ID: budgetID, UserID: otherUserID, Name: "Test Budget",
+		ID: budgetID, UserID: otherUserID, Name: testBudgetName,
 	}
 
 	mockBudgetRepo.On("FindByID", ctx, budgetID, userID).Return(initialBudget, nil) // FindByID should return the budget regardless of user for ApplyUpdate to check
@@ -635,8 +647,8 @@ func TestService_Delete_Success(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 
 	mockBudgetRepo.On("WithTx", ctx, mock.AnythingOfType("func(context.Context) error")).Return(nil)
 	mockBudgetRepo.On("Delete", ctx, budgetID, userID).Return(nil)
@@ -664,7 +676,7 @@ func TestService_List_Success(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	userID := "user123"
+	userID := testUserID
 	filter := domain.BudgetFilter{Limit: 10, Offset: 0}
 
 	budgets := []*domain.Budget{
@@ -708,14 +720,14 @@ func TestService_GetSummary_Success(t *testing.T) {
 
 	svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFeatureFlag)
 
-	budgetID := "budget123"
-	userID := "user123"
+	budgetID := testBudgetID
+	userID := testUserID
 
 	budget := &domain.Budget{
 		ID: budgetID, UserID: userID, Name: "Summary Budget",
 		TotalLimit: 100000, SpentAmount: 75000,
 		Categories: []*domain.BudgetCategory{
-			{ID: "cat1", BudgetID: budgetID, Name: "Groceries", LimitAmount: 50000, SpentAmount: 30000},
+			{ID: testCat1, BudgetID: budgetID, Name: testGrocery, LimitAmount: 50000, SpentAmount: 30000},
 			{ID: "cat2", BudgetID: budgetID, Name: "Utilities", LimitAmount: 30000, SpentAmount: 25000},
 		},
 	}
@@ -729,7 +741,7 @@ func TestService_GetSummary_Success(t *testing.T) {
 		UsagePercent:  75.00,
 		CategoryCount: 2,
 		Categories: []application.CategorySummaryDTO{
-			{CategoryID: "cat1", Name: "Groceries", LimitAmount: 50000, SpentAmount: 30000, Remaining: 20000, UsagePercent: 60.00},
+			{CategoryID: testCat1, Name: testGrocery, LimitAmount: 50000, SpentAmount: 30000, Remaining: 20000, UsagePercent: 60.00},
 			{CategoryID: "cat2", Name: "Utilities", LimitAmount: 30000, SpentAmount: 25000, Remaining: 5000, UsagePercent: 83.33},
 		},
 	}
@@ -776,18 +788,18 @@ func TestService_Create_FlagDefaultOrAbsent(t *testing.T) {
 		svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, mockFF)
 
 		budgetID := uuid.New().String()
-		userID := "user123"
+		userID := testUserID
 		idempotencyKey := "test-flag-default-" + uuid.New().String()
 
 		req := application.CreateBudgetRequest{
 			UserID:     userID,
 			Name:       "Default Flag Budget",
-			Period:     "monthly",
+			Period:     testPeriod,
 			TotalLimit: 100000,
-			StartDate:  "2023-01-01",
-			EndDate:    "2023-01-31",
+			StartDate:  testStartDate,
+			EndDate:    testEndDate,
 			Categories: []application.CreateCategoryDTO{
-				{Name: "Groceries", LimitAmount: 50000, Category: "Food"},
+				{Name: testGrocery, LimitAmount: 50000, Category: testCategory},
 			},
 			IdempotencyKey: idempotencyKey,
 		}
@@ -832,18 +844,18 @@ func TestService_Create_FlagDefaultOrAbsent(t *testing.T) {
 		svc := application.NewService(mockBudgetRepo, mockCategoryRepo, mockOutboxRepo, mockIdempotencyStore, mockCache, nil)
 
 		budgetID := uuid.New().String()
-		userID := "user123"
+		userID := testUserID
 		idempotencyKey := "test-flag-nil-" + uuid.New().String()
 
 		req := application.CreateBudgetRequest{
 			UserID:     userID,
 			Name:       "Nil Flag Budget",
-			Period:     "monthly",
+			Period:     testPeriod,
 			TotalLimit: 100000,
-			StartDate:  "2023-01-01",
-			EndDate:    "2023-01-31",
+			StartDate:  testStartDate,
+			EndDate:    testEndDate,
 			Categories: []application.CreateCategoryDTO{
-				{Name: "Groceries", LimitAmount: 50000, Category: "Food"},
+				{Name: testGrocery, LimitAmount: 50000, Category: testCategory},
 			},
 			IdempotencyKey: idempotencyKey,
 		}

@@ -29,7 +29,7 @@ func getQuerier(ctx context.Context) querier {
 	return nil
 }
 
-func withTx(pool *pgxpool.Pool, ctx context.Context, fn func(context.Context) error) error {
+func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)

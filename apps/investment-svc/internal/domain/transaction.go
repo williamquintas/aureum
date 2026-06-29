@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import (
@@ -8,6 +9,7 @@ import (
 // TransactionType represents the type of investment transaction.
 type TransactionType string
 
+// Supported transaction type constants.
 const (
 	TransactionBuy          TransactionType = "buy"
 	TransactionSell         TransactionType = "sell"
@@ -16,6 +18,7 @@ const (
 	TransactionAmortization TransactionType = "amortization"
 )
 
+// ValidTransactionTypes returns all valid transaction types.
 func ValidTransactionTypes() []TransactionType {
 	return []TransactionType{
 		TransactionBuy, TransactionSell,
@@ -23,6 +26,7 @@ func ValidTransactionTypes() []TransactionType {
 	}
 }
 
+// Valid checks whether the transaction type is valid.
 func (t TransactionType) Valid() bool {
 	for _, v := range ValidTransactionTypes() {
 		if t == v {

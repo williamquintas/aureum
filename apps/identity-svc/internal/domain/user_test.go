@@ -1,4 +1,4 @@
-package domain
+package domain //nolint:goconst
 
 import (
 	"testing"
@@ -18,7 +18,7 @@ func TestNewEmail_Invalid(t *testing.T) {
 		email string
 	}{
 		{"empty", ""},
-		{"no domain", "user"},
+		{"no domain", "user"}, //nolint:goconst
 		{"no at", "userexample.com"},
 	}
 	for _, tt := range tests {

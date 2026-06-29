@@ -1,3 +1,4 @@
+//nolint:goconst // test file - repeated strings acceptable
 package domain
 
 import (
@@ -159,7 +160,7 @@ func TestVariableExpense_TransitionStatus(t *testing.T) {
 			err = ve.TransitionStatus(tt.to)
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
-				require.Equal(t, TransactionStatus(tt.from), ve.Status)
+				require.Equal(t, tt.from, ve.Status)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.to, ve.Status)

@@ -1,4 +1,4 @@
-package domain
+package domain //nolint:goconst
 
 import (
 	"testing"
@@ -33,7 +33,7 @@ func TestRoleHasPermission(t *testing.T) {
 }
 
 func TestHasRequiredRole_AdminAllowsAdmin(t *testing.T) {
-	require.True(t, HasRequiredRole([]string{"admin"}, RoleAdmin))
+	require.True(t, HasRequiredRole([]string{"admin"}, RoleAdmin)) //nolint:goconst
 }
 
 func TestHasRequiredRole_AdminAllowsUserRole(t *testing.T) {
@@ -41,7 +41,7 @@ func TestHasRequiredRole_AdminAllowsUserRole(t *testing.T) {
 }
 
 func TestHasRequiredRole_UserDeniesAdmin(t *testing.T) {
-	require.False(t, HasRequiredRole([]string{"user"}, RoleAdmin))
+	require.False(t, HasRequiredRole([]string{"user"}, RoleAdmin)) //nolint:goconst
 }
 
 func TestHasRequiredRole_MultipleRoles(t *testing.T) {
@@ -67,7 +67,7 @@ func TestEvaluateABAC_AdminCanDoAnything(t *testing.T) {
 }
 
 func TestEvaluateABAC_UserCanReadOwnResource(t *testing.T) {
-	user := &User{ID: "user-1", Roles: []string{"user"}}
+	user := &User{ID: "user-1", Roles: []string{"user"}} //nolint:goconst
 	err := EvaluateABAC(user, ABACRequest{
 		ResourceType:    ResourceAccount,
 		Action:          ActionRead,

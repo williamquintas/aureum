@@ -1,3 +1,4 @@
+// Package api provides the gRPC API handler for the investment service.
 package api
 
 import (
@@ -18,18 +19,31 @@ import (
 	investmentv1 "github.com/aureum/proto/gen/investment/investmentv1"
 )
 
+// goconst constants for default string returns in enum conversions.
+const (
+	strOther  = "other"
+	strBuy    = "buy"
+	strActive = "active"
+)
+
+// GRPCHandler implements the gRPC InvestmentService server.
 type GRPCHandler struct {
 	investmentv1.UnimplementedInvestmentServiceServer
 	svc application.InvestmentService
 }
 
+// NewGRPCHandler creates a new gRPC handler with the given application service.
 func NewGRPCHandler(svc application.InvestmentService) *GRPCHandler {
 	return &GRPCHandler{svc: svc}
 }
 
 // ── Investment ──────────────────────────────────────────────────────────────
 
-func (h *GRPCHandler) CreateInvestment(ctx context.Context, req *investmentv1.CreateInvestmentRequest) (*investmentv1.Investment, error) {
+// CreateInvestment handles the gRPC CreateInvestment request.
+func (h *GRPCHandler) CreateInvestment(
+	ctx context.Context,
+	req *investmentv1.CreateInvestmentRequest,
+) (*investmentv1.Investment, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -52,7 +66,11 @@ func (h *GRPCHandler) CreateInvestment(ctx context.Context, req *investmentv1.Cr
 	return investmentFromCreate(resp), nil
 }
 
-func (h *GRPCHandler) GetInvestment(ctx context.Context, req *investmentv1.GetInvestmentRequest) (*investmentv1.Investment, error) {
+// GetInvestment handles the gRPC GetInvestment request.
+func (h *GRPCHandler) GetInvestment(
+	ctx context.Context,
+	req *investmentv1.GetInvestmentRequest,
+) (*investmentv1.Investment, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -65,7 +83,11 @@ func (h *GRPCHandler) GetInvestment(ctx context.Context, req *investmentv1.GetIn
 	return investmentFromGet(resp), nil
 }
 
-func (h *GRPCHandler) UpdateInvestment(ctx context.Context, req *investmentv1.UpdateInvestmentRequest) (*investmentv1.Investment, error) {
+// UpdateInvestment handles the gRPC UpdateInvestment request.
+func (h *GRPCHandler) UpdateInvestment(
+	ctx context.Context,
+	req *investmentv1.UpdateInvestmentRequest,
+) (*investmentv1.Investment, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -107,7 +129,11 @@ func (h *GRPCHandler) UpdateInvestment(ctx context.Context, req *investmentv1.Up
 	return investmentFromGet(resp), nil
 }
 
-func (h *GRPCHandler) DeleteInvestment(ctx context.Context, req *investmentv1.DeleteInvestmentRequest) (*emptypb.Empty, error) {
+// DeleteInvestment handles the gRPC DeleteInvestment request.
+func (h *GRPCHandler) DeleteInvestment(
+	ctx context.Context,
+	req *investmentv1.DeleteInvestmentRequest,
+) (*emptypb.Empty, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -119,7 +145,11 @@ func (h *GRPCHandler) DeleteInvestment(ctx context.Context, req *investmentv1.De
 	return &emptypb.Empty{}, nil
 }
 
-func (h *GRPCHandler) ListInvestments(ctx context.Context, req *investmentv1.ListInvestmentsRequest) (*investmentv1.ListInvestmentsResponse, error) {
+// ListInvestments handles the gRPC ListInvestments request.
+func (h *GRPCHandler) ListInvestments(
+	ctx context.Context,
+	req *investmentv1.ListInvestmentsRequest,
+) (*investmentv1.ListInvestmentsResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -149,13 +179,17 @@ func (h *GRPCHandler) ListInvestments(ctx context.Context, req *investmentv1.Lis
 	telemetry.RecordRequest(ctx, "ListInvestments", "ok", time.Since(start))
 	return &investmentv1.ListInvestmentsResponse{
 		Investments: protoItems,
-		TotalCount:  int32(total),
+		TotalCount:  int32(total), //nolint:gosec
 	}, nil
 }
 
 // ── Transaction ─────────────────────────────────────────────────────────────
 
-func (h *GRPCHandler) RecordTransaction(ctx context.Context, req *investmentv1.RecordTransactionRequest) (*investmentv1.InvestmentTransaction, error) {
+// RecordTransaction handles the gRPC RecordTransaction request.
+func (h *GRPCHandler) RecordTransaction(
+	ctx context.Context,
+	req *investmentv1.RecordTransactionRequest,
+) (*investmentv1.InvestmentTransaction, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -177,7 +211,11 @@ func (h *GRPCHandler) RecordTransaction(ctx context.Context, req *investmentv1.R
 	return transactionFromRecord(resp), nil
 }
 
-func (h *GRPCHandler) ListTransactions(ctx context.Context, req *investmentv1.ListTransactionsRequest) (*investmentv1.ListTransactionsResponse, error) {
+// ListTransactions handles the gRPC ListTransactions request.
+func (h *GRPCHandler) ListTransactions(
+	ctx context.Context,
+	req *investmentv1.ListTransactionsRequest,
+) (*investmentv1.ListTransactionsResponse, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -209,13 +247,17 @@ func (h *GRPCHandler) ListTransactions(ctx context.Context, req *investmentv1.Li
 	telemetry.RecordRequest(ctx, "ListTransactions", "ok", time.Since(start))
 	return &investmentv1.ListTransactionsResponse{
 		Transactions: protoItems,
-		TotalCount:   int32(total),
+		TotalCount:   int32(total), //nolint:gosec
 	}, nil
 }
 
 // ── Portfolio ───────────────────────────────────────────────────────────────
 
-func (h *GRPCHandler) GetPortfolioSummary(ctx context.Context, _ *investmentv1.GetPortfolioSummaryRequest) (*investmentv1.PortfolioSummary, error) {
+// GetPortfolioSummary handles the gRPC GetPortfolioSummary request.
+func (h *GRPCHandler) GetPortfolioSummary(
+	ctx context.Context,
+	_ *investmentv1.GetPortfolioSummaryRequest,
+) (*investmentv1.PortfolioSummary, error) {
 	start := time.Now()
 
 	userID := mustExtractUserID(ctx)
@@ -257,16 +299,16 @@ func assetTypeFromProto(t investmentv1.AssetType) string {
 	case investmentv1.AssetType_GOLD:
 		return "gold"
 	case investmentv1.AssetType_OTHER_ASSET:
-		return "other"
+		return strOther
 	default:
-		return "other"
+		return strOther
 	}
 }
 
 func transactionTypeFromProto(t investmentv1.TransactionType) string {
 	switch t {
 	case investmentv1.TransactionType_BUY:
-		return "buy"
+		return strBuy
 	case investmentv1.TransactionType_SELL:
 		return "sell"
 	case investmentv1.TransactionType_DIVIDEND:
@@ -276,20 +318,20 @@ func transactionTypeFromProto(t investmentv1.TransactionType) string {
 	case investmentv1.TransactionType_AMORTIZATION:
 		return "amortization"
 	default:
-		return "buy"
+		return strBuy
 	}
 }
 
 func investmentStatusFromProto(s investmentv1.InvestmentStatus) string {
 	switch s {
 	case investmentv1.InvestmentStatus_ACTIVE:
-		return "active"
+		return strActive
 	case investmentv1.InvestmentStatus_SOLD:
 		return "sold"
 	case investmentv1.InvestmentStatus_CANCELLED:
 		return "cancelled"
 	default:
-		return "active"
+		return strActive
 	}
 }
 
@@ -464,6 +506,7 @@ func mustExtractUserID(ctx context.Context) string {
 	return uid
 }
 
+// UserContext embeds the user ID into the context.
 func UserContext(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }

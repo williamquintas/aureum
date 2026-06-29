@@ -1,3 +1,4 @@
+// Package domain provides domain entities, value objects, repository interfaces, and errors.
 package domain
 
 import "context"
@@ -36,7 +37,11 @@ type InvestmentRepository interface {
 type TransactionRepository interface {
 	Save(ctx context.Context, tx *InvestmentTransaction) error
 	FindByID(ctx context.Context, id, userID string) (*InvestmentTransaction, error)
-	FindByInvestment(ctx context.Context, investmentID, userID string, filter TransactionFilter) ([]*InvestmentTransaction, error)
+	FindByInvestment(
+		ctx context.Context,
+		investmentID, userID string,
+		filter TransactionFilter,
+	) ([]*InvestmentTransaction, error)
 	CountByInvestment(ctx context.Context, investmentID, userID string, filter TransactionFilter) (int, error)
 	List(ctx context.Context, userID string, filter TransactionFilter) ([]*InvestmentTransaction, error)
 	WithTx(ctx context.Context, fn func(context.Context) error) error

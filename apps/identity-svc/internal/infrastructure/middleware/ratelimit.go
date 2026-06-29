@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// RateLimiter implements Redis-backed rate limiting per IP address.
 type RateLimiter struct {
 	client *redis.Client
 	limit  int
@@ -15,6 +16,7 @@ type RateLimiter struct {
 	prefix string
 }
 
+// NewRateLimiter creates a new RateLimiter.
 func NewRateLimiter(client *redis.Client, limit int, window time.Duration) *RateLimiter {
 	return &RateLimiter{
 		client: client,
@@ -24,6 +26,7 @@ func NewRateLimiter(client *redis.Client, limit int, window time.Duration) *Rate
 	}
 }
 
+// Middleware returns the rate limiting HTTP middleware handler.
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := rl.prefix + r.RemoteAddr

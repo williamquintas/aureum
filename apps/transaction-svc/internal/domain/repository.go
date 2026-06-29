@@ -2,6 +2,7 @@ package domain
 
 import "context"
 
+// IncomeRepository defines persistence operations for Income entities.
 type IncomeRepository interface {
 	Save(ctx context.Context, income *Income) error
 	FindByID(ctx context.Context, id, userID string) (*Income, error)
@@ -12,6 +13,7 @@ type IncomeRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// IncomeFilter provides filtering, pagination, and sorting parameters for listing incomes.
 type IncomeFilter struct {
 	Status   *TransactionStatus
 	DateFrom *string
@@ -20,6 +22,7 @@ type IncomeFilter struct {
 	Offset   int
 }
 
+// FixedExpenseRepository defines persistence operations for FixedExpense entities.
 type FixedExpenseRepository interface {
 	Save(ctx context.Context, expense *FixedExpense) error
 	FindByID(ctx context.Context, id, userID string) (*FixedExpense, error)
@@ -30,6 +33,7 @@ type FixedExpenseRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// FixedExpenseFilter provides filtering, pagination, and sorting parameters for listing fixed expenses.
 type FixedExpenseFilter struct {
 	Status  *TransactionStatus
 	DayFrom *int
@@ -38,6 +42,7 @@ type FixedExpenseFilter struct {
 	Offset  int
 }
 
+// VariableExpenseRepository defines persistence operations for VariableExpense entities.
 type VariableExpenseRepository interface {
 	Save(ctx context.Context, expense *VariableExpense) error
 	FindByID(ctx context.Context, id, userID string) (*VariableExpense, error)
@@ -48,6 +53,7 @@ type VariableExpenseRepository interface {
 	WithTx(ctx context.Context, fn func(context.Context) error) error
 }
 
+// VariableExpenseFilter provides filtering, pagination, and sorting parameters for listing variable expenses.
 type VariableExpenseFilter struct {
 	Status   *TransactionStatus
 	DateFrom *string

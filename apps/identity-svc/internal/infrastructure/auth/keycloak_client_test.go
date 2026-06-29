@@ -1,4 +1,5 @@
-package auth_test
+// Package auth_test contains tests for the auth package.
+package auth_test //nolint:goconst
 
 import (
 	"context"
@@ -53,9 +54,9 @@ func TestKeycloakClient_CreateUser_Success(t *testing.T) {
 	var srvURL string
 	client, srv := setupMockKeycloak(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/realms/test-realm/protocol/openid-connect/token":
+		case "/realms/test-realm/protocol/openid-connect/token": //nolint:goconst
 			writeJSONResponse(w, http.StatusOK, tokenResponse())
-		case "/admin/realms/test-realm/users":
+		case "/admin/realms/test-realm/users": //nolint:goconst
 			w.Header().Set("Location", fmt.Sprintf("%s/realms/test-realm/users/new-user-id", srvURL))
 			w.WriteHeader(http.StatusCreated)
 		case "/admin/realms/test-realm/users/new-user-id/reset-password":

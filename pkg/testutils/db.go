@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// SetupTestDB creates a PostgreSQL test container with optional migrations and returns a pool.
 func SetupTestDB(t *testing.T, migrateURL string) *pgxpool.Pool {
 	t.Helper()
 

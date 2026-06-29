@@ -3,15 +3,13 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/aureum/debt-svc/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aureum/debt-svc/internal/domain"
 )
 
-func ptr(s string) *string                                 { return &s }
-func ptrInt64(n int64) *int64                              { return &n }
-func ptrDebtType(t domain.DebtType) *domain.DebtType       { return &t }
-func ptrDebtStatus(s domain.DebtStatus) *domain.DebtStatus { return &s }
+func ptr(s string) *string { return &s }
 
 func TestDebtType_Valid(t *testing.T) {
 	tests := []struct {

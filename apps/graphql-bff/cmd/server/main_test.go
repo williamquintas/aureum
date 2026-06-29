@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -96,7 +97,7 @@ func TestCorsMiddleware(t *testing.T) {
 
 	t.Run("sets CORS headers", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/graphql", nil)
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"))
 		assert.Equal(t, "GET, POST, OPTIONS", rec.Header().Get("Access-Control-Allow-Methods"))
@@ -106,14 +107,14 @@ func TestCorsMiddleware(t *testing.T) {
 
 	t.Run("handles OPTIONS preflight", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("OPTIONS", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "OPTIONS", "/graphql", nil)
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("passes through GET requests", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/graphql", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/graphql", nil)
 		handler.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})

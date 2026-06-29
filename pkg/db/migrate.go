@@ -1,3 +1,4 @@
+// Package db provides PostgreSQL pool management and database migration utilities.
 package db
 
 import (
@@ -10,6 +11,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
+// RunMigrations applies all pending up-migrations from the given path to the database.
 func RunMigrations(dbURL, migrationsPath string) error {
 	m, err := migrate.New("file://"+migrationsPath, dbURL)
 	if err != nil {

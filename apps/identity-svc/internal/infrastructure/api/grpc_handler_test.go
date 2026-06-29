@@ -1,4 +1,4 @@
-package api_test
+package api_test //nolint:goconst
 
 import (
 	"context"
@@ -24,10 +24,10 @@ func TestGRPC_ValidateToken_Valid(t *testing.T) {
 	tv := &mockTokenValidator{
 		validateFunc: func(ctx context.Context, token string) (*domain.User, error) {
 			return &domain.User{
-				ID:    "user-id",
-				Email: "user@example.com",
-				Name:  "Test User",
-				Roles: []string{"user"},
+				ID:    "user-id",          //nolint:goconst
+				Email: "user@example.com", //nolint:goconst
+				Name:  "Test User",        //nolint:goconst
+				Roles: []string{"user"},   //nolint:goconst
 			}, nil
 		},
 	}
@@ -139,14 +139,14 @@ func TestGRPC_GetUser_NotFound(t *testing.T) {
 func TestGRPC_ABACCheck_Allowed(t *testing.T) {
 	users := &mockUserRepo{
 		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
-			return &domain.User{ID: id, Roles: []string{"admin"}}, nil
+			return &domain.User{ID: id, Roles: []string{"admin"}}, nil //nolint:goconst
 		},
 	}
 	authzSvc := application.NewAuthorizationService(users, nil)
 	h := api.NewGRPCHandler(nil, authzSvc)
 
 	resp, err := h.ABACCheck(context.Background(), &identityv1.ABACCheckRequest{
-		UserId:       "admin-id",
+		UserId:       "admin-id", //nolint:goconst
 		ResourceType: "account",
 		Action:       "delete",
 	})

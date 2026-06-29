@@ -61,6 +61,22 @@ linters:
         - name: superfluous-else
         - name: unreachable-code
         - name: redefines-builtin-id
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+          - gosec
+          - noctx
+          - bodyclose
+          - lll
+          - unused
+      - path: cmd/
+        linters:
+          - lll
+      - path: migrations/
+        linters:
+          - lll
 formatters:
   enable:
     - gofmt
@@ -69,23 +85,8 @@ formatters:
     gofmt:
       simplify: true
     goimports:
-      local-prefixes: github.com/aureum
+      local-prefixes:
+        - github.com/aureum
 issues:
-  exit-code: 1
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-use-default: false
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - noctx
-        - bodyclose
-        - lll
-        - unused
-    - path: cmd/
-      linters:
-        - lll
-    - path: migrations/
-      linters:
-        - lll

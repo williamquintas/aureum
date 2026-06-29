@@ -1,7 +1,20 @@
+// Package application contains application-layer DTOs, services, and use-case orchestrations.
 package application
 
 import "github.com/aureum/transaction-svc/internal/domain"
 
+const statusPending = "pending"
+
+const (
+	incomeSalary         = "salary"
+	incomeFreelance      = "freelance"
+	incomeOther          = "other"
+	pmCreditCard         = "credit_card"
+	pmDebitCard          = "debit_card"
+	expenseDiscretionary = "discretionary"
+)
+
+// CreateIncomeRequest represents the input for creating a new income record.
 type CreateIncomeRequest struct {
 	UserID         string
 	Description    string
@@ -13,6 +26,7 @@ type CreateIncomeRequest struct {
 	IdempotencyKey string
 }
 
+// CreateIncomeResponse represents the output after successfully creating an income record.
 type CreateIncomeResponse struct {
 	ID             string
 	UserID         string
@@ -26,6 +40,7 @@ type CreateIncomeResponse struct {
 	UpdatedAt      int64
 }
 
+// GetIncomeResponse represents the output for retrieving an income record.
 type GetIncomeResponse struct {
 	ID             string
 	UserID         string
@@ -39,6 +54,7 @@ type GetIncomeResponse struct {
 	UpdatedAt      int64
 }
 
+// UpdateIncomeRequest represents the input for updating an existing income record.
 type UpdateIncomeRequest struct {
 	ID             string
 	UserID         string
@@ -51,6 +67,7 @@ type UpdateIncomeRequest struct {
 	IdempotencyKey string
 }
 
+// CreateFixedExpenseRequest represents the input for creating a new fixed expense.
 type CreateFixedExpenseRequest struct {
 	UserID         string
 	Description    string
@@ -61,6 +78,7 @@ type CreateFixedExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateFixedExpenseResponse represents the output after creating a fixed expense.
 type CreateFixedExpenseResponse struct {
 	ID            string
 	UserID        string
@@ -73,6 +91,7 @@ type CreateFixedExpenseResponse struct {
 	UpdatedAt     int64
 }
 
+// UpdateFixedExpenseRequest represents the input for updating a fixed expense.
 type UpdateFixedExpenseRequest struct {
 	ID             string
 	UserID         string
@@ -84,6 +103,7 @@ type UpdateFixedExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateVariableExpenseRequest represents the input for creating a new variable expense.
 type CreateVariableExpenseRequest struct {
 	UserID         string
 	Description    string
@@ -97,6 +117,7 @@ type CreateVariableExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// CreateVariableExpenseResponse represents the output after creating a variable expense.
 type CreateVariableExpenseResponse struct {
 	ID            string
 	UserID        string
@@ -112,6 +133,7 @@ type CreateVariableExpenseResponse struct {
 	UpdatedAt     int64
 }
 
+// UpdateVariableExpenseRequest represents the input for updating a variable expense.
 type UpdateVariableExpenseRequest struct {
 	ID             string
 	UserID         string
@@ -126,6 +148,7 @@ type UpdateVariableExpenseRequest struct {
 	IdempotencyKey string
 }
 
+// ListResponse is a generic paginated list response.
 type ListResponse struct {
 	Items      interface{} `json:"items"`
 	TotalCount int         `json:"total_count"`
@@ -134,7 +157,7 @@ type ListResponse struct {
 
 func toDomainStatus(status string) (domain.TransactionStatus, error) {
 	switch status {
-	case "pending":
+	case statusPending:
 		return domain.StatusPending, nil
 	case "completed":
 		return domain.StatusCompleted, nil
@@ -147,9 +170,9 @@ func toDomainStatus(status string) (domain.TransactionStatus, error) {
 
 func toDomainIncomeType(t string) (domain.IncomeType, error) {
 	switch t {
-	case "salary":
+	case incomeSalary:
 		return domain.IncomeTypeSalary, nil
-	case "freelance":
+	case incomeFreelance:
 		return domain.IncomeTypeFreelance, nil
 	case "investment":
 		return domain.IncomeTypeInvestment, nil
@@ -157,7 +180,7 @@ func toDomainIncomeType(t string) (domain.IncomeType, error) {
 		return domain.IncomeTypeBusiness, nil
 	case "refund":
 		return domain.IncomeTypeRefund, nil
-	case "other":
+	case incomeOther:
 		return domain.IncomeTypeOther, nil
 	default:
 		return "", domain.ErrInvalidEnum
@@ -166,9 +189,9 @@ func toDomainIncomeType(t string) (domain.IncomeType, error) {
 
 func toDomainPaymentMethod(pm string) (domain.PaymentMethod, error) {
 	switch pm {
-	case "credit_card":
+	case pmCreditCard:
 		return domain.PaymentMethodCreditCard, nil
-	case "debit_card":
+	case pmDebitCard:
 		return domain.PaymentMethodDebitCard, nil
 	case "cash":
 		return domain.PaymentMethodCash, nil
@@ -176,7 +199,7 @@ func toDomainPaymentMethod(pm string) (domain.PaymentMethod, error) {
 		return domain.PaymentMethodBankTransfer, nil
 	case "pix":
 		return domain.PaymentMethodPix, nil
-	case "other":
+	case incomeOther:
 		return domain.PaymentMethodOther, nil
 	default:
 		return "", domain.ErrInvalidEnum
@@ -187,7 +210,7 @@ func toDomainExpenseType(et string) (domain.ExpenseType, error) {
 	switch et {
 	case "essential":
 		return domain.ExpenseTypeEssential, nil
-	case "discretionary":
+	case expenseDiscretionary:
 		return domain.ExpenseTypeDiscretionary, nil
 	case "occasional":
 		return domain.ExpenseTypeOccasional, nil

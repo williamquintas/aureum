@@ -1,3 +1,4 @@
+// Package persistence provides PostgreSQL-based repository implementations.
 package persistence
 
 import (
@@ -12,27 +13,32 @@ import (
 	"github.com/aureum/investment-svc/internal/domain"
 )
 
+// InvestmentRepo implements domain.InvestmentRepository using PostgreSQL.
 type InvestmentRepo struct {
 	pool *pgxpool.Pool
 }
 
+// NewInvestmentRepo creates a new InvestmentRepo.
 func NewInvestmentRepo(pool *pgxpool.Pool) *InvestmentRepo {
 	return &InvestmentRepo{pool: pool}
 }
 
+// WithTx executes a function within a database transaction.
 func (r *InvestmentRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
-	return withTx(r.pool, ctx, fn)
+	return withTx(ctx, r.pool, fn)
 }
 
+// Save persists a new investment entity.
 func (r *InvestmentRepo) Save(ctx context.Context, investment *domain.Investment) error {
 	q := getQuerier(ctx)
 	if q == nil {
 		return fmt.Errorf("no transaction in context")
 	}
 
-	_, err := q.Exec(ctx,
-		`INSERT INTO investments (id, user_id, name, ticker, asset_type, quantity, average_price, total_invested, status, broker, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+	query := `INSERT INTO investments (id, user_id, name, ticker, asset_type, quantity, ` +
+		`average_price, total_invested, status, broker, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	_, err := q.Exec(ctx, query,
 		investment.ID, investment.UserID, investment.Name, investment.Ticker,
 		string(investment.AssetType), investment.Quantity, investment.AveragePrice,
 		investment.TotalInvested, string(investment.Status), investment.Broker,
@@ -44,10 +50,12 @@ func (r *InvestmentRepo) Save(ctx context.Context, investment *domain.Investment
 	return nil
 }
 
+// FindByID retrieves a single investment by its ID and user ID.
 func (r *InvestmentRepo) FindByID(ctx context.Context, id, userID string) (*domain.Investment, error) {
-	row := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, name, ticker, asset_type, quantity, average_price, total_invested, status, broker, created_at, updated_at, deleted_at
-		 FROM investments WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
+	query := `SELECT id, user_id, name, ticker, asset_type, quantity, average_price, ` +
+		`total_invested, status, broker, created_at, updated_at, deleted_at
+		 FROM investments WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`
+	row := r.pool.QueryRow(ctx, query,
 		id, userID,
 	)
 
@@ -72,15 +80,17 @@ func (r *InvestmentRepo) FindByID(ctx context.Context, id, userID string) (*doma
 	return &inv, nil
 }
 
+// Update persists changes to an existing investment entity.
 func (r *InvestmentRepo) Update(ctx context.Context, investment *domain.Investment) error {
 	q := getQuerier(ctx)
 	if q == nil {
 		return fmt.Errorf("no transaction in context")
 	}
 
-	_, err := q.Exec(ctx,
-		`UPDATE investments SET name=$1, ticker=$2, asset_type=$3, quantity=$4, average_price=$5, total_invested=$6, status=$7, broker=$8, updated_at=$9
-		 WHERE id=$10 AND deleted_at IS NULL`,
+	query := `UPDATE investments SET name=$1, ticker=$2, asset_type=$3, quantity=$4, ` +
+		`average_price=$5, total_invested=$6, status=$7, broker=$8, updated_at=$9
+		 WHERE id=$10 AND deleted_at IS NULL`
+	_, err := q.Exec(ctx, query,
 		investment.Name, investment.Ticker, string(investment.AssetType),
 		investment.Quantity, investment.AveragePrice, investment.TotalInvested,
 		string(investment.Status), investment.Broker, investment.UpdatedAt,
@@ -92,6 +102,7 @@ func (r *InvestmentRepo) Update(ctx context.Context, investment *domain.Investme
 	return nil
 }
 
+// Delete soft-deletes an investment by ID and user ID.
 func (r *InvestmentRepo) Delete(ctx context.Context, id, userID string) error {
 	q := getQuerier(ctx)
 	if q == nil {
@@ -109,8 +120,14 @@ func (r *InvestmentRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
-func (r *InvestmentRepo) List(ctx context.Context, userID string, filter domain.InvestmentFilter) ([]*domain.Investment, error) {
-	query := `SELECT id, user_id, name, ticker, asset_type, quantity, average_price, total_invested, status, broker, created_at, updated_at
+// List returns paginated investments for a user with optional filters.
+func (r *InvestmentRepo) List(
+	ctx context.Context,
+	userID string,
+	filter domain.InvestmentFilter,
+) ([]*domain.Investment, error) {
+	query := `SELECT id, user_id, name, ticker, asset_type, quantity, average_price, ` +
+		`total_invested, status, broker, created_at, updated_at
 			  FROM investments WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
 	argIdx := 2
@@ -164,6 +181,7 @@ func (r *InvestmentRepo) List(ctx context.Context, userID string, filter domain.
 	return investments, nil
 }
 
+// Count returns the total number of investments matching the given filter.
 func (r *InvestmentRepo) Count(ctx context.Context, userID string, filter domain.InvestmentFilter) (int, error) {
 	query := `SELECT COUNT(*) FROM investments WHERE user_id=$1 AND deleted_at IS NULL`
 	args := []interface{}{userID}
@@ -177,7 +195,6 @@ func (r *InvestmentRepo) Count(ctx context.Context, userID string, filter domain
 	if filter.StatusFilter != nil {
 		query += fmt.Sprintf(" AND status=$%d", argIdx)
 		args = append(args, string(*filter.StatusFilter))
-		argIdx++
 	}
 
 	var count int
@@ -188,10 +205,12 @@ func (r *InvestmentRepo) Count(ctx context.Context, userID string, filter domain
 	return count, nil
 }
 
+// FindByUser retrieves all non-deleted investments for a user.
 func (r *InvestmentRepo) FindByUser(ctx context.Context, userID string) ([]*domain.Investment, error) {
-	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, ticker, asset_type, quantity, average_price, total_invested, status, broker, created_at, updated_at
-		 FROM investments WHERE user_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC`,
+	query := `SELECT id, user_id, name, ticker, asset_type, quantity, average_price, ` +
+		`total_invested, status, broker, created_at, updated_at
+		 FROM investments WHERE user_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC`
+	rows, err := r.pool.Query(ctx, query,
 		userID,
 	)
 	if err != nil {
@@ -219,10 +238,12 @@ func (r *InvestmentRepo) FindByUser(ctx context.Context, userID string) ([]*doma
 	return investments, nil
 }
 
+// FindActiveByUser retrieves all active investments for a user.
 func (r *InvestmentRepo) FindActiveByUser(ctx context.Context, userID string) ([]*domain.Investment, error) {
-	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, ticker, asset_type, quantity, average_price, total_invested, status, broker, created_at, updated_at
-		 FROM investments WHERE user_id=$1 AND status='active' AND deleted_at IS NULL ORDER BY created_at DESC`,
+	query := `SELECT id, user_id, name, ticker, asset_type, quantity, average_price, ` +
+		`total_invested, status, broker, created_at, updated_at
+		 FROM investments WHERE user_id=$1 AND status='active' AND deleted_at IS NULL ORDER BY created_at DESC`
+	rows, err := r.pool.Query(ctx, query,
 		userID,
 	)
 	if err != nil {

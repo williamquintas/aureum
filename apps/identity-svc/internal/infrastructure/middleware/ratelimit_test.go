@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -28,7 +29,7 @@ func TestRateLimiter_FirstRequestPasses(t *testing.T) {
 	rl, _ := setupRateLimiter(t, 5, time.Minute)
 	handler := rl.Middleware(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -43,14 +44,14 @@ func TestRateLimiter_ExceedsLimit(t *testing.T) {
 
 	// First 3 requests should pass
 	for i := 0; i < 3; i++ {
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "request %d should pass", i+1)
 	}
 
 	// 4th request should be rate limited
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -64,13 +65,13 @@ func TestRateLimiter_RetryAfterHeader(t *testing.T) {
 	handler := rl.Middleware(http.HandlerFunc(okHandler))
 
 	// First request passes
-	req1 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req1 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	assert.Equal(t, http.StatusOK, w1.Code)
 
 	// Second request gets rate limited with Retry-After
-	req2 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req2 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 
@@ -88,7 +89,7 @@ func TestRateLimiter_HeadersPresent(t *testing.T) {
 	rl, _ := setupRateLimiter(t, 10, time.Minute)
 	handler := rl.Middleware(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -101,14 +102,14 @@ func TestRateLimiter_DifferentIPs(t *testing.T) {
 	handler := rl.Middleware(http.HandlerFunc(okHandler))
 
 	// Request from IP 1
-	req1 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req1 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req1.RemoteAddr = "192.168.1.1:12345"
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	assert.Equal(t, http.StatusOK, w1.Code)
 
 	// Request from IP 2
-	req2 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req2 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req2.RemoteAddr = "192.168.1.2:54321"
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
@@ -156,13 +157,13 @@ func TestRateLimiter_TableDriven(t *testing.T) {
 			handler := rl.Middleware(http.HandlerFunc(okHandler))
 
 			for i := 0; i < tt.requests-1; i++ {
-				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 				w := httptest.NewRecorder()
 				handler.ServeHTTP(w, req)
 			}
 
 			// Last request to check
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 

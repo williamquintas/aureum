@@ -10,6 +10,7 @@ import (
 	"github.com/aureum/pkg/auth"
 )
 
+// CreateTestUser returns a stub auth.Claims for use in tests.
 func CreateTestUser(t *testing.T) *auth.Claims {
 	t.Helper()
 	return &auth.Claims{
@@ -25,6 +26,7 @@ func CreateTestUser(t *testing.T) *auth.Claims {
 	}
 }
 
+// GenerateTestToken creates a signed JWT token for testing.
 func GenerateTestToken(t *testing.T, secret []byte, claims *auth.Claims) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -1,3 +1,4 @@
+// Package middleware_test contains tests for the middleware package.
 package middleware_test
 
 import (

@@ -1,6 +1,7 @@
-package middleware_test
+package middleware_test //nolint:goconst
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,11 +12,11 @@ import (
 )
 
 func TestCORS_AllowedOrigin(t *testing.T) {
-	origins := []string{"https://example.com", "https://app.example.com"}
+	origins := []string{"https://example.com", "https://app.example.com"} //nolint:goconst
 	corsMw := middleware.CORS(origins)
 	handler := corsMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Origin", "https://example.com")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -33,7 +34,7 @@ func TestCORS_DisallowedOrigin_FallsBack(t *testing.T) {
 	corsMw := middleware.CORS(origins)
 	handler := corsMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Origin", "https://evil.com")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -48,7 +49,7 @@ func TestCORS_DisallowedOriginEmptyList(t *testing.T) {
 	corsMw := middleware.CORS([]string{})
 	handler := corsMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	req.Header.Set("Origin", "https://anywhere.com")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -62,7 +63,7 @@ func TestCORS_OptionsRequest(t *testing.T) {
 	corsMw := middleware.CORS(origins)
 	handler := corsMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodOptions, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodOptions, "/test", nil)
 	req.Header.Set("Origin", "https://example.com")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -76,7 +77,7 @@ func TestCORS_NoOriginHeader(t *testing.T) {
 	corsMw := middleware.CORS(origins)
 	handler := corsMw(http.HandlerFunc(okHandler))
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 	// No Origin header set
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -103,7 +104,7 @@ func TestCORS_TableDriven(t *testing.T) {
 		{
 			name:           "allowed origin",
 			allowedOrigins: []string{"https://a.com", "https://b.com"},
-			requestOrigin:  "https://a.com",
+			requestOrigin:  "https://a.com", //nolint:goconst
 			requestMethod:  http.MethodGet,
 			wantStatus:     http.StatusOK,
 			wantOrigin:     "https://a.com",
@@ -139,7 +140,7 @@ func TestCORS_TableDriven(t *testing.T) {
 			corsMw := middleware.CORS(tt.allowedOrigins)
 			handler := corsMw(http.HandlerFunc(okHandler))
 
-			req := httptest.NewRequest(tt.requestMethod, "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), tt.requestMethod, "/test", nil)
 			req.Header.Set("Origin", tt.requestOrigin)
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)

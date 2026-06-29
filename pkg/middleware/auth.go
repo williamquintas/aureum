@@ -1,3 +1,4 @@
+// Package middleware provides gRPC interceptors for authentication and authorization.
 package middleware
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/aureum/pkg/auth"
 )
 
+// GRPCAuthInterceptor returns a gRPC unary interceptor that validates Bearer tokens.
 func GRPCAuthInterceptor(
 	validateFunc func(ctx context.Context, token string) (*auth.Claims, error),
 ) grpc.UnaryServerInterceptor {

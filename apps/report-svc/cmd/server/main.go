@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aureum/pkg/db"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/aureum/pkg/cache"
+	"github.com/aureum/pkg/db"
 	ff "github.com/aureum/pkg/featureflag"
 	"github.com/aureum/pkg/kafka"
 	"github.com/aureum/pkg/telemetry"

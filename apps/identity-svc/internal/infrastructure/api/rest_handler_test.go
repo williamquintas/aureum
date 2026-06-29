@@ -1,4 +1,5 @@
-package api_test
+// Package api_test contains tests for the api package.
+package api_test //nolint:goconst
 
 import (
 	"context"
@@ -27,7 +28,7 @@ const testJWTSecret = "test-secret-key-for-signing-tokens"
 func generateTestToken(t *testing.T, userID string, roles ...string) string {
 	t.Helper()
 	if len(roles) == 0 {
-		roles = []string{"user"}
+		roles = []string{"user"} //nolint:goconst
 	}
 	claims := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -36,8 +37,8 @@ func generateTestToken(t *testing.T, userID string, roles ...string) string {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Email: "user@example.com",
-		Name:  "Test User",
+		Email: "user@example.com", //nolint:goconst
+		Name:  "Test User",        //nolint:goconst
 		Roles: roles,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -117,7 +118,7 @@ func (m *mockKeycloak) CreateUser(ctx context.Context, email, password, name str
 	if m.createUserFunc != nil {
 		return m.createUserFunc(ctx, email, password, name)
 	}
-	return "kc-id", nil
+	return "kc-id", nil //nolint:goconst
 }
 func (m *mockKeycloak) Authenticate(ctx context.Context, email, password string) (*application.LoginResponse, error) {
 	if m.authenticateFunc != nil {
@@ -218,7 +219,8 @@ func (m *mockEmailOTPStore) GetAndDelete(ctx context.Context, email string) (str
 
 type mockSessionClient struct{}
 
-func (m *mockSessionClient) GetUserSessions(_ context.Context, _ string) ([]application.UserSessionRepresentation, error) {
+func (m *mockSessionClient) GetUserSessions(_ context.Context, _ string,
+) ([]application.UserSessionRepresentation, error) {
 	return nil, nil
 }
 func (m *mockSessionClient) LogoutUserSession(_ context.Context, _ string) error {
@@ -233,7 +235,8 @@ func (m *mockFlag) IsEnabled(_ context.Context, _ string) bool { return m.enable
 
 type mockCache struct{}
 
-func (m *mockCache) GetOrSet(_ context.Context, _ string, _ time.Duration, fn func() (interface{}, error), dest interface{}) error {
+func (m *mockCache) GetOrSet(_ context.Context, _ string, _ time.Duration,
+	fn func() (interface{}, error), dest interface{}) error {
 	val, err := fn()
 	if err != nil {
 		return err
@@ -314,7 +317,7 @@ func setupRouter(t *testing.T, h *api.Handler) chi.Router {
 }
 
 func executeRequest(r chi.Router, method, path, body string, headers map[string]string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), method, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range headers {
 		req.Header.Set(k, v)
@@ -412,7 +415,7 @@ func TestHandler_Login_Success(t *testing.T) {
 	users := &mockUserRepo{
 		findByEmailFunc: func(ctx context.Context, email string) (*domain.User, error) {
 			return &domain.User{
-				ID: "user-id", Email: email, EmailVerified: true,
+				ID: "user-id", Email: email, EmailVerified: true, //nolint:goconst
 				Status: domain.UserStatusActive,
 			}, nil
 		},
@@ -601,7 +604,7 @@ func TestHandler_VerifyEmail_ExpiredOTP(t *testing.T) {
 func TestHandler_ForgotPassword_Success(t *testing.T) {
 	users := &mockUserRepo{
 		findByEmailFunc: func(ctx context.Context, email string) (*domain.User, error) {
-			return &domain.User{ID: "uid", Email: email}, nil
+			return &domain.User{ID: "uid", Email: email}, nil //nolint:goconst
 		},
 	}
 	h, _ := newTestHandler(users, nil, nil)
@@ -632,7 +635,7 @@ func TestHandler_ForgotPassword_InvalidEmail(t *testing.T) {
 func TestHandler_ResetPassword_Success(t *testing.T) {
 	// We need a valid reset token
 	validToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": "uid",
+		"user_id": "uid", //nolint:goconst
 		"email":   "user@example.com",
 		"sub":     "uid",
 		"exp":     float64(time.Now().Add(15 * time.Minute).Unix()),
@@ -710,7 +713,7 @@ func TestHandler_GetProfile_Success(t *testing.T) {
 
 	token := generateTestToken(t, "user-id")
 	w := executeRequest(r, http.MethodGet, "/me", "",
-		map[string]string{"Authorization": "Bearer " + token},
+		map[string]string{"Authorization": "Bearer " + token}, //nolint:goconst
 	)
 	require.Equal(t, http.StatusOK, w.Code)
 	var profile application.UserProfileResponse
@@ -1002,8 +1005,8 @@ func TestHandler_Admin_CreateUser(t *testing.T) {
 func TestHandler_Admin_AssignRole(t *testing.T) {
 	users := &mockUserRepo{
 		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
-			if id == "admin-id" {
-				return &domain.User{ID: id, Roles: []string{"admin"}}, nil
+			if id == "admin-id" { //nolint:goconst
+				return &domain.User{ID: id, Roles: []string{"admin"}}, nil //nolint:goconst
 			}
 			return &domain.User{ID: id, Roles: []string{"user"}}, nil
 		},

@@ -1,4 +1,4 @@
-package application
+package application //nolint:goconst
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 func TestAuthorizationService_AssignRole_NotAdmin(t *testing.T) {
 	users := &mockUserRepo{
 		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
-			return &domain.User{ID: id, Roles: []string{"user"}}, nil
+			return &domain.User{ID: id, Roles: []string{"user"}}, nil //nolint:goconst
 		},
 	}
 	svc := NewAuthorizationService(users, nil)
@@ -23,8 +23,8 @@ func TestAuthorizationService_AssignRole_NotAdmin(t *testing.T) {
 func TestAuthorizationService_AssignRole_AdminSuccess(t *testing.T) {
 	users := &mockUserRepo{
 		findByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
-			if id == "admin-1" {
-				return &domain.User{ID: id, Roles: []string{"admin"}}, nil
+			if id == "admin-1" { //nolint:goconst
+				return &domain.User{ID: id, Roles: []string{"admin"}}, nil //nolint:goconst
 			}
 			return &domain.User{ID: id, Roles: []string{"user"}}, nil
 		},
@@ -88,7 +88,7 @@ func TestAuthorizationService_Evaluate_UserDenied(t *testing.T) {
 	}
 	svc := NewAuthorizationService(users, nil)
 	resp, err := svc.Evaluate(context.Background(), ABACCheckRequest{
-		UserID:       "user-1",
+		UserID:       "user-1", //nolint:goconst
 		ResourceType: string(domain.ResourceAccount),
 		Action:       string(domain.ActionDelete),
 	})
